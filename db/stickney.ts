@@ -178,6 +178,7 @@ export type StickneyModuleData = {
   fleetChecks?: StickneyFleetCheck[];
   readinessExceptions?: StickneyReadinessException[];
   workOrders?: StickneyWorkOrder[];
+  fleetSources?: { checks: boolean; readinessExceptions: boolean; workOrders: boolean };
   duties?: StickneyDuty[];
   boxCards?: StickneyBoxCard[];
   policies?: StickneyPolicy[];
@@ -205,6 +206,19 @@ async function read<T>(sql: string): Promise<T[]> {
   });
   if (error) throw new Error(`Stickney data read failed: ${error.message}`);
   return (data ?? []) as T[];
+}
+
+async function optionalRead<T>(sql: string): Promise<{ rows: T[]; connected: boolean }> {
+  try { return { rows: await read<T>(sql), connected: true }; }
+  catch { return { rows: [], connected: false }; }
+}
+
+async function fleetApparatus(): Promise<StickneyApparatus[]> {
+  try {
+    return await read<StickneyApparatus>(`select p.id,p.name,p.asset_type,coalesce(a.status,'not_recorded') as status,p.vin,p.manufacturer,p.model,p.year,p.weekly_due_day,coalesce(p.maintenance_schedule,'') as maintenance_schedule,coalesce(p.owner_manual_url,'') as owner_manual_url,coalesce(p.service_manual_url,'') as service_manual_url,coalesce(p.parts_catalog_url,'') as parts_catalog_url,coalesce(p.preferred_vendor,'') as preferred_vendor,p.service_profile_verified_at from inventory_apparatus_profiles p left join department_apparatus a on a.id=p.id where p.id in(select id from stickney_inventory_apparatus) order by p.name`);
+  } catch {
+    return read<StickneyApparatus>(`select id,name,asset_type,'not_recorded' as status,null::text as vin,manufacturer,model,year,weekly_due_day,'' as maintenance_schedule,'' as owner_manual_url,'' as service_manual_url,'' as parts_catalog_url,'' as preferred_vendor,null::text as service_profile_verified_at from stickney_inventory_apparatus order by name`);
+  }
 }
 
 async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
@@ -296,16 +310,16 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
   }
   if (module === "hydrants") { const hydrants = await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`); return { hydrants: departmentId ? await applyOverrides(departmentId, "hydrant", hydrants) : hydrants }; }
   if (module === "fleet" || module === "inventory") {
-    const [apparatus, compartments, inventory, inventoryPhotos, fleetChecks, readinessExceptions, workOrders] = await Promise.all([
-      read<StickneyApparatus>(`select p.id,p.name,p.asset_type,coalesce(a.status,'not_recorded') as status,p.vin,p.manufacturer,p.model,p.year,p.weekly_due_day,coalesce(p.maintenance_schedule,'') as maintenance_schedule,coalesce(p.owner_manual_url,'') as owner_manual_url,coalesce(p.service_manual_url,'') as service_manual_url,coalesce(p.parts_catalog_url,'') as parts_catalog_url,coalesce(p.preferred_vendor,'') as preferred_vendor,p.service_profile_verified_at from inventory_apparatus_profiles p left join department_apparatus a on a.id=p.id where p.id in(select id from stickney_inventory_apparatus) order by p.name`),
+    const [apparatus, compartments, inventory, inventoryPhotos, fleetChecksResult, readinessResult, workOrdersResult] = await Promise.all([
+      fleetApparatus(),
       read<StickneyInventoryCompartment>(`select id,apparatus_id,label,side,sort_order from stickney_inventory_compartments order by apparatus_id,sort_order,label`),
       read<StickneyInventoryItem>(`select id,apparatus_id,compartment_id,name,manufacturer,model,serial_number,barcode,quantity_required,equipment_category,check_types,source_form,item_order,retired_at from stickney_inventory_equipment where retired_at is null order by apparatus_id,item_order,name`),
       read<StickneyInventoryPhoto>(`select id,apparatus_id,compartment_id,equipment_id,view_level,door_state,original_filename,mime_type,byte_size,approval_status,captured_at from stickney_inventory_photo_views where replaced_at is null order by captured_at desc`),
-      module === "fleet" ? read<StickneyFleetCheck>(`select c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at,count(i.id)::int as item_count,count(i.id) filter(where i.result='pending')::int as pending_count,count(i.id) filter(where i.result in ('failed','missing','damaged'))::int as failed_count,max(i.numeric_reading) filter(where i.numeric_reading is not null) as latest_odometer from inventory_checks c left join inventory_check_items i on i.check_id=c.id where c.apparatus_id in(select id from stickney_inventory_apparatus) and c.status in ('in_progress','completed') group by c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at order by c.started_at desc`) : Promise.resolve([]),
-      module === "fleet" ? read<StickneyReadinessException>(`select id,apparatus_id,result,priority,coalesce(notes,'') as notes,status,out_of_service,opened_by,opened_at,issue_categories,assigned_employee_names from inventory_readiness_exceptions where apparatus_id in(select id from stickney_inventory_apparatus) and status<>'resolved' order by opened_at desc`) : Promise.resolve([]),
-      module === "fleet" ? read<StickneyWorkOrder>(`select id,apparatus_id,status,priority,summary,coalesce(details,'') as details,coalesce(assigned_to,'') as assigned_to,opened_by,opened_at,due_at,assigned_employee_names,repair_date,repair_cost,vendor,resolution_notes from inventory_work_orders where apparatus_id in(select id from stickney_inventory_apparatus) order by opened_at desc`) : Promise.resolve([]),
+      module === "fleet" ? optionalRead<StickneyFleetCheck>(`select c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at,count(i.id)::int as item_count,count(i.id) filter(where i.result='pending')::int as pending_count,count(i.id) filter(where i.result in ('failed','missing','damaged'))::int as failed_count,max(i.numeric_reading) filter(where i.numeric_reading is not null) as latest_odometer from inventory_checks c left join inventory_check_items i on i.check_id=c.id where c.apparatus_id in(select id from stickney_inventory_apparatus) and c.status in ('in_progress','completed') group by c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at order by c.started_at desc`) : Promise.resolve({ rows: [], connected: false }),
+      module === "fleet" ? optionalRead<StickneyReadinessException>(`select id,apparatus_id,result,priority,coalesce(notes,'') as notes,status,out_of_service,opened_by,opened_at,issue_categories,assigned_employee_names from inventory_readiness_exceptions where apparatus_id in(select id from stickney_inventory_apparatus) and status<>'resolved' order by opened_at desc`) : Promise.resolve({ rows: [], connected: false }),
+      module === "fleet" ? optionalRead<StickneyWorkOrder>(`select id,apparatus_id,status,priority,summary,coalesce(details,'') as details,coalesce(assigned_to,'') as assigned_to,opened_by,opened_at,due_at,assigned_employee_names,repair_date,repair_cost,vendor,resolution_notes from inventory_work_orders where apparatus_id in(select id from stickney_inventory_apparatus) order by opened_at desc`) : Promise.resolve({ rows: [], connected: false }),
     ]);
-    return { apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus, compartments, inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory, inventoryPhotos, fleetChecks, readinessExceptions, workOrders };
+    return { apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus, compartments, inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory, inventoryPhotos, fleetChecks: fleetChecksResult.rows, readinessExceptions: readinessResult.rows, workOrders: workOrdersResult.rows, fleetSources: { checks: fleetChecksResult.connected, readinessExceptions: readinessResult.connected, workOrders: workOrdersResult.connected } };
   }
   if (module === "duties") { const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`); return { duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties }; }
   if (module === "documents") {
