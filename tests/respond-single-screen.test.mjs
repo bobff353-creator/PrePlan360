@@ -11,6 +11,9 @@ test("demo Respond keeps the desktop command view on one screen", async () => {
   ]);
   assert.match(script, /rspCommandDeck\(match\)/);
   assert.match(script, /rsp-command-grid/);
+  assert.match(script, /Construction/);
+  assert.match(script, /Hydrant status/);
+  assert.match(script, /Critical hazards/);
   assert.match(script, /No building hazards, systems, Knox, hydrants, or fire-flow values are inferred/);
   assert.match(styles, /#main:has\(\.respond-upgrade\)\{overflow:hidden/);
   assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
@@ -23,6 +26,7 @@ test("all department Respond pages inherit the compact editable foundation", asy
   ]);
   assert.match(component, /<RespondWorkspace/);
   assert.match(component, /CAD not connected/);
+  assert.match(component, /Preplan intelligence/);
   assert.match(component, /Configure Respond and manage records/);
   assert.match(styles, /\.dept-app-content:has\(\.respond-department-workspace\)/);
   assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
