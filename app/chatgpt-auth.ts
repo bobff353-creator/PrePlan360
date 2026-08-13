@@ -5,6 +5,7 @@ import {
   ownerCredentialCount,
 } from "@/app/owner-auth";
 import { isOwner } from "@/db/access";
+import { getMemberSessionUser } from "@/app/member-auth";
 
 export type ChatGPTUser = {
   userId: string;
@@ -26,6 +27,8 @@ const CALLBACK_PATH = "/callback";
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const ownerSession = await getOwnerSessionUser();
   if (ownerSession) return ownerSession;
+  const memberSession = await getMemberSessionUser();
+  if (memberSession) return memberSession;
 
   const headerUser = await getChatGPTHeaderUser();
   if (!headerUser) return null;

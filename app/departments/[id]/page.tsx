@@ -21,7 +21,7 @@ export default async function DepartmentBuild({ params }: { params: Promise<{ id
     </header>
     <section className="access-page department-page">
       <div className="department-banner"><div><div className="access-kicker">DEPARTMENT WEB APP</div><h1>{department.name}</h1><p>Control the identity members see when they enter this department.</p></div><a className="access-primary" href={`/d/${department.slug}`}>Open live department app <span aria-hidden="true">↗</span></a></div>
-      {owner ? <div className="support-warning"><b>Owner direct access is read only here.</b><span>Start a logged support session from Owner Command before changing department settings or branding.</span></div> : <DepartmentEditor department={department}/>}
+      <DepartmentEditor department={department}/>
       <div className="department-grid"><section className="department-summary"><h2>App identity</h2><div><span>Direct shortcut</span><b>/d/{department.slug}</b></div><div><span>Visible app name</span><b>{department.app_title || department.name}</b></div><div><span>Stations</span><b>{department.station_count}</b></div><div><span>Vehicles</span><b>{department.vehicle_count}</b></div><div><span>Platform branding</span><b>Hidden in department app</b></div></section><section className="department-audit"><h2>Recent activity</h2>{audit.length ? audit.map((event) => <article key={event.id}><time>{new Date(event.created_at).toLocaleString()}</time><b>{event.event_type.replaceAll("_", " ")}</b><p>{event.detail}</p></article>) : <p className="access-muted">No audited changes yet.</p>}</section></div>
     </section>
   </main>;

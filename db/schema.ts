@@ -137,9 +137,69 @@ export const departmentMemberships = sqliteTable("department_memberships", {
   status: text("status").notNull(),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
+  permissionsJson: text("permissions_json").notNull().default("[]"),
 }, (table) => [
   uniqueIndex("idx_memberships_user_department").on(table.userId, table.departmentId),
   index("idx_memberships_department").on(table.departmentId, table.status),
+]);
+
+export const departmentInvitations = sqliteTable("department_invitations", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  email: text("email").notNull(),
+  displayName: text("display_name").notNull().default(""),
+  role: text("role").notNull(),
+  permissionsJson: text("permissions_json").notNull().default("[]"),
+  tokenHash: text("token_hash").notNull(),
+  status: text("status").notNull(),
+  invitedBy: text("invited_by").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  acceptedBy: text("accepted_by"),
+  createdAt: text("created_at").notNull(),
+  acceptedAt: text("accepted_at"),
+}, (table) => [
+  uniqueIndex("idx_department_invitations_token").on(table.tokenHash),
+  index("idx_department_invitations_department_status").on(table.departmentId, table.status),
+]);
+
+export const memberCredentials = sqliteTable("member_credentials", {
+  userId: text("user_id").primaryKey(),
+  email: text("email").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  iterations: integer("iterations").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_member_credentials_email").on(table.email)]);
+
+export const memberSessions = sqliteTable("member_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: text("user_id").notNull(),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+}, (table) => [index("idx_member_sessions_user_expires").on(table.userId, table.expiresAt)]);
+
+export const memberLoginState = sqliteTable("member_login_state", {
+  email: text("email").primaryKey(),
+  failedCount: integer("failed_count").notNull().default(0),
+  lockedUntil: text("locked_until"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const stickneyRecordOverrides = sqliteTable("stickney_record_overrides", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  recordType: text("record_type").notNull(),
+  sourceRecordId: text("source_record_id").notNull(),
+  dataJson: text("data_json").notNull().default("{}"),
+  status: text("status").notNull().default("active"),
+  createdBy: text("created_by").notNull(),
+  updatedBy: text("updated_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_stickney_overrides_record").on(table.departmentId, table.recordType, table.sourceRecordId),
+  index("idx_stickney_overrides_department_type").on(table.departmentId, table.recordType, table.status),
 ]);
 
 export const accessRequests = sqliteTable("access_requests", {

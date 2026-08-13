@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const owner = await isOwner(user.userId);
   const form = await request.formData();
   const supportId = String(form.get("support_session_id") || "");
-  if (owner) {
+  if (owner && supportId) {
     const session = await getSupportSession(supportId);
     if (!session || session.owner_user_id !== user.userId || session.department_id !== id || session.status !== "active") {
       return new Response("An active logged support session is required", { status: 403 });
@@ -48,6 +48,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await db().prepare("UPDATE departments SET logo_key=?,logo_content_type=?,updated_at=? WHERE id=?").bind(blob.url, file.type, now(), id).run();
   if (department.logo_key) await del(department.logo_key);
   await audit(user.userId, id, owner ? "owner_support_logo_change" : "department_logo_change", "Department app logo updated.");
-  const target = owner ? `/owner/support/${supportId}` : `/departments/${id}`;
+  const target = owner && supportId ? `/owner/support/${supportId}` : `/departments/${id}`;
   return Response.redirect(new URL(target, request.url), 303);
 }

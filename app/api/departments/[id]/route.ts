@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const owner = await isOwner(user.userId);
   const form = await request.formData();
   const supportId = String(form.get("support_session_id") || "");
-  if (owner) {
+  if (owner && supportId) {
     const session = await getSupportSession(supportId);
     if (!session || session.owner_user_id !== user.userId || session.department_id !== id || session.status !== "active") {
       return new Response("An active logged support session is required", { status: 403 });
@@ -44,6 +44,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await db().prepare("UPDATE departments SET name=?,app_title=?,welcome_message=?,station_count=?,vehicle_count=?,weather_location=?,brand_primary=?,brand_secondary=?,brand_accent=?,brand_action=?,brand_alert=?,status='configured',updated_at=? WHERE id=?")
     .bind(name, appTitle, welcomeMessage, stations, vehicles, weather, colors.brand_primary, colors.brand_secondary, colors.brand_accent, colors.brand_action, colors.brand_alert, now(), id).run();
   await audit(user.userId, id, owner ? "owner_support_brand_change" : "department_brand_change", `${name} app branding and profile updated.`);
-  const target = owner ? `/owner/support/${supportId}` : `/departments/${id}`;
+  const target = owner && supportId ? `/owner/support/${supportId}` : `/departments/${id}`;
   return Response.redirect(new URL(target, request.url), 303);
 }

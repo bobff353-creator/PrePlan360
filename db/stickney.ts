@@ -157,6 +157,8 @@ export type StickneyModuleData = {
   phoneNumbers?: StickneyPhoneNumber[];
 };
 
+export type StickneyEditableRecordType = "employee" | "schedule" | "preplan" | "hydrant" | "apparatus" | "inventory" | "duty" | "box_card" | "policy" | "phone";
+
 function client() {
   return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -176,6 +178,12 @@ async function read<T>(sql: string): Promise<T[]> {
   });
   if (error) throw new Error(`Stickney data read failed: ${error.message}`);
   return (data ?? []) as T[];
+}
+
+async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
+  const result = await import("@/db/access").then(({ db }) => db().prepare("SELECT source_record_id,data_json,status FROM stickney_record_overrides WHERE department_id=? AND record_type=?").bind(departmentId, recordType).all<{ source_record_id: string; data_json: string; status: string }>());
+  const overrides = new Map(result.results.map((row) => [row.source_record_id, row]));
+  return rows.flatMap((row) => { const override = overrides.get(row.id); if (override?.status === "hidden") return []; if (!override) return [row]; try { return [{ ...row, ...JSON.parse(override.data_json), id: row.id } as T]; } catch { return [row]; } });
 }
 
 function chicagoDate(daysFromToday = 0) {
@@ -209,21 +217,21 @@ async function summary(): Promise<StickneySummary> {
   return Object.fromEntries(rows.map((row) => [row.key, Number(row.count)])) as StickneySummary;
 }
 
-export async function loadStickneyModule(module: string): Promise<StickneyModuleData> {
+export async function loadStickneyModule(module: string, departmentId = ""): Promise<StickneyModuleData> {
   if (module === "dashboard") return { summary: await summary() };
   if (module === "staffing") {
-    return { employees: await read<StickneyEmployee>(`
+    const employees = await read<StickneyEmployee>(`
       select e.id,e.name,p.label as rank,coalesce(ep.employment_type,'') as employment_type,
         coalesce(ep.driver_status,'') as driver_status,ep.start_date,ep.photo_updated_at
       from employees e join pay_scales p on p.id=e.pay_scale_id
       left join employee_profiles ep on ep.employee_id=e.id
       where e.active=1 order by e.sort_order,e.name
-    `) };
+    `); return { employees: departmentId ? await applyOverrides(departmentId, "employee", employees) : employees };
   }
   if (module === "scheduling") {
     const start = chicagoDate(-7);
     const end = chicagoDate(35);
-    return { schedule: await read<StickneyScheduleAssignment>(`
+    const schedule = await read<StickneyScheduleAssignment>(`
       select s.id,en.entry_date as work_date,t.name as shift_name,
         coalesce(nullif(s.start_time,''),t.start_time) as start_time,
         coalesce(nullif(s.end_time,''),t.end_time) as end_time,s.role,
@@ -235,16 +243,16 @@ export async function loadStickneyModule(module: string): Promise<StickneyModule
       join pay_scales p on p.id=e.pay_scale_id
       where s.status='filled' and en.entry_date between '${start}' and '${end}'
       order by en.entry_date,coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
-    `) };
+    `); return { schedule: departmentId ? await applyOverrides(departmentId, "schedule", schedule) : schedule };
   }
   if (module === "preplans") {
     const [preplans, preplanImports] = await Promise.all([
       read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`),
       read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`),
     ]);
-    return { preplans, preplanImports };
+    return { preplans: departmentId ? await applyOverrides(departmentId, "preplan", preplans) : preplans, preplanImports };
   }
-  if (module === "hydrants") return { hydrants: await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`) };
+  if (module === "hydrants") { const hydrants = await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`); return { hydrants: departmentId ? await applyOverrides(departmentId, "hydrant", hydrants) : hydrants }; }
   if (module === "fleet" || module === "inventory") {
     const [apparatus, compartments, inventory, inventoryPhotos] = await Promise.all([
       read<StickneyApparatus>(`select id,name,asset_type,manufacturer,model,year,weekly_due_day from stickney_inventory_apparatus order by name`),
@@ -252,17 +260,17 @@ export async function loadStickneyModule(module: string): Promise<StickneyModule
       module === "inventory" ? read<StickneyInventoryItem>(`select id,apparatus_id,compartment_id,name,manufacturer,model,serial_number,barcode,quantity_required,equipment_category,check_types,source_form,item_order,retired_at from stickney_inventory_equipment where retired_at is null order by apparatus_id,item_order,name`) : Promise.resolve([]),
       read<StickneyInventoryPhoto>(`select id,apparatus_id,compartment_id,equipment_id,view_level,door_state,original_filename,mime_type,byte_size,approval_status,captured_at from stickney_inventory_photo_views where replaced_at is null order by captured_at desc`),
     ]);
-    return { apparatus, compartments, inventory, inventoryPhotos };
+    return { apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus, compartments, inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory, inventoryPhotos };
   }
-  if (module === "duties") return { duties: await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`) };
+  if (module === "duties") { const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`); return { duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties }; }
   if (module === "documents") {
     const [boxCards, policies] = await Promise.all([
       read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`),
       read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`),
     ]);
-    return { boxCards, policies };
+    return { boxCards: departmentId ? await applyOverrides(departmentId, "box_card", boxCards) : boxCards, policies: departmentId ? await applyOverrides(departmentId, "policy", policies) : policies };
   }
-  if (module === "phones") return { phoneNumbers: await read<StickneyPhoneNumber>(`select id,category,name,emergency_number,non_emergency_number,notes,sort_order from important_phone_numbers order by category,sort_order,name`) };
+  if (module === "phones") { const phoneNumbers = await read<StickneyPhoneNumber>(`select id,category,name,emergency_number,non_emergency_number,notes,sort_order from important_phone_numbers order by category,sort_order,name`); return { phoneNumbers: departmentId ? await applyOverrides(departmentId, "phone", phoneNumbers) : phoneNumbers }; }
   return {};
 }
 
