@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.vinext/
+.wrangler/
+.vercel/
+dist/
+build/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example

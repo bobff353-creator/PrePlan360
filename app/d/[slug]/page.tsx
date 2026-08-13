@@ -1,0 +1,87 @@
+import type { CSSProperties } from "react";
+import type { Metadata } from "next";
+import { chatGPTSignOutPath, requireChatGPTUser } from "@/app/chatgpt-auth";
+import { canAccessDepartment, canAdminDepartment, getDepartmentBySlug, getSupportSession, isOwner, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
+import { DepartmentLogo } from "@/app/departments/department-brand";
+import { loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
+import AssetManager from "./asset-manager";
+import ReferenceLibrary from "./reference-library";
+import StickneyWorkspace from "./stickney-workspace";
+
+export const dynamic = "force-dynamic";
+
+const modules = [
+  ["dashboard", "Home", "01"], ["live-ops", "Live Operations", "02"], ["respond", "Respond", "03"], ["staffing", "Roster & Staffing", "04"],
+  ["scheduling", "Scheduling", "05"], ["preplans", "Pre-Plans", "06"], ["fleet", "Apparatus", "07"], ["inventory", "Inventory", "08"], ["duties", "Daily Duties", "09"],
+  ["documents", "Policies & Box Cards", "10"], ["phones", "Important Numbers", "11"], ["hydrants", "Hydrants", "12"], ["inspections", "Inspections · Coming Soon", "13"],
+];
+
+const stickneyModules = new Set(["dashboard", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const department = await getDepartmentBySlug(slug);
+  if (!department) return { title: "Department app" };
+  const logo = department.logo_key ? `/api/departments/${department.id}/logo` : undefined;
+  return {
+    title: department.app_title || department.name,
+    description: department.welcome_message || `${department.name} department operations app.`,
+    manifest: `/d/${slug}/manifest.webmanifest`,
+    icons: logo ? { icon: logo, apple: logo } : undefined,
+  };
+}
+
+export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string }> }) {
+  const { slug } = await params;
+  const department = await getDepartmentBySlug(slug);
+  if (!department) return <main className="department-app-missing"><h1>Department app not found.</h1><a href="/portal">Return to department sign in</a></main>;
+  const user = await requireChatGPTUser(`/d/${slug}`);
+  if (!(await canAccessDepartment(user.userId, department.id))) return <main className="department-app-missing"><h1>Department access required.</h1><p>This app is not assigned to your signed-in account.</p><a href="/portal">Return to department sign in</a></main>;
+  const owner = await isOwner(user.userId);
+  const query = await searchParams;
+  const selected = query.module || "dashboard";
+  const active = modules.find(([key]) => key === selected) || modules[0];
+  const supportSession = owner && query.support ? await getSupportSession(query.support) : null;
+  const ownerSupport = !!supportSession && supportSession.owner_user_id === user.userId && supportSession.department_id === department.id && supportSession.status === "active";
+  const editable = owner ? ownerSupport : await canAdminDepartment(user.userId, department.id);
+  const supportQuery = ownerSupport ? `&support=${encodeURIComponent(supportSession.id)}` : "";
+  const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([
+    listDepartmentPreplans(department.id),
+    listSharedPreplans(department.id),
+    listDepartmentHydrants(department.id),
+    listSharedHydrants(department.id),
+  ]) : null;
+  const isStickney = department.slug === "stickney";
+  let stickneyData: StickneyModuleData | null = null;
+  let stickneyConnectionError = "";
+  if (isStickney && stickneyModules.has(active[0])) {
+    try {
+      stickneyData = await loadStickneyModule(active[0]);
+    } catch (error) {
+      stickneyConnectionError = error instanceof Error ? error.message : "The Stickney data connection is unavailable.";
+      stickneyData = {};
+    }
+  }
+  const style = { "--dept-primary": department.brand_primary, "--dept-bg": department.brand_secondary, "--dept-accent": department.brand_accent, "--dept-action": department.brand_action, "--dept-alert": department.brand_alert } as CSSProperties;
+
+  return <main className="department-app" style={style}>
+    <aside className="dept-app-sidebar"><div className="dept-app-brand"><DepartmentLogo department={department}/><div><b>{department.app_title || department.name}</b><small>Department operations</small></div></div><nav>{modules.map(([key, label, number]) => <a className={active[0] === key ? "active" : ""} href={`/d/${slug}?module=${key}${supportQuery}`} key={key}><span>{number}</span>{label}</a>)}</nav><div className="dept-sidebar-foot"><span><i/> {ownerSupport ? "Audited owner support" : "Secure department app"}</span><a href={chatGPTSignOutPath("/")}>Sign out</a></div></aside>
+    <section className="dept-app-workspace"><header><button className="dept-mobile-mark" aria-label="Department menu"><DepartmentLogo department={department}/></button><div><span>{department.name}</span><b>{active[1]}</b></div><div className="dept-user"><span>{user.displayName}</span>{owner ? <a href="/owner">Owner console</a> : <a href="/portal">Switch department</a>}</div></header>
+      <div className="dept-app-content"><div className="dept-app-heading"><div><span>DEPARTMENT WORKSPACE</span><h1>{active[1]}</h1><p>{department.welcome_message || `${department.name} operations, connected in one web app.`}</p></div><div className="dept-app-status"><i/> App configured</div></div>
+      {stickneyData ? <><StickneyWorkspace module={active[0]} departmentId={department.id} data={stickneyData} connectionError={stickneyConnectionError || undefined}/>{active[0] === "fleet" ? <details className="stickney-archive"><summary>PrePlan 360 native asset records</summary><AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/></details> : null}{referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : null}</> : active[0] === "dashboard" ? <Dashboard department={department.name} stations={department.station_count} vehicles={department.vehicle_count} weather={department.weather_location} supportQuery={supportQuery}/> : active[0] === "fleet" ? <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : active[0] === "inspections" ? <ComingSoon/> : <ModuleEmpty moduleName={active[1]}/>}
+      </div>
+    </section>
+  </main>;
+}
+
+function Dashboard({ department, stations, vehicles, weather, supportQuery }: { department: string; stations: number; vehicles: number; weather: string; supportQuery: string }) {
+  return <><div className="dept-metrics"><article><span>Stations</span><b>{stations}</b><small>Configured locations</small></article><article><span>Vehicles</span><b>{vehicles}</b><small>Configured apparatus</small></article><article><span>Weather location</span><b className="metric-text">{weather || "Not set"}</b><small>{weather ? "Location saved" : "Add in Build & branding"}</small></article><article className="attention"><span>Live integrations</span><b className="metric-text">Not connected</b><small>Truthful setup status</small></article></div><div className="dept-home-grid"><section><span className="dept-section-label">READY TO BUILD</span><h2>{department} workspace</h2><p>The department identity is live. Operational modules remain clean until authorized records or integrations are connected.</p><div className="dept-module-grid">{modules.slice(1, 7).map(([key, label, number]) => <a href={`?module=${key}${supportQuery}`} key={key}><span>{number}</span><b>{label}</b><small>Open module</small></a>)}</div></section><aside><span className="dept-section-label">CURRENT STATUS</span><h2>No active incident</h2><p>No live CAD or operational feed is connected to this department app.</p><div className="dept-safe-state"><i/> Available for configured workflows</div></aside></div></>;
+}
+
+function ComingSoon() {
+  return <section className="dept-module-empty coming-soon"><div className="dept-empty-mark">LOCKED</div><span className="dept-section-label">INSPECTIONS</span><h2>Coming soon.</h2><p>The inspections workspace is hidden from department use while it is under owner development. No inspection names, occupancies, schedules, or compliance figures are exposed here.</p><a href="/portal">Return to department portal</a></section>;
+}
+
+function ModuleEmpty({ moduleName }: { moduleName: string }) {
+  return <section className="dept-module-empty"><div className="dept-empty-mark">+</div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>Ready for department configuration.</h2><p>This module is part of the branded department app, but no department records or live integration have been connected yet.</p><a href="/portal">Return to department portal</a></section>;
+}

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_single_platform_owner` ON `platform_users` (`platform_role`) WHERE "platform_users"."platform_role" = 'platform_owner';

@@ -1,0 +1,273 @@
+import "server-only";
+
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = "https://ukpdacqjmhvlhmrwxtcx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HY1UlYHvPnvDIuq_N_X_Sg_xu7bxTzs";
+
+export type StickneySummary = {
+  employees: number;
+  schedule_assignments: number;
+  preplans: number;
+  preplan_imports: number;
+  hydrants: number;
+  apparatus: number;
+  inventory_items: number;
+  inventory_photos: number;
+  duties: number;
+  box_cards: number;
+  policies: number;
+  phone_numbers: number;
+};
+
+export type StickneyEmployee = {
+  id: string;
+  name: string;
+  rank: string;
+  employment_type: string;
+  driver_status: string;
+  start_date: string | null;
+  photo_updated_at: string | null;
+};
+
+export type StickneyScheduleAssignment = {
+  id: string;
+  work_date: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  role: string;
+  employee_id: string;
+  employee_name: string;
+  rank: string;
+};
+
+export type StickneyPreplan = {
+  id: string;
+  business_name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  construction_type: string;
+  floor_count: number;
+  suggested_fire_flow_gpm: number;
+  contact_info: string;
+  construction: string;
+  access_info: string;
+  alarm_system: string;
+  knox_box: string;
+  riser: string;
+  fdc: string;
+  sprinkler_system: string;
+  status: string;
+  updated_at: string;
+};
+
+export type StickneyPreplanImport = {
+  id: string;
+  business_name: string;
+  address: string;
+  status: string;
+  latitude: number | null;
+  longitude: number | null;
+  linked_preplan_id: string | null;
+};
+
+export type StickneyHydrant = {
+  id: string;
+  hydrant_number: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  service_status: string;
+  manufacturer: string;
+  model: string;
+  notes: string;
+  updated_at: string;
+};
+
+export type StickneyApparatus = {
+  id: string;
+  name: string;
+  asset_type: string;
+  manufacturer: string | null;
+  model: string | null;
+  year: number | null;
+  weekly_due_day: number | null;
+};
+
+export type StickneyInventoryCompartment = {
+  id: string;
+  apparatus_id: string;
+  label: string;
+  side: string;
+  sort_order: number;
+};
+
+export type StickneyInventoryItem = {
+  id: string;
+  apparatus_id: string;
+  compartment_id: string | null;
+  name: string;
+  manufacturer: string | null;
+  model: string | null;
+  serial_number: string | null;
+  barcode: string | null;
+  quantity_required: number;
+  equipment_category: string | null;
+  check_types: string[] | null;
+  source_form: string | null;
+  item_order: number | null;
+  retired_at: string | null;
+};
+
+export type StickneyInventoryPhoto = {
+  id: string;
+  apparatus_id: string;
+  compartment_id: string | null;
+  equipment_id: string | null;
+  view_level: string;
+  door_state: string;
+  original_filename: string;
+  mime_type: string;
+  byte_size: number;
+  approval_status: string;
+  captured_at: string;
+};
+
+export type StickneyDuty = { id: string; day_of_week: number; shift_key: string; duty: string; updated_at: string };
+export type StickneyBoxCard = { id: string; title: string; address: string; box_number: string; access_notes: string; details: string; department: string; document_url: string; document_page: number; status: string; updated_at: string };
+export type StickneyPolicy = { id: string; title: string; policy_number: string; category: string; effective_date: string; body: string; status: string; updated_at: string };
+export type StickneyPhoneNumber = { id: string; category: string; name: string; emergency_number: string; non_emergency_number: string; notes: string; sort_order: number };
+
+export type StickneyModuleData = {
+  summary?: StickneySummary;
+  employees?: StickneyEmployee[];
+  schedule?: StickneyScheduleAssignment[];
+  preplans?: StickneyPreplan[];
+  preplanImports?: StickneyPreplanImport[];
+  hydrants?: StickneyHydrant[];
+  apparatus?: StickneyApparatus[];
+  compartments?: StickneyInventoryCompartment[];
+  inventory?: StickneyInventoryItem[];
+  inventoryPhotos?: StickneyInventoryPhoto[];
+  duties?: StickneyDuty[];
+  boxCards?: StickneyBoxCard[];
+  policies?: StickneyPolicy[];
+  phoneNumbers?: StickneyPhoneNumber[];
+};
+
+function client() {
+  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+async function read<T>(sql: string): Promise<T[]> {
+  const secret = process.env.STICKNEY_DATABASE_SECRET?.replace(/^[\s"']+|[\s"']+$/g, "");
+  if (!secret) throw new Error("The Stickney data connection is not configured.");
+  if (!/^\s*(select|with)\b/i.test(sql) || /;|--|\/\*|\*\//.test(sql)) {
+    throw new Error("Stickney reads must be a single read-only query.");
+  }
+  const { data, error } = await client().rpc("firehouse_server_sql", {
+    p_sql: sql,
+    p_mode: "all",
+    p_secret: secret,
+  });
+  if (error) throw new Error(`Stickney data read failed: ${error.message}`);
+  return (data ?? []) as T[];
+}
+
+function chicagoDate(daysFromToday = 0) {
+  const now = new Date();
+  now.setDate(now.getDate() + daysFromToday);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+async function summary(): Promise<StickneySummary> {
+  const rows = await read<{ key: keyof StickneySummary; count: number }>(`
+    select 'employees' as key, count(*)::int as count from employees where active = 1
+    union all select 'schedule_assignments', count(*)::int from station_shift_slots where status = 'filled'
+    union all select 'preplans', count(*)::int from field_preplans
+    union all select 'preplan_imports', count(*)::int from field_preplan_imports
+    union all select 'hydrants', count(*)::int from field_hydrants
+    union all select 'apparatus', count(*)::int from stickney_inventory_apparatus
+    union all select 'inventory_items', count(*)::int from stickney_inventory_equipment where retired_at is null
+    union all select 'inventory_photos', count(*)::int from stickney_inventory_photo_views where replaced_at is null
+    union all select 'duties', count(*)::int from daily_duties
+    union all select 'box_cards', count(*)::int from box_cards where status = 'Active'
+    union all select 'policies', count(*)::int from policies where status = 'Active'
+    union all select 'phone_numbers', count(*)::int from important_phone_numbers
+  `);
+  return Object.fromEntries(rows.map((row) => [row.key, Number(row.count)])) as StickneySummary;
+}
+
+export async function loadStickneyModule(module: string): Promise<StickneyModuleData> {
+  if (module === "dashboard") return { summary: await summary() };
+  if (module === "staffing") {
+    return { employees: await read<StickneyEmployee>(`
+      select e.id,e.name,p.label as rank,coalesce(ep.employment_type,'') as employment_type,
+        coalesce(ep.driver_status,'') as driver_status,ep.start_date,ep.photo_updated_at
+      from employees e join pay_scales p on p.id=e.pay_scale_id
+      left join employee_profiles ep on ep.employee_id=e.id
+      where e.active=1 order by e.sort_order,e.name
+    `) };
+  }
+  if (module === "scheduling") {
+    const start = chicagoDate(-7);
+    const end = chicagoDate(35);
+    return { schedule: await read<StickneyScheduleAssignment>(`
+      select s.id,en.entry_date as work_date,t.name as shift_name,
+        coalesce(nullif(s.start_time,''),t.start_time) as start_time,
+        coalesce(nullif(s.end_time,''),t.end_time) as end_time,s.role,
+        e.id as employee_id,e.name as employee_name,p.label as rank
+      from station_shift_slots s
+      join station_schedule_entries en on en.id=s.entry_id
+      join station_shift_types t on t.id=en.shift_type_id
+      join employees e on e.id=s.employee_id
+      join pay_scales p on p.id=e.pay_scale_id
+      where s.status='filled' and en.entry_date between '${start}' and '${end}'
+      order by en.entry_date,coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
+    `) };
+  }
+  if (module === "preplans") {
+    const [preplans, preplanImports] = await Promise.all([
+      read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`),
+      read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`),
+    ]);
+    return { preplans, preplanImports };
+  }
+  if (module === "hydrants") return { hydrants: await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`) };
+  if (module === "fleet" || module === "inventory") {
+    const [apparatus, compartments, inventory, inventoryPhotos] = await Promise.all([
+      read<StickneyApparatus>(`select id,name,asset_type,manufacturer,model,year,weekly_due_day from stickney_inventory_apparatus order by name`),
+      read<StickneyInventoryCompartment>(`select id,apparatus_id,label,side,sort_order from stickney_inventory_compartments order by apparatus_id,sort_order,label`),
+      module === "inventory" ? read<StickneyInventoryItem>(`select id,apparatus_id,compartment_id,name,manufacturer,model,serial_number,barcode,quantity_required,equipment_category,check_types,source_form,item_order,retired_at from stickney_inventory_equipment where retired_at is null order by apparatus_id,item_order,name`) : Promise.resolve([]),
+      read<StickneyInventoryPhoto>(`select id,apparatus_id,compartment_id,equipment_id,view_level,door_state,original_filename,mime_type,byte_size,approval_status,captured_at from stickney_inventory_photo_views where replaced_at is null order by captured_at desc`),
+    ]);
+    return { apparatus, compartments, inventory, inventoryPhotos };
+  }
+  if (module === "duties") return { duties: await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`) };
+  if (module === "documents") {
+    const [boxCards, policies] = await Promise.all([
+      read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`),
+      read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`),
+    ]);
+    return { boxCards, policies };
+  }
+  if (module === "phones") return { phoneNumbers: await read<StickneyPhoneNumber>(`select id,category,name,emergency_number,non_emergency_number,notes,sort_order from important_phone_numbers order by category,sort_order,name`) };
+  return {};
+}
+
+export async function isStickneyEmployeeWithPhoto(employeeId: string) {
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(employeeId)) return false;
+  const rows = await read<{ id: string }>(`select e.id from employees e join employee_profiles ep on ep.employee_id=e.id where e.active=1 and ep.photo_updated_at is not null and e.id='${employeeId}' limit 1`);
+  return rows.length === 1;
+}

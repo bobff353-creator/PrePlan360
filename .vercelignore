@@ -1,0 +1,17 @@
+.git
+.next
+.vinext
+.wrangler
+.agents
+.openai
+node_modules
+work
+outputs
+dist
+build
+examples
+tests
+skills-lock.json
+*.log
+.env*
+!.env.example
