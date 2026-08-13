@@ -159,7 +159,7 @@ export type StickneyInventoryPhoto = {
   captured_at: string;
 };
 
-export type StickneyDuty = { id: string; day_of_week: number; shift_key: string; duty: string; updated_at: string };
+export type StickneyDuty = { id: string; day_of_week: number; shift_key: string; duty: string; detail?: string; category?: string; assigned_to?: string; due_time?: string; completed_date?: string; updated_at: string };
 export type StickneyBoxCard = { id: string; title: string; address: string; box_number: string; access_notes: string; details: string; department: string; document_url: string; document_page: number; status: string; updated_at: string };
 export type StickneyPolicy = { id: string; title: string; policy_number: string; category: string; effective_date: string; body: string; status: string; updated_at: string };
 export type StickneyPhoneNumber = { id: string; category: string; name: string; emergency_number: string; non_emergency_number: string; notes: string; sort_order: number };
@@ -180,6 +180,7 @@ export type StickneyModuleData = {
   workOrders?: StickneyWorkOrder[];
   fleetSources?: { checks: boolean; readinessExceptions: boolean; workOrders: boolean };
   duties?: StickneyDuty[];
+  dutyContext?: { date: string; dayOfWeek: number; segment: string };
   boxCards?: StickneyBoxCard[];
   policies?: StickneyPolicy[];
   phoneNumbers?: StickneyPhoneNumber[];
@@ -244,6 +245,14 @@ function chicagoDate(daysFromToday = 0) {
   }).formatToParts(now);
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function chicagoDutyContext() {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const weekday = parts.find((item) => item.type === "weekday")?.value || "Sunday";
+  const hour = Number(parts.find((item) => item.type === "hour")?.value || 0);
+  const dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(weekday);
+  return { date: chicagoDate(), dayOfWeek: Math.max(0, dayOfWeek), segment: hour < 12 ? "morning" : hour < 18 ? "afternoon" : "night" };
 }
 
 async function summary(): Promise<StickneySummary> {
@@ -321,7 +330,7 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
     ]);
     return { apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus, compartments, inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory, inventoryPhotos, fleetChecks: fleetChecksResult.rows, readinessExceptions: readinessResult.rows, workOrders: workOrdersResult.rows, fleetSources: { checks: fleetChecksResult.connected, readinessExceptions: readinessResult.connected, workOrders: workOrdersResult.connected } };
   }
-  if (module === "duties") { const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`); return { duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties }; }
+  if (module === "duties") { const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`); return { duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties, dutyContext: chicagoDutyContext() }; }
   if (module === "documents") {
     const [boxCards, policies] = await Promise.all([
       read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`),

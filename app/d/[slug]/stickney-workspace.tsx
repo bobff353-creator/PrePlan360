@@ -2,6 +2,7 @@
 import type { StickneyModuleData } from "@/db/stickney";
 import StaffingWorkspace from "./staffing-workspace";
 import FleetWorkspace from "./fleet-workspace";
+import DailyDutiesWorkspace from "./daily-duties-workspace";
 
 type Props = {
   module: string;
@@ -11,8 +12,6 @@ type Props = {
   supportSessionId?: string;
   connectionError?: string;
 };
-
-const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function SourceNotice() {
   return <div className="stickney-source-notice"><b>Live Stickney records</b><span>Read-only connection to Stickney Firehouse Manager. The source records remain in place and are not deleted or rewritten.</span></div>;
@@ -112,9 +111,7 @@ function Inventory({ departmentId, data, editable, supportSessionId }: { departm
 }
 
 function Duties({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
-  const duties = data.duties ?? [];
-  const grouped = Map.groupBy(duties, (row) => Number(row.day_of_week));
-  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>DAILY DUTIES</span><h2>Recurring station duties</h2></div><b>{duties.length}</b></div>{duties.length ? <div className="stickney-duty-grid">{[...grouped.entries()].map(([day, rows]) => <article key={day}><h3>{dayNames[day] || `Day ${day}`}</h3>{rows.map((row) => <div key={row.id}><b>{row.shift_key}</b><p>{row.duty || "No duty text entered"}</p><EditableRecord departmentId={departmentId} recordType="duty" recordId={row.id} editable={editable} supportSessionId={supportSessionId} fields={[{name:"shift_key",label:"Shift",value:row.shift_key},{name:"duty",label:"Duty",value:row.duty,multiline:true}]}/></div>)}</article>)}</div> : <Empty title="No daily duties" text="The source returned no recurring duty records."/>}</section>;
+  return <DailyDutiesWorkspace departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId}/>;
 }
 
 function Documents({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
