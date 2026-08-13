@@ -94,15 +94,15 @@ function normalize(row: FoundationRow | null, scope: "master" | "department", de
   };
 }
 
-const columns = "department_id,module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,updated_at";
+const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,updated_at";
 
 export async function getMasterFoundation(): Promise<FoundationSettings> {
-  const row = await db().prepare(`SELECT ${columns} FROM platform_foundation_settings WHERE id='master'`).first<FoundationRow>();
+  const row = await db().prepare(`SELECT ${settingsColumns} FROM platform_foundation_settings WHERE id='master'`).first<FoundationRow>();
   return normalize(row, "master", null, true);
 }
 
 export async function getDepartmentFoundation(departmentId: string): Promise<FoundationSettings> {
-  const override = await db().prepare(`SELECT ${columns} FROM department_foundation_settings WHERE department_id=?`).bind(departmentId).first<FoundationRow>();
+  const override = await db().prepare(`SELECT department_id,${settingsColumns} FROM department_foundation_settings WHERE department_id=?`).bind(departmentId).first<FoundationRow>();
   if (override) return normalize(override, "department", departmentId, true);
   const master = await getMasterFoundation();
   return { ...master, scope: "department", department_id: departmentId, is_override: false };
