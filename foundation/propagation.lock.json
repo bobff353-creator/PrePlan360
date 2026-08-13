@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.4",
-  "generatedAt": "2026-08-13T22:10:15.645Z",
+  "release": "2026.08.13.6",
+  "generatedAt": "2026-08-13T22:34:23.808Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -38,8 +38,8 @@
       "departments": "280bdd97d2b686b3d6e1193bf787d553fffd694b8c7b038aeea1748c854e6e50"
     },
     "respond": {
-      "demo": "c27161ddc533a5c87c7c2449ae682c96794e4c51da752f22ccb91f0eb1b5167c",
-      "departments": "9b3ec43e6fd3b839ec31bd766b549097cac1b47b4ad6276c299a7ec8cec41783"
+      "demo": "31dc21b7ef3063f025b9a27a496ccdf32ff57c23e0a3d7284e91852e7dce3a9b",
+      "departments": "ed15301ff74b131ba152709582ce61fc3c7c1a0fdb6fc83d40cc75620a1d6626"
     }
   }
 }

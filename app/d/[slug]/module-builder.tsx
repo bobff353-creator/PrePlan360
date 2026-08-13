@@ -59,6 +59,7 @@ function RespondWorkspace({ moduleName, heading, description, instructions, acti
       <RespondPanel label="Preplan intelligence" title={`${resources.length} connected record${resources.length === 1 ? "" : "s"}`} tone="ready" items={resources} empty="No department-approved preplan, building systems, water-supply, or response resource is linked yet."/>
       <RespondPanel label="Apparatus response" title={`${apparatus.filter((item) => item.operational_status !== "offline").length} available record${apparatus.length === 1 ? "" : "s"}`} tone={apparatus.some((item) => item.operational_status === "attention" || item.operational_status === "offline") ? "danger" : "ready"} items={apparatus} empty="No apparatus response status has been entered."/>
       <RespondPanel label="Staging and guidance" title={`${guidance.length} department entr${guidance.length === 1 ? "y" : "ies"}`} tone="information" items={guidance} empty="No verified staging note, contact, or department guidance has been entered."/>
+      <DepartmentRespondContext activeIncident={activeIncident} incidents={incidents} resources={resources}/>
     </div>
     {instructions ? <div className="respond-department-note"><b>Department instructions</b><span>{instructions}</span></div> : null}
     {editable ? <details className="respond-department-manage"><summary><span className="module-build-plus">+</span><span><b>Configure Respond and manage records</b><small>Changes are saved only to this department workspace.</small></span></summary><div className="module-build-panels">
@@ -67,6 +68,33 @@ function RespondWorkspace({ moduleName, heading, description, instructions, acti
       {data.items.length ? <div className="respond-record-manager"><h3>Edit existing records</h3>{data.items.map((item) => <ModuleItem key={item.id} item={item} editable action={action} supportSessionId={supportSessionId}/>)}</div> : null}
     </div></details> : null}
   </section>;
+}
+
+function DepartmentRespondContext({ activeIncident, incidents, resources }: { activeIncident?: DepartmentModuleItem; incidents: DepartmentModuleItem[]; resources: DepartmentModuleItem[] }) {
+  const currentLocation = activeIncident?.location || "";
+  const exactHistory = currentLocation ? incidents.filter((item) => item.id !== activeIncident?.id && normalizeLocation(item.location) === normalizeLocation(currentLocation)) : [];
+  const currentArea = areaLocationKey(currentLocation);
+  const areaHistory = currentArea ? incidents.filter((item) => item.id !== activeIncident?.id && normalizeLocation(item.location) !== normalizeLocation(currentLocation) && areaLocationKey(item.location) === currentArea) : [];
+  const aSideResource = resources.find((item) => /\ba[\s-]?side\b/i.test(item.title) && /photo|image|view/i.test(item.title));
+  const aSideLink = safeLink(aSideResource?.link_url || "");
+  const streetViewLink = currentLocation ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentLocation)}` : "";
+  return <section className="respond-department-context">
+    <header><span>Incident context</span><b>A-side → CAD notes → exact history → area history</b></header>
+    <div className="respond-context-grid">
+      <article className="respond-context-media"><ContextLabel label="A-side view" value={aSideLink ? "Saved image" : "Street View fallback"}/><div className={`respond-aside-view${aSideLink ? " saved" : ""}`} style={aSideLink ? { backgroundImage: `linear-gradient(180deg, transparent 30%, rgba(4, 9, 14, .85)), url(${JSON.stringify(aSideLink)})` } : undefined}><span>A</span><div><b>{aSideLink ? "Saved department A-side image" : "No saved A-side photo"}</b><small>{aSideLink ? "Confirm image date and building before use." : currentLocation ? "Locate the incident address, then open the available panorama." : "An active incident location is required for the fallback."}</small></div>{aSideLink ? <a href={aSideLink} target="_blank" rel="noreferrer">Open image</a> : streetViewLink ? <a href={streetViewLink} target="_blank" rel="noreferrer">Locate for Street View</a> : null}</div></article>
+      <article><ContextLabel label="Current CAD notes" value={activeIncident ? "Manual incident" : "No active incident"}/><p>{activeIncident?.summary || "No current CAD notes are available. CAD is not connected; an authorized user may enter a verified incident note."}</p></article>
+      <article><ContextLabel label="Exact-address history" value={`${exactHistory.length} found`}/><DepartmentHistoryRows items={exactHistory} empty="No prior incident at this exact saved address."/></article>
+      <article><ContextLabel label="Area history" value={`${areaHistory.length} same-street`}/><DepartmentHistoryRows items={areaHistory} empty="No other incident on this saved street."/></article>
+    </div>
+  </section>;
+}
+
+function ContextLabel({ label, value }: { label: string; value: string }) {
+  return <div className="respond-context-label"><span>{label}</span><b>{value}</b></div>;
+}
+
+function DepartmentHistoryRows({ items, empty }: { items: DepartmentModuleItem[]; empty: string }) {
+  return items.length ? <div className="respond-context-history">{items.slice(0, 2).map((item) => <div key={item.id}><b>{item.title}</b><small>{item.location || "Location not entered"} · {item.operational_status}</small></div>)}</div> : <p className="respond-context-empty">{empty}</p>;
 }
 
 function RespondPanel({ label, title, tone, items, empty }: { label: string; title: string; tone: "ready" | "warning" | "danger" | "information"; items: DepartmentModuleItem[]; empty: string }) {
@@ -86,11 +114,21 @@ function ModuleItemForm({ action, supportSessionId, item }: { action: string; su
     <div className="module-form-row"><label>Type<select name="item_type" defaultValue={item?.item_type || "notice"}><option value="incident">Incident</option><option value="apparatus">Apparatus</option><option value="station">Station</option><option value="notice">Notice</option><option value="resource">Resource</option></select></label><label>Status<select name="operational_status" defaultValue={item?.operational_status || "ready"}><option value="active">Active</option><option value="ready">Ready</option><option value="attention">Needs attention</option><option value="closed">Closed</option><option value="offline">Offline</option><option value="draft">Draft</option></select></label></div>
     <label>Details<textarea name="summary" maxLength={5000} rows={4} defaultValue={item?.summary}/></label>
     <div className="module-form-row"><label>Location<input name="location" maxLength={300} defaultValue={item?.location}/></label><label>Contact<input name="contact" maxLength={300} defaultValue={item?.contact}/></label></div>
-    <div className="module-form-row"><label>Resource link<input name="link_url" type="url" maxLength={1000} placeholder="https://" defaultValue={item?.link_url}/></label><label>Order<input name="sort_order" type="number" min={-9999} max={9999} defaultValue={item?.sort_order ?? 0}/></label></div>
+    <div className="module-form-row"><label>Resource link / A-side image URL<input name="link_url" type="url" maxLength={1000} placeholder="https://" defaultValue={item?.link_url}/></label><label>Order<input name="sort_order" type="number" min={-9999} max={9999} defaultValue={item?.sort_order ?? 0}/></label></div>
     <button type="submit">{item ? "Save entry" : "Add entry"}</button>
   </form>;
 }
 
 function safeLink(value: string) {
   try { const url = new URL(value); return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : ""; } catch { return ""; }
+}
+
+function normalizeLocation(value?: string | null) {
+  return String(value || "").toLowerCase().replace(/\b(street)\b/g, "st").replace(/\b(avenue)\b/g, "ave").replace(/\b(road)\b/g, "rd").replace(/\b(drive)\b/g, "dr").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function areaLocationKey(value?: string | null) {
+  const parts = normalizeLocation(value).split(" ").filter(Boolean);
+  if (parts.length && /^\d+$/.test(parts[0])) parts.shift();
+  return parts.slice(0, 2).join(" ");
 }
