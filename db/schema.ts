@@ -202,6 +202,40 @@ export const stickneyRecordOverrides = sqliteTable("stickney_record_overrides", 
   index("idx_stickney_overrides_department_type").on(table.departmentId, table.recordType, table.status),
 ]);
 
+export const departmentModuleConfigs = sqliteTable("department_module_configs", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  moduleKey: text("module_key").notNull(),
+  heading: text("heading").notNull().default(""),
+  description: text("description").notNull().default(""),
+  instructions: text("instructions").notNull().default(""),
+  createdBy: text("created_by").notNull(),
+  updatedBy: text("updated_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_department_module_configs_key").on(table.departmentId, table.moduleKey)]);
+
+export const departmentModuleItems = sqliteTable("department_module_items", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  moduleKey: text("module_key").notNull(),
+  itemType: text("item_type").notNull().default("notice"),
+  title: text("title").notNull(),
+  operationalStatus: text("operational_status").notNull().default("ready"),
+  summary: text("summary").notNull().default(""),
+  location: text("location").notNull().default(""),
+  contact: text("contact").notNull().default(""),
+  linkUrl: text("link_url").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+  recordStatus: text("record_status").notNull().default("active"),
+  createdBy: text("created_by").notNull(),
+  updatedBy: text("updated_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_department_module_items_list").on(table.departmentId, table.moduleKey, table.recordStatus, table.sortOrder),
+]);
+
 export const accessRequests = sqliteTable("access_requests", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),

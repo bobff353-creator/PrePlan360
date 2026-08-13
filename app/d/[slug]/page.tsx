@@ -1,12 +1,13 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
-import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getSupportSession, isOwner, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
+import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
 import { loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
 import AssetManager from "./asset-manager";
 import ReferenceLibrary from "./reference-library";
 import StickneyWorkspace from "./stickney-workspace";
+import ModuleBuilder from "./module-builder";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const active = modules.find(([key]) => key === selected) || modules[0];
   const supportSession = owner && query.support ? await getSupportSession(query.support) : null;
   const ownerSupport = !!supportSession && supportSession.owner_user_id === user.userId && supportSession.department_id === department.id && supportSession.status === "active";
-  const permissionByModule = ({ staffing: "staffing", scheduling: "scheduling", preplans: "preplans", fleet: "fleet", inventory: "inventory", duties: "duties", documents: "documents", phones: "phones", hydrants: "hydrants" } as const)[active[0] as "staffing" | "scheduling" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
+  const permissionByModule = ({ "live-ops": "live_ops", respond: "respond", staffing: "staffing", scheduling: "scheduling", preplans: "preplans", fleet: "fleet", inventory: "inventory", duties: "duties", documents: "documents", phones: "phones", hydrants: "hydrants" } as const)[active[0] as "live-ops" | "respond" | "staffing" | "scheduling" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
   const editable = permissionByModule ? await canDepartmentPermission(user.userId, department.id, permissionByModule, ownerSupport ? supportSession?.id : "") : false;
   const supportQuery = ownerSupport ? `&support=${encodeURIComponent(supportSession.id)}` : "";
   const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([
@@ -52,6 +53,8 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
     listDepartmentHydrants(department.id),
     listSharedHydrants(department.id),
   ]) : null;
+  const configurableModule = active[0] === "live-ops" || active[0] === "respond" ? active[0] : null;
+  const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
   const isStickney = department.slug === "stickney";
   let stickneyData: StickneyModuleData | null = null;
   let stickneyConnectionError = "";
@@ -69,7 +72,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
     <aside className="dept-app-sidebar"><div className="dept-app-brand"><DepartmentLogo department={department}/><div><b>{department.app_title || department.name}</b><small>Department operations</small></div></div><nav>{modules.map(([key, label, number]) => <a className={active[0] === key ? "active" : ""} href={`/d/${slug}?module=${key}${supportQuery}`} key={key}><span>{number}</span>{label}</a>)}</nav><div className="dept-sidebar-foot"><span><i/> {ownerSupport ? "Audited owner support" : "Secure department app"}</span><form method="post" action="/api/member/logout"><button type="submit">Sign out</button></form></div></aside>
     <section className="dept-app-workspace"><header><button className="dept-mobile-mark" aria-label="Department menu"><DepartmentLogo department={department}/></button><div><span>{department.name}</span><b>{active[1]}</b></div><div className="dept-user"><span>{user.displayName}</span>{owner ? <a href="/owner">Owner console</a> : <a href="/portal">Switch department</a>}</div></header>
       <div className="dept-app-content"><div className="dept-app-heading"><div><span>DEPARTMENT WORKSPACE</span><h1>{active[1]}</h1><p>{department.welcome_message || `${department.name} operations, connected in one web app.`}</p></div><div className="dept-app-status"><i/> App configured</div></div>
-      {stickneyData ? <><StickneyWorkspace module={active[0]} departmentId={department.id} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined}/>{active[0] === "fleet" ? <details className="stickney-archive"><summary>PrePlan 360 native asset records</summary><AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/></details> : null}{referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : null}</> : active[0] === "dashboard" ? <Dashboard department={department.name} stations={department.station_count} vehicles={department.vehicle_count} weather={department.weather_location} supportQuery={supportQuery}/> : active[0] === "fleet" ? <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : active[0] === "inspections" ? <ComingSoon/> : <ModuleEmpty moduleName={active[1]}/>}
+      {moduleData && configurableModule ? <ModuleBuilder moduleKey={configurableModule} moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : stickneyData ? <><StickneyWorkspace module={active[0]} departmentId={department.id} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined}/>{active[0] === "fleet" ? <details className="stickney-archive"><summary>PrePlan 360 native asset records</summary><AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/></details> : null}{referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : null}</> : active[0] === "dashboard" ? <Dashboard department={department.name} stations={department.station_count} vehicles={department.vehicle_count} weather={department.weather_location} supportQuery={supportQuery}/> : active[0] === "fleet" ? <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : active[0] === "inspections" ? <ComingSoon/> : <ModuleEmpty moduleName={active[1]}/>}
       </div>
     </section>
   </main>;

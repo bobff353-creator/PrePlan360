@@ -3,7 +3,7 @@ import type { ChatGPTUser } from "@/app/chatgpt-auth";
 
 export type Department = { id: string; name: string; slug: string; status: string; station_count: number; vehicle_count: number; weather_location: string; app_title: string; welcome_message: string; brand_primary: string; brand_secondary: string; brand_accent: string; brand_action: string; brand_alert: string; logo_key: string | null; logo_content_type: string | null; updated_at: string };
 export type AccessRequest = { id: string; user_id: string; email: string; display_name: string; department_name: string; requested_role: string; note: string; status: string; department_id: string | null; created_at: string };
-export const departmentPermissions = ["staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants", "settings", "members"] as const;
+export const departmentPermissions = ["live_ops", "respond", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants", "settings", "members"] as const;
 export type DepartmentPermission = typeof departmentPermissions[number];
 export type Membership = Department & { membership_role: string; permissions_json: string };
 export type DepartmentMember = { id: string; user_id: string; email: string; display_name: string; role: string; status: string; permissions_json: string; created_at: string; updated_at: string };
@@ -18,6 +18,9 @@ export type DepartmentPreplan = { id: string; department_id: string; property_na
 export type SharedPreplan = Omit<DepartmentPreplan, "internal_notes"> & { department_name: string };
 export type DepartmentHydrant = { id: string; department_id: string; hydrant_number: string; location: string; latitude: string; longitude: string; flow_gpm: number | null; operational_notes: string; internal_notes: string; last_inspected: string | null; status: string; visibility: string; updated_at: string };
 export type SharedHydrant = Omit<DepartmentHydrant, "internal_notes"> & { department_name: string };
+export type DepartmentModuleConfig = { id: string; department_id: string; module_key: string; heading: string; description: string; instructions: string; updated_at: string };
+export type DepartmentModuleItem = { id: string; department_id: string; module_key: string; item_type: string; title: string; operational_status: string; summary: string; location: string; contact: string; link_url: string; sort_order: number; updated_at: string };
+export type DepartmentModuleData = { config: DepartmentModuleConfig | null; items: DepartmentModuleItem[] };
 
 export function db() { return database(); }
 export function id(prefix: string) { return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`; }
@@ -59,3 +62,10 @@ export async function listDepartmentPreplans(departmentId: string): Promise<Depa
 export async function listSharedPreplans(viewerDepartmentId: string): Promise<SharedPreplan[]> { const result = await db().prepare("SELECT p.id,p.department_id,p.property_name,p.address,p.operational_summary,p.last_reviewed,p.status,p.visibility,p.updated_at,d.name AS department_name FROM department_preplans p JOIN departments d ON d.id=p.department_id WHERE p.department_id<>? AND p.visibility='mutual_aid' AND p.status='active' AND d.status IN ('configured','active') ORDER BY d.name,p.property_name").bind(viewerDepartmentId).all<SharedPreplan>(); return result.results; }
 export async function listDepartmentHydrants(departmentId: string): Promise<DepartmentHydrant[]> { const result = await db().prepare("SELECT id,department_id,hydrant_number,location,latitude,longitude,flow_gpm,operational_notes,internal_notes,last_inspected,status,visibility,updated_at FROM department_hydrants WHERE department_id=? ORDER BY hydrant_number").bind(departmentId).all<DepartmentHydrant>(); return result.results; }
 export async function listSharedHydrants(viewerDepartmentId: string): Promise<SharedHydrant[]> { const result = await db().prepare("SELECT h.id,h.department_id,h.hydrant_number,h.location,h.latitude,h.longitude,h.flow_gpm,h.operational_notes,h.last_inspected,h.status,h.visibility,h.updated_at,d.name AS department_name FROM department_hydrants h JOIN departments d ON d.id=h.department_id WHERE h.department_id<>? AND h.visibility='mutual_aid' AND h.status='in_service' AND d.status IN ('configured','active') ORDER BY d.name,h.hydrant_number").bind(viewerDepartmentId).all<SharedHydrant>(); return result.results; }
+export async function getDepartmentModuleData(departmentId: string, moduleKey: string): Promise<DepartmentModuleData> {
+  const [config, items] = await Promise.all([
+    db().prepare("SELECT id,department_id,module_key,heading,description,instructions,updated_at FROM department_module_configs WHERE department_id=? AND module_key=?").bind(departmentId, moduleKey).first<DepartmentModuleConfig>(),
+    db().prepare("SELECT id,department_id,module_key,item_type,title,operational_status,summary,location,contact,link_url,sort_order,updated_at FROM department_module_items WHERE department_id=? AND module_key=? AND record_status='active' ORDER BY sort_order,title").bind(departmentId, moduleKey).all<DepartmentModuleItem>(),
+  ]);
+  return { config, items: items.results };
+}
