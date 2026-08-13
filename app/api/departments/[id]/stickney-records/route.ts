@@ -3,7 +3,7 @@ import { audit, canDepartmentPermission, db, getDepartment, id, now, type Depart
 import type { StickneyEditableRecordType } from "@/db/stickney";
 
 const definitions: Record<StickneyEditableRecordType, { permission: DepartmentPermission; module: string; fields: Record<string, number> }> = {
-  employee: { permission: "staffing", module: "staffing", fields: { name: 160, rank: 100, employment_type: 100, driver_status: 100, start_date: 20 } },
+  employee: { permission: "staffing", module: "staffing", fields: { name: 160, rank: 100, employment_type: 100, driver_status: 100, start_date: 20, employee_number: 80, phone: 80, email: 200, schedule_sms_opt_in: 1, station_notify_email: 1, station_notify_text: 1, home_shift: 120, station_role: 120, emergency_name: 160, emergency_relationship: 100, emergency_phone: 80, notes: 3000 } },
   schedule: { permission: "scheduling", module: "scheduling", fields: { work_date: 20, shift_name: 120, start_time: 20, end_time: 20, role: 120, employee_name: 160, rank: 100 } },
   preplan: { permission: "preplans", module: "preplans", fields: { business_name: 160, address: 240, construction_type: 120, floor_count: 10, access_info: 2000, alarm_system: 500, sprinkler_system: 500, fdc: 500 } },
   hydrant: { permission: "hydrants", module: "hydrants", fields: { hydrant_number: 120, address: 240, service_status: 80, manufacturer: 120, model: 120, notes: 2000 } },
@@ -21,14 +21,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!user) return new Response("Sign in required", { status: 401 });
   const form = await request.formData();
   const recordType = String(form.get("record_type") || "") as StickneyEditableRecordType;
-  const recordId = String(form.get("record_id") || "").trim().slice(0, 120);
+  let recordId = String(form.get("record_id") || "").trim().slice(0, 120);
   const supportId = String(form.get("support_session_id") || "").trim().slice(0, 120);
   const definition = definitions[recordType];
   if (!definition || !recordId) return new Response("Invalid record", { status: 400 });
   const department = await getDepartment(departmentId);
   if (!department || department.slug !== "stickney") return new Response("Stickney department not found", { status: 404 });
   if (!(await canDepartmentPermission(user.userId, departmentId, definition.permission, supportId))) return new Response("This account cannot edit this area", { status: 403 });
+  if (recordType === "employee" && recordId === "new") recordId = id("employee");
   const data = Object.fromEntries(Object.entries(definition.fields).map(([field, max]) => [field, String(form.get(field) || "").trim().slice(0, max)]));
+  if (recordType === "employee" && !data.name) return new Response("Employee name is required", { status: 400 });
+  for (const field of ["schedule_sms_opt_in", "station_notify_email", "station_notify_text"]) data[field] = data[field] === "1" ? "1" : "0";
   if (recordType === "preplan") data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
   const at = now();
   await db().prepare("INSERT INTO stickney_record_overrides (id,department_id,record_type,source_record_id,data_json,status,created_by,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(department_id,record_type,source_record_id) DO UPDATE SET data_json=excluded.data_json,status='active',updated_by=excluded.updated_by,updated_at=excluded.updated_at").bind(id("override"), departmentId, recordType, recordId, JSON.stringify(data), "active", user.userId, user.userId, at, at).run();

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- protected operational images are streamed by authenticated API routes */
 import type { StickneyModuleData } from "@/db/stickney";
+import StaffingWorkspace from "./staffing-workspace";
 
 type Props = {
   module: string;
@@ -75,7 +76,7 @@ function StickneyDashboard({ data }: { data: StickneyModuleData }) {
 
 function Staffing({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const employees = data.employees ?? [];
-  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>PERSONNEL</span><h2>Active employees</h2></div><b>{employees.length}</b></div>{employees.length ? <div className="stickney-person-grid">{employees.map((employee) => <article key={employee.id}><div className="stickney-person-photo">{employee.photo_updated_at ? <img src={`/api/departments/${departmentId}/stickney-photo/${employee.id}?v=${encodeURIComponent(employee.photo_updated_at)}`} alt={`${employee.name} profile`}/> : <span>{employee.name.split(/\s+/).slice(0,2).map((part) => part[0]).join("").toUpperCase()}</span>}</div><div><b>{employee.name}</b><span>{employee.rank}</span><small>{[employee.employment_type, employee.driver_status].filter(Boolean).join(" · ") || "Personnel record"}</small>{employee.start_date ? <small>Started {formatDate(employee.start_date)}</small> : null}</div><EditableRecord departmentId={departmentId} recordType="employee" recordId={employee.id} editable={editable} supportSessionId={supportSessionId} fields={[{name:"name",label:"Name",value:employee.name},{name:"rank",label:"Rank",value:employee.rank},{name:"employment_type",label:"Employment type",value:employee.employment_type},{name:"driver_status",label:"Driver status",value:employee.driver_status},{name:"start_date",label:"Start date",value:employee.start_date}]}/></article>)}</div> : <Empty title="No active employees" text="The Stickney source returned no active employee records."/>}</section>;
+  return employees.length ? <StaffingWorkspace departmentId={departmentId} employees={employees} editable={editable} supportSessionId={supportSessionId}/> : <section className="stickney-panel"><SourceNotice/><Empty title="No active employees" text="The Stickney source returned no active employee records."/></section>;
 }
 
 function Schedule({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {

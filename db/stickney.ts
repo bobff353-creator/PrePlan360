@@ -28,6 +28,18 @@ export type StickneyEmployee = {
   driver_status: string;
   start_date: string | null;
   photo_updated_at: string | null;
+  employee_number: string;
+  phone: string;
+  email: string;
+  schedule_sms_opt_in: number;
+  station_notify_email: number;
+  station_notify_text: number;
+  home_shift: string;
+  station_role: string;
+  emergency_name: string;
+  emergency_relationship: string;
+  emergency_phone: string;
+  notes: string;
 };
 
 export type StickneyScheduleAssignment = {
@@ -183,7 +195,13 @@ async function read<T>(sql: string): Promise<T[]> {
 async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
   const result = await import("@/db/access").then(({ db }) => db().prepare("SELECT source_record_id,data_json,status FROM stickney_record_overrides WHERE department_id=? AND record_type=?").bind(departmentId, recordType).all<{ source_record_id: string; data_json: string; status: string }>());
   const overrides = new Map(result.results.map((row) => [row.source_record_id, row]));
-  return rows.flatMap((row) => { const override = overrides.get(row.id); if (override?.status === "hidden") return []; if (!override) return [row]; try { return [{ ...row, ...JSON.parse(override.data_json), id: row.id } as T]; } catch { return [row]; } });
+  const merged = rows.flatMap((row) => { const override = overrides.get(row.id); if (override?.status === "hidden") return []; if (!override) return [row]; try { return [{ ...row, ...JSON.parse(override.data_json), id: row.id } as T]; } catch { return [row]; } });
+  const sourceIds = new Set(rows.map((row) => row.id));
+  const local = result.results.flatMap((row) => {
+    if (sourceIds.has(row.source_record_id) || row.status === "hidden" || !row.source_record_id.startsWith("employee_")) return [];
+    try { return [{ ...JSON.parse(row.data_json), id: row.source_record_id } as T]; } catch { return []; }
+  });
+  return [...merged, ...local];
 }
 
 function chicagoDate(daysFromToday = 0) {
@@ -222,7 +240,16 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
   if (module === "staffing") {
     const employees = await read<StickneyEmployee>(`
       select e.id,e.name,p.label as rank,coalesce(ep.employment_type,'') as employment_type,
-        coalesce(ep.driver_status,'') as driver_status,ep.start_date,ep.photo_updated_at
+        coalesce(ep.driver_status,'') as driver_status,ep.start_date,ep.photo_updated_at,
+        coalesce(ep.employee_number,'') as employee_number,coalesce(ep.phone,'') as phone,
+        coalesce(ep.email,'') as email,coalesce(ep.schedule_sms_opt_in,0) as schedule_sms_opt_in,
+        coalesce(ep.station_notify_email,0) as station_notify_email,
+        coalesce(ep.station_notify_text,0) as station_notify_text,
+        coalesce((select t.name from station_standing_assignments sa join station_shift_types t on t.id=sa.shift_type_id where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as home_shift,
+        coalesce((select sa.role from station_standing_assignments sa where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as station_role,
+        coalesce(ep.emergency_name,'') as emergency_name,
+        coalesce(ep.emergency_relationship,'') as emergency_relationship,
+        coalesce(ep.emergency_phone,'') as emergency_phone,coalesce(ep.notes,'') as notes
       from employees e join pay_scales p on p.id=e.pay_scale_id
       left join employee_profiles ep on ep.employee_id=e.id
       where e.active=1 order by e.sort_order,e.name
