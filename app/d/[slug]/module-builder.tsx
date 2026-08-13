@@ -25,7 +25,7 @@ export default function ModuleBuilder({ moduleKey, moduleName, departmentId, dat
   return <section className="module-builder">
     <header className="module-builder-intro"><div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>{heading}</h2><p>{description}</p>{instructions ? <small>{instructions}</small> : null}</div><div className="module-connection-state"><i/>Manual workspace</div></header>
     {data.items.length ? <div className="module-item-grid">{data.items.map((item) => <ModuleItem key={item.id} item={item} editable={editable} action={action} supportSessionId={supportSessionId}/>)}</div> : <div className="module-blank-state"><b>No department entries yet.</b><span>{editable ? "Use the build control below to add the first real entry." : "An authorized owner or editor can build this module."}</span></div>}
-    {editable ? <details className="module-build-control" open={!data.items.length && !data.config}>
+    {editable ? <details className="module-build-control">
       <summary><span className="module-build-plus">+</span><span><b>Build this module</b><small>Configure the workspace and add real operational entries</small></span></summary>
       <div className="module-build-panels">
         <form method="post" action={action} className="module-build-form">
