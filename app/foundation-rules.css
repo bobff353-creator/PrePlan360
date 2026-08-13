@@ -1,0 +1,2 @@
+.dept-foundation-rulebar{display:flex;align-items:center;gap:10px;margin:-18px 0 20px;padding:10px 13px;border-left:3px solid var(--dept-accent);background:rgba(214,169,54,.06);font-size:8px}.dept-foundation-rulebar span{color:var(--dept-accent);font-weight:900;text-transform:uppercase}.dept-foundation-rulebar b{color:#dce6ed}.dept-foundation-rulebar small{color:#8498a7}
+@media(max-width:640px){.dept-foundation-rulebar{align-items:flex-start;flex-direction:column}}

@@ -1,17 +1,16 @@
 import { requireOwnerUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/db/access";
+import { isOwner, listDepartments } from "@/db/access";
+import { getDepartmentFoundation, getMasterFoundation } from "@/db/foundation";
+import FoundationEditor from "./foundation-editor";
 
 export const dynamic = "force-dynamic";
 
-const workspaces = [
-  ["Occupancy register", "Building identity, contacts, hazards, systems, permit types, and inspection cadence."],
-  ["Inspection queue", "Assignment, scheduling, field status, reinspection, and supervisor review."],
-  ["Forms and code sets", "Owner-controlled templates, editions, local amendments, findings, and correction language."],
-  ["Reporting and exchange", "PDF reports, controlled exports, provider adapters, and future authorized integrations."],
-];
-
-export default async function OwnerDevelopmentPreview() {
+export default async function OwnerFoundation({ searchParams }: { searchParams: Promise<{ department?: string; saved?: string }> }) {
+  const query = await searchParams;
   const user = await requireOwnerUser("/owner/demo");
-  if (!(await isOwner(user.userId))) return <main className="access-shell"><section className="owner-claim"><div className="access-kicker">OWNER ACCESS REQUIRED</div><h1>Development preview is protected.</h1><p>Only the verified platform owner can open unpublished modules.</p><a className="access-primary" href="/portal">Department sign in</a></section></main>;
-  return <main className="access-shell owner-dev"><header className="access-header"><a className="department-admin-brand" href="/owner"><span className="department-monogram">DEV</span><span><b>Owner development build</b><small>Unpublished workspace</small></span></a><div className="access-account"><span>{user.displayName}</span><a href="/owner">Return to Owner Command</a></div></header><section className="access-page"><div className="owner-dev-banner"><span>OWNER ONLY · NOT PUBLISHED</span><h1>Inspections</h1><p>This module stays hidden behind “Coming Soon” everywhere else. Build and review its structure here without exposing occupancies, inspectors, schedules, or compliance information.</p></div><div className="owner-dev-grid">{workspaces.map(([title, copy], index) => <article key={title}><span>0{index + 1}</span><h2>{title}</h2><p>{copy}</p><button disabled>Continue building</button></article>)}</div><div className="owner-dev-state"><div><span>DATA CONNECTION</span><h2>No department inspection records connected</h2><p>Real records will appear only after the module is approved, department-scoped authorization is verified, and a migration/import path is selected.</p></div><b>Protected empty state</b></div></section></main>;
+  if (!(await isOwner(user.userId))) return <main className="access-shell"><section className="owner-claim"><div className="access-kicker">OWNER ACCESS REQUIRED</div><h1>Owner foundation is protected.</h1><p>Only the verified platform owner can change the master department build.</p><a className="access-primary" href="/portal">Department sign in</a></section></main>;
+  const departments = await listDepartments();
+  const selected = departments.find((department) => department.id === query.department) ?? null;
+  const settings = selected ? await getDepartmentFoundation(selected.id) : await getMasterFoundation();
+  return <main className="access-shell owner-dev foundation-page"><header className="access-header"><a className="department-admin-brand" href="/owner"><span className="department-monogram">360</span><span><b>Owner Foundation</b><small>Master department build</small></span></a><div className="access-account"><span>{user.displayName}</span><a href="/owner">Return to Owner Command</a></div></header><section className="access-page"><div className="owner-dev-banner"><span>OWNER ONLY · SAVED PLATFORM SETTINGS</span><h1>Every department starts here.</h1><p>Use the full product demo for workflow testing, and use this foundation editor for the saved rules every attached department inherits. A department override changes only that department.</p><div className="foundation-top-actions"><a className="access-primary" href="/demo?owner=1">Open usable full demo</a><form method="get" action="/owner/demo"><label>Editing<select name="department" defaultValue={selected?.id || ""}><option value="">Master foundation · all departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label><button className="access-secondary" type="submit">Load</button></form></div></div>{query.saved ? <div className="owner-invite-ready"><b>Foundation saved.</b><span>{query.saved === "inherited" ? "This department now follows the master foundation." : "The saved settings are active in the department build."}</span></div> : null}{selected ? <div className={`foundation-inheritance ${settings.is_override ? "override" : "inherited"}`}><b>{selected.name}</b><span>{settings.is_override ? "Using a department-specific override" : "Inheriting the master owner foundation"}</span><a href={`/d/${selected.slug}`}>Open department app</a></div> : <div className="foundation-inheritance inherited"><b>Master foundation</b><span>New and existing departments inherit these settings until an override is saved.</span></div>}<FoundationEditor settings={settings} scopeName={selected?.name || "All departments"}/></section></main>;
 }

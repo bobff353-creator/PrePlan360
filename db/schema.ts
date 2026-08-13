@@ -236,6 +236,42 @@ export const departmentModuleItems = sqliteTable("department_module_items", {
   index("idx_department_module_items_list").on(table.departmentId, table.moduleKey, table.recordStatus, table.sortOrder),
 ]);
 
+export const platformFoundationSettings = sqliteTable("platform_foundation_settings", {
+  id: text("id").primaryKey(),
+  moduleOrderJson: text("module_order_json").notNull().default("[]"),
+  hiddenModulesJson: text("hidden_modules_json").notNull().default("[]"),
+  boardRotationSeconds: integer("board_rotation_seconds").notNull().default(8),
+  responseDurationSeconds: integer("response_duration_seconds").notNull().default(12),
+  shiftHoursOn: integer("shift_hours_on").notNull().default(24),
+  shiftHoursOff: integer("shift_hours_off").notNull().default(48),
+  shiftStartTime: text("shift_start_time").notNull().default("07:00"),
+  overtimePeriodDays: integer("overtime_period_days").notNull().default(14),
+  overtimeThresholdHours: integer("overtime_threshold_hours").notNull().default(212),
+  overtimeAssignmentRule: text("overtime_assignment_rule").notNull().default("Department-defined rotation"),
+  schedulingNotes: text("scheduling_notes").notNull().default(""),
+  overtimeNotes: text("overtime_notes").notNull().default(""),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const departmentFoundationSettings = sqliteTable("department_foundation_settings", {
+  departmentId: text("department_id").primaryKey(),
+  moduleOrderJson: text("module_order_json").notNull().default("[]"),
+  hiddenModulesJson: text("hidden_modules_json").notNull().default("[]"),
+  boardRotationSeconds: integer("board_rotation_seconds").notNull().default(8),
+  responseDurationSeconds: integer("response_duration_seconds").notNull().default(12),
+  shiftHoursOn: integer("shift_hours_on").notNull().default(24),
+  shiftHoursOff: integer("shift_hours_off").notNull().default(48),
+  shiftStartTime: text("shift_start_time").notNull().default("07:00"),
+  overtimePeriodDays: integer("overtime_period_days").notNull().default(14),
+  overtimeThresholdHours: integer("overtime_threshold_hours").notNull().default(212),
+  overtimeAssignmentRule: text("overtime_assignment_rule").notNull().default("Department-defined rotation"),
+  schedulingNotes: text("scheduling_notes").notNull().default(""),
+  overtimeNotes: text("overtime_notes").notNull().default(""),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const accessRequests = sqliteTable("access_requests", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
