@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import type { DepartmentModuleData, DepartmentModuleItem } from "@/db/access";
 
 const defaults = {
@@ -19,19 +16,20 @@ const defaults = {
 type ModuleKey = keyof typeof defaults;
 
 export default function ModuleBuilder({ moduleKey, moduleName, departmentId, data, editable, supportSessionId }: { moduleKey: ModuleKey; moduleName: string; departmentId: string; data: DepartmentModuleData; editable: boolean; supportSessionId: string }) {
-  const [builderOpen, setBuilderOpen] = useState(false);
   const fallback = defaults[moduleKey];
   const heading = data.config?.heading || fallback.heading;
   const description = data.config?.description || fallback.description;
   const instructions = data.config?.instructions || fallback.instructions;
   const action = `/api/departments/${departmentId}/modules/${moduleKey}`;
+  const controlId = `module-builder-${moduleKey}`;
 
   return <section className="module-builder">
     <header className="module-builder-intro"><div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>{heading}</h2><p>{description}</p>{instructions ? <small>{instructions}</small> : null}</div><div className="module-connection-state"><i/>Manual workspace</div></header>
     {data.items.length ? <div className="module-item-grid">{data.items.map((item) => <ModuleItem key={item.id} item={item} editable={editable} action={action} supportSessionId={supportSessionId}/>)}</div> : <div className="module-blank-state"><b>No department entries yet.</b><span>{editable ? "Use the build control below to add the first real entry." : "An authorized owner or editor can build this module."}</span></div>}
-    {editable ? <section className={`module-build-control${builderOpen ? " open" : ""}`}>
-      <button className="module-build-toggle" type="button" aria-expanded={builderOpen} onClick={() => setBuilderOpen((open) => !open)}><span className="module-build-plus">+</span><span><b>Build this module</b><small>Configure the workspace and add real operational entries</small></span></button>
-      {builderOpen ? <div className="module-build-panels">
+    {editable ? <section className="module-build-control">
+      <input className="module-build-checkbox" id={controlId} type="checkbox"/>
+      <label className="module-build-toggle" htmlFor={controlId}><span className="module-build-plus">+</span><span><b>Build this module</b><small>Configure the workspace and add real operational entries</small></span></label>
+      <div className="module-build-panels">
         <form method="post" action={action} className="module-build-form">
           <input type="hidden" name="action" value="save_config"/><input type="hidden" name="support_session_id" value={supportSessionId}/>
           <h3>Workspace setup</h3>
@@ -41,7 +39,7 @@ export default function ModuleBuilder({ moduleKey, moduleName, departmentId, dat
           <button type="submit">Save workspace</button>
         </form>
         <ModuleItemForm action={action} supportSessionId={supportSessionId}/>
-      </div> : null}
+      </div>
     </section> : null}
   </section>;
 }
