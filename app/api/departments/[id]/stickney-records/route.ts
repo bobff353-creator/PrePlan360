@@ -7,7 +7,7 @@ const definitions: Record<StickneyEditableRecordType, { permission: DepartmentPe
   schedule: { permission: "scheduling", module: "scheduling", fields: { work_date: 20, shift_name: 120, start_time: 20, end_time: 20, role: 120, employee_name: 160, rank: 100 } },
   preplan: { permission: "preplans", module: "preplans", fields: { business_name: 160, address: 240, construction_type: 120, floor_count: 10, access_info: 2000, alarm_system: 500, sprinkler_system: 500, fdc: 500 } },
   hydrant: { permission: "hydrants", module: "hydrants", fields: { hydrant_number: 120, address: 240, service_status: 80, manufacturer: 120, model: 120, notes: 2000 } },
-  apparatus: { permission: "fleet", module: "fleet", fields: { name: 160, asset_type: 100, manufacturer: 120, model: 120, year: 10, weekly_due_day: 2 } },
+  apparatus: { permission: "fleet", module: "fleet", fields: { name: 160, asset_type: 100, status: 40, vin: 17, manufacturer: 120, model: 120, year: 10, weekly_due_day: 2, maintenance_schedule: 5000, owner_manual_url: 1000, service_manual_url: 1000, parts_catalog_url: 1000, preferred_vendor: 240 } },
   inventory: { permission: "inventory", module: "inventory", fields: { name: 160, manufacturer: 120, model: 120, serial_number: 120, barcode: 120, quantity_required: 10, equipment_category: 120 } },
   duty: { permission: "duties", module: "duties", fields: { shift_key: 100, duty: 3000 } },
   box_card: { permission: "documents", module: "documents", fields: { title: 200, address: 240, box_number: 100, access_notes: 3000, details: 5000 } },
@@ -29,8 +29,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!department || department.slug !== "stickney") return new Response("Stickney department not found", { status: 404 });
   if (!(await canDepartmentPermission(user.userId, departmentId, definition.permission, supportId))) return new Response("This account cannot edit this area", { status: 403 });
   if (recordType === "employee" && recordId === "new") recordId = id("employee");
+  if (recordType === "apparatus" && recordId === "new") recordId = id("apparatus");
   const data = Object.fromEntries(Object.entries(definition.fields).map(([field, max]) => [field, String(form.get(field) || "").trim().slice(0, max)]));
   if (recordType === "employee" && !data.name) return new Response("Employee name is required", { status: 400 });
+  if (recordType === "apparatus" && !data.name) return new Response("Apparatus name is required", { status: 400 });
   for (const field of ["schedule_sms_opt_in", "station_notify_email", "station_notify_text"]) data[field] = data[field] === "1" ? "1" : "0";
   if (recordType === "preplan") data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
   const at = now();

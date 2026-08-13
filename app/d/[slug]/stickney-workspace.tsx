@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- protected operational images are streamed by authenticated API routes */
 import type { StickneyModuleData } from "@/db/stickney";
 import StaffingWorkspace from "./staffing-workspace";
+import FleetWorkspace from "./fleet-workspace";
 
 type Props = {
   module: string;
@@ -97,10 +98,7 @@ function Hydrants({ departmentId, data, editable, supportSessionId }: { departme
 }
 
 function Fleet({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
-  const apparatus = data.apparatus ?? [];
-  const compartments = data.compartments ?? [];
-  const photos = data.inventoryPhotos ?? [];
-  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>APPARATUS</span><h2>Vehicles and apparatus</h2><p>Current profiles from Stickney&apos;s operational inventory.</p></div><b>{apparatus.length}</b></div>{apparatus.length ? <div className="stickney-card-grid apparatus">{apparatus.map((unit) => { const unitCompartments = compartments.filter((item) => item.apparatus_id === unit.id); const unitPhotos = photos.filter((item) => item.apparatus_id === unit.id); return <article key={unit.id}>{unitPhotos[0] ? <img className="stickney-apparatus-photo" src={`/api/departments/${departmentId}/stickney-inventory-photo/${unitPhotos[0].id}`} alt={`${unit.name} inventory view`}/> : null}<span>{unit.asset_type || "Apparatus"}</span><h3>{unit.name}</h3><p>{[unit.year,unit.manufacturer,unit.model].filter(Boolean).join(" ") || "Vehicle details not entered"}</p><dl><div><dt>Compartments</dt><dd>{unitCompartments.length}</dd></div><div><dt>Photos</dt><dd>{unitPhotos.length}</dd></div><div><dt>Weekly due</dt><dd>{unit.weekly_due_day == null ? "Not set" : dayNames[unit.weekly_due_day] || `Day ${unit.weekly_due_day}`}</dd></div></dl><EditableRecord departmentId={departmentId} recordType="apparatus" recordId={unit.id} editable={editable} supportSessionId={supportSessionId} fields={[{name:"name",label:"Name",value:unit.name},{name:"asset_type",label:"Asset type",value:unit.asset_type},{name:"manufacturer",label:"Manufacturer",value:unit.manufacturer},{name:"model",label:"Model",value:unit.model},{name:"year",label:"Year",value:unit.year},{name:"weekly_due_day",label:"Weekly due day",value:unit.weekly_due_day}]}/></article>; })}</div> : <Empty title="No apparatus profiles" text="The Stickney inventory source returned no apparatus profiles."/>}</section>;
+  return <FleetWorkspace departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId}/>;
 }
 
 function Inventory({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
