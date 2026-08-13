@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "release": "2026.08.13.1",
+  "generatedAt": "2026-08-13T21:44:05.020Z",
+  "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
+  "currentDepartments": [
+    "stickney",
+    "fermilab"
+  ],
+  "futureDepartments": "automatic-through-shared-route",
+  "modules": {
+    "application-shell": {
+      "demo": "56c717c40222de8c575d62e0e2e1c758b58efea282ed4e3a162e293ee019f0c9",
+      "departments": "65c0defc7a99767585de373cb7d70fc14f353cdbc4f18ef2062e4aa2608c6220"
+    },
+    "live-operations": {
+      "demo": "e9f8de0b61dc0f8847e96f7964b86cfd5ec1cfa47ccea6cb0052f7b7f1f009ca",
+      "departments": "cb8db598069217e58ed245c30d55ceb2f06cde677890fe69e6d8a1cfb963a732"
+    },
+    "roster-and-staffing": {
+      "demo": "4be946024558406f309bde015547468a46eeee40e2fa8ee8535c7c13c0f22d90",
+      "departments": "ff78dd0f95847240a7b268f8bacb7e677bf55a356955cca19301054cd179895e"
+    },
+    "scheduling": {
+      "demo": "94a526a9efdfc316f90ac91697fd936e543bd6d8b67041702bdc635cde24bd89",
+      "departments": "ca576cdc59648004cdbf454cc8b402f82450db5e603c3cb55e53770a6a06e4e1"
+    },
+    "daily-log-and-duties": {
+      "demo": "1b119d8300875fcdcd2afebfae4502c3f5091f37912ca8a7fa88cdbe33d0a02c",
+      "departments": "6302176152b6c8571a17a474246f16b05d17d67bb5d8a1d8dc80e28a0ebf6eac"
+    },
+    "owner-foundation": {
+      "demo": "8cc8db95b984557fdbef6f599ecc42474722fb7791b707e81ff607eca6c113b5",
+      "departments": "501b5829d70cbb0aaae59eddcd128b95a589c8ce816e6763d3a43de342e446d2"
+    },
+    "preplans": {
+      "demo": "8e02339f8159c04358a268fb75015f112ee730a86035b326e7c0217b30607e36",
+      "departments": "280bdd97d2b686b3d6e1193bf787d553fffd694b8c7b038aeea1748c854e6e50"
+    },
+    "respond": {
+      "demo": "8b2eade2ccd1f6a9c8f99b06c2c08afa16aa5d553a58a786ec953d98a5e1f5b7",
+      "departments": "779108ffca291a44d1a991e7be3ee90141d6520a5f27feacb19fd9b1a429bbe8"
+    }
+  }
+}
