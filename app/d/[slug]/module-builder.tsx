@@ -15,7 +15,7 @@ const defaults = {
 
 type ModuleKey = keyof typeof defaults;
 
-export default function ModuleBuilder({ moduleKey, moduleName, departmentId, data, editable, supportSessionId }: { moduleKey: ModuleKey; moduleName: string; departmentId: string; data: DepartmentModuleData; editable: boolean; supportSessionId: string }) {
+export default function ModuleBuilder({ moduleKey, moduleName, departmentId, data, editable, supportSessionId, recordManagerOnly = false }: { moduleKey: ModuleKey; moduleName: string; departmentId: string; data: DepartmentModuleData; editable: boolean; supportSessionId: string; recordManagerOnly?: boolean }) {
   const fallback = defaults[moduleKey];
   const heading = data.config?.heading || fallback.heading;
   const description = data.config?.description || fallback.description;
@@ -23,12 +23,12 @@ export default function ModuleBuilder({ moduleKey, moduleName, departmentId, dat
   const action = `/api/departments/${departmentId}/modules/${moduleKey}`;
   const controlId = `module-builder-${moduleKey}`;
 
-  return <section className="module-builder">
-    <header className="module-builder-intro"><div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>{heading}</h2><p>{description}</p>{instructions ? <small>{instructions}</small> : null}</div><div className="module-connection-state"><i/>Manual workspace</div></header>
+  return <section className={`module-builder${recordManagerOnly ? " record-manager" : ""}`}>
+    {!recordManagerOnly ? <header className="module-builder-intro"><div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>{heading}</h2><p>{description}</p>{instructions ? <small>{instructions}</small> : null}</div><div className="module-connection-state"><i/>Manual workspace</div></header> : null}
     {data.items.length ? <div className="module-item-grid">{data.items.map((item) => <ModuleItem key={item.id} item={item} editable={editable} action={action} supportSessionId={supportSessionId}/>)}</div> : <div className="module-blank-state"><b>No department entries yet.</b><span>{editable ? "Use the build control below to add the first real entry." : "An authorized owner or editor can build this module."}</span></div>}
     {editable ? <section className="module-build-control">
       <input className="module-build-checkbox" id={controlId} type="checkbox"/>
-      <label className="module-build-toggle" htmlFor={controlId}><span className="module-build-plus">+</span><span><b>Build this module</b><small>Configure the workspace and add real operational entries</small></span></label>
+      <label className="module-build-toggle" htmlFor={controlId}><span className="module-build-plus">+</span><span><b>{recordManagerOnly ? "Add or edit board records" : "Build this module"}</b><small>{recordManagerOnly ? "Manage real incidents, apparatus status, station notices, and resources" : "Configure the workspace and add real operational entries"}</small></span></label>
       <div className="module-build-panels">
         <form method="post" action={action} className="module-build-form">
           <input type="hidden" name="action" value="save_config"/><input type="hidden" name="support_session_id" value={supportSessionId}/>

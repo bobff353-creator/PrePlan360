@@ -1,7 +1,7 @@
 import { getOwnerUser } from "@/app/chatgpt-auth";
 import { isSameOriginRequest } from "@/app/owner-auth";
 import { audit, getDepartment, isOwner } from "@/db/access";
-import { foundationModules, getDepartmentFoundation, getMasterFoundation, saveFoundation, type FoundationModuleKey } from "@/db/foundation";
+import { boardSettingsFromForm, foundationModules, getDepartmentFoundation, getMasterFoundation, saveFoundation, type FoundationModuleKey } from "@/db/foundation";
 
 const knownModules = new Set<FoundationModuleKey>(foundationModules.map((module) => module.key));
 
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
   const hidden = form.getAll("hidden_modules").map(String).filter((value): value is FoundationModuleKey => knownModules.has(value as FoundationModuleKey) && value !== "dashboard");
   const settings = {
     ...current,
+    ...boardSettingsFromForm(form, current),
     scope: department ? "department" as const : "master" as const,
     department_id: department?.id ?? null,
     module_order: [...new Set([...order, ...foundationModules.map((module) => module.key)])],
