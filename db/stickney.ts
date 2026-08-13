@@ -27,6 +27,8 @@ export type StickneyEmployee = {
   employment_type: string;
   driver_status: string;
   start_date: string | null;
+  employment_end_date: string | null;
+  qualified_roles: string[];
   photo_updated_at: string | null;
   employee_number: string;
   phone: string;
@@ -116,9 +118,49 @@ export type StickneyApparatus = {
   service_profile_verified_at: string | null;
 };
 
-export type StickneyFleetCheck = { id: string; apparatus_id: string; check_type: string; status: string; started_by: string; started_at: string; completed_at: string | null; item_count: number; pending_count: number; failed_count: number; latest_odometer: number | null };
-export type StickneyReadinessException = { id: string; apparatus_id: string; result: string; priority: string; notes: string; status: string; out_of_service: boolean; opened_by: string; opened_at: string; issue_categories: string[]; assigned_employee_names: string[] };
-export type StickneyWorkOrder = { id: string; apparatus_id: string; status: string; priority: string; summary: string; details: string; assigned_to: string; opened_by: string; opened_at: string; due_at: string | null; assigned_employee_names: string[]; repair_date: string | null; repair_cost: number | null; vendor: string | null; resolution_notes: string | null };
+export type StickneyFleetCheck = {
+  id: string;
+  apparatus_id: string;
+  check_type: string;
+  status: string;
+  started_by: string;
+  started_at: string;
+  completed_at: string | null;
+  item_count: number;
+  pending_count: number;
+  failed_count: number;
+  latest_odometer: number | null;
+};
+export type StickneyReadinessException = {
+  id: string;
+  apparatus_id: string;
+  result: string;
+  priority: string;
+  notes: string;
+  status: string;
+  out_of_service: boolean;
+  opened_by: string;
+  opened_at: string;
+  issue_categories: string[];
+  assigned_employee_names: string[];
+};
+export type StickneyWorkOrder = {
+  id: string;
+  apparatus_id: string;
+  status: string;
+  priority: string;
+  summary: string;
+  details: string;
+  assigned_to: string;
+  opened_by: string;
+  opened_at: string;
+  due_at: string | null;
+  assigned_employee_names: string[];
+  repair_date: string | null;
+  repair_cost: number | null;
+  vendor: string | null;
+  resolution_notes: string | null;
+};
 
 export type StickneyInventoryCompartment = {
   id: string;
@@ -159,10 +201,50 @@ export type StickneyInventoryPhoto = {
   captured_at: string;
 };
 
-export type StickneyDuty = { id: string; day_of_week: number; shift_key: string; duty: string; detail?: string; category?: string; assigned_to?: string; due_time?: string; completed_date?: string; updated_at: string };
-export type StickneyBoxCard = { id: string; title: string; address: string; box_number: string; access_notes: string; details: string; department: string; document_url: string; document_page: number; status: string; updated_at: string };
-export type StickneyPolicy = { id: string; title: string; policy_number: string; category: string; effective_date: string; body: string; status: string; updated_at: string };
-export type StickneyPhoneNumber = { id: string; category: string; name: string; emergency_number: string; non_emergency_number: string; notes: string; sort_order: number };
+export type StickneyDuty = {
+  id: string;
+  day_of_week: number;
+  shift_key: string;
+  duty: string;
+  detail?: string;
+  category?: string;
+  assigned_to?: string;
+  due_time?: string;
+  completed_date?: string;
+  updated_at: string;
+};
+export type StickneyBoxCard = {
+  id: string;
+  title: string;
+  address: string;
+  box_number: string;
+  access_notes: string;
+  details: string;
+  department: string;
+  document_url: string;
+  document_page: number;
+  status: string;
+  updated_at: string;
+};
+export type StickneyPolicy = {
+  id: string;
+  title: string;
+  policy_number: string;
+  category: string;
+  effective_date: string;
+  body: string;
+  status: string;
+  updated_at: string;
+};
+export type StickneyPhoneNumber = {
+  id: string;
+  category: string;
+  name: string;
+  emergency_number: string;
+  non_emergency_number: string;
+  notes: string;
+  sort_order: number;
+};
 
 export type StickneyModuleData = {
   summary?: StickneySummary;
@@ -178,7 +260,11 @@ export type StickneyModuleData = {
   fleetChecks?: StickneyFleetCheck[];
   readinessExceptions?: StickneyReadinessException[];
   workOrders?: StickneyWorkOrder[];
-  fleetSources?: { checks: boolean; readinessExceptions: boolean; workOrders: boolean };
+  fleetSources?: {
+    checks: boolean;
+    readinessExceptions: boolean;
+    workOrders: boolean;
+  };
   duties?: StickneyDuty[];
   dutyContext?: { date: string; dayOfWeek: number; segment: string };
   boxCards?: StickneyBoxCard[];
@@ -188,9 +274,32 @@ export type StickneyModuleData = {
 
 export type StickneyEditableRecordType = "employee" | "schedule" | "preplan" | "hydrant" | "apparatus" | "inventory" | "duty" | "box_card" | "policy" | "phone";
 
+export const STICKNEY_WORK_ROLES = ["Officer", "Driver / Engineer", "Medic", "Firefighter", "Command", "Other"] as const;
+
+export function stickneyEmployeeActiveOn(employee: StickneyEmployee, date: string) {
+  return (!employee.start_date || employee.start_date <= date) && (!employee.employment_end_date || date <= employee.employment_end_date);
+}
+
+export function stickneyEmployeeRoles(employee: StickneyEmployee) {
+  const saved = Array.isArray(employee.qualified_roles) ? employee.qualified_roles.filter((role) => STICKNEY_WORK_ROLES.includes(role as (typeof STICKNEY_WORK_ROLES)[number])) : [];
+  if (saved.length) return saved;
+  const text = `${employee.rank} ${employee.station_role} ${employee.driver_status}`;
+  const roles: string[] = [];
+  if (/chief|captain|lieutenant|officer/i.test(text)) roles.push("Officer");
+  if (/engineer|driver|pump/i.test(text)) roles.push("Driver / Engineer");
+  if (/paramedic|emt-p|medic/i.test(text)) roles.push("Medic");
+  if (/firefighter|ff\b/i.test(text)) roles.push("Firefighter");
+  if (/chief|command/i.test(text)) roles.push("Command");
+  return roles.length ? [...new Set(roles)] : ["Firefighter"];
+}
+
 function client() {
   return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
   });
 }
 
@@ -210,8 +319,11 @@ async function read<T>(sql: string): Promise<T[]> {
 }
 
 async function optionalRead<T>(sql: string): Promise<{ rows: T[]; connected: boolean }> {
-  try { return { rows: await read<T>(sql), connected: true }; }
-  catch { return { rows: [], connected: false }; }
+  try {
+    return { rows: await read<T>(sql), connected: true };
+  } catch {
+    return { rows: [], connected: false };
+  }
 }
 
 async function fleetApparatus(): Promise<StickneyApparatus[]> {
@@ -225,11 +337,24 @@ async function fleetApparatus(): Promise<StickneyApparatus[]> {
 async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
   const result = await import("@/db/access").then(({ db }) => db().prepare("SELECT source_record_id,data_json,status FROM stickney_record_overrides WHERE department_id=? AND record_type=?").bind(departmentId, recordType).all<{ source_record_id: string; data_json: string; status: string }>());
   const overrides = new Map(result.results.map((row) => [row.source_record_id, row]));
-  const merged = rows.flatMap((row) => { const override = overrides.get(row.id); if (override?.status === "hidden") return []; if (!override) return [row]; try { return [{ ...row, ...JSON.parse(override.data_json), id: row.id } as T]; } catch { return [row]; } });
+  const merged = rows.flatMap((row) => {
+    const override = overrides.get(row.id);
+    if (override?.status === "hidden") return [];
+    if (!override) return [row];
+    try {
+      return [{ ...row, ...JSON.parse(override.data_json), id: row.id } as T];
+    } catch {
+      return [row];
+    }
+  });
   const sourceIds = new Set(rows.map((row) => row.id));
   const local = result.results.flatMap((row) => {
     if (sourceIds.has(row.source_record_id) || row.status === "hidden" || !row.source_record_id.startsWith(`${recordType}_`)) return [];
-    try { return [{ ...JSON.parse(row.data_json), id: row.source_record_id } as T]; } catch { return []; }
+    try {
+      return [{ ...JSON.parse(row.data_json), id: row.source_record_id } as T];
+    } catch {
+      return [];
+    }
   });
   return [...merged, ...local];
 }
@@ -248,11 +373,49 @@ function chicagoDate(daysFromToday = 0) {
 }
 
 function chicagoDutyContext() {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    weekday: "long",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
   const weekday = parts.find((item) => item.type === "weekday")?.value || "Sunday";
   const hour = Number(parts.find((item) => item.type === "hour")?.value || 0);
   const dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(weekday);
-  return { date: chicagoDate(), dayOfWeek: Math.max(0, dayOfWeek), segment: hour < 12 ? "morning" : hour < 18 ? "afternoon" : "night" };
+  return {
+    date: chicagoDate(),
+    dayOfWeek: Math.max(0, dayOfWeek),
+    segment: hour < 12 ? "morning" : hour < 18 ? "afternoon" : "night",
+  };
+}
+
+export async function loadStickneyEmployees(departmentId = "") {
+  const employees = await read<StickneyEmployee>(`
+    select e.id,e.name,p.label as rank,coalesce(ep.employment_type,'') as employment_type,
+      coalesce(ep.driver_status,'') as driver_status,ep.start_date,null::text as employment_end_date,ep.photo_updated_at,
+      coalesce(ep.employee_number,'') as employee_number,coalesce(ep.phone,'') as phone,
+      coalesce(ep.email,'') as email,coalesce(ep.schedule_sms_opt_in,0) as schedule_sms_opt_in,
+      coalesce(ep.station_notify_email,0) as station_notify_email,
+      coalesce(ep.station_notify_text,0) as station_notify_text,
+      coalesce((select t.name from station_standing_assignments sa join station_shift_types t on t.id=sa.shift_type_id where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as home_shift,
+      coalesce((select sa.role from station_standing_assignments sa where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as station_role,
+      array[]::text[] as qualified_roles,
+      coalesce(ep.emergency_name,'') as emergency_name,
+      coalesce(ep.emergency_relationship,'') as emergency_relationship,
+      coalesce(ep.emergency_phone,'') as emergency_phone,coalesce(ep.notes,'') as notes
+    from employees e join pay_scales p on p.id=e.pay_scale_id
+    left join employee_profiles ep on ep.employee_id=e.id
+    where e.active=1 order by e.sort_order,e.name
+  `);
+  return departmentId ? applyOverrides(departmentId, "employee", employees) : employees;
+}
+
+export async function loadDepartmentEmployeeOverlays(departmentId: string) {
+  return applyOverrides<StickneyEmployee>(departmentId, "employee", []);
+}
+
+export async function loadDepartmentScheduleOverlays(departmentId: string) {
+  return applyOverrides<StickneyScheduleAssignment>(departmentId, "schedule", []);
 }
 
 async function summary(): Promise<StickneySummary> {
@@ -275,24 +438,7 @@ async function summary(): Promise<StickneySummary> {
 
 export async function loadStickneyModule(module: string, departmentId = ""): Promise<StickneyModuleData> {
   if (module === "dashboard") return { summary: await summary() };
-  if (module === "staffing") {
-    const employees = await read<StickneyEmployee>(`
-      select e.id,e.name,p.label as rank,coalesce(ep.employment_type,'') as employment_type,
-        coalesce(ep.driver_status,'') as driver_status,ep.start_date,ep.photo_updated_at,
-        coalesce(ep.employee_number,'') as employee_number,coalesce(ep.phone,'') as phone,
-        coalesce(ep.email,'') as email,coalesce(ep.schedule_sms_opt_in,0) as schedule_sms_opt_in,
-        coalesce(ep.station_notify_email,0) as station_notify_email,
-        coalesce(ep.station_notify_text,0) as station_notify_text,
-        coalesce((select t.name from station_standing_assignments sa join station_shift_types t on t.id=sa.shift_type_id where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as home_shift,
-        coalesce((select sa.role from station_standing_assignments sa where sa.employee_id=e.id and sa.active=1 order by sa.created_at limit 1),'') as station_role,
-        coalesce(ep.emergency_name,'') as emergency_name,
-        coalesce(ep.emergency_relationship,'') as emergency_relationship,
-        coalesce(ep.emergency_phone,'') as emergency_phone,coalesce(ep.notes,'') as notes
-      from employees e join pay_scales p on p.id=e.pay_scale_id
-      left join employee_profiles ep on ep.employee_id=e.id
-      where e.active=1 order by e.sort_order,e.name
-    `); return { employees: departmentId ? await applyOverrides(departmentId, "employee", employees) : employees };
-  }
+  if (module === "staffing") return { employees: await loadStickneyEmployees(departmentId) };
   if (module === "scheduling") {
     const start = chicagoDate(-7);
     const end = chicagoDate(35);
@@ -308,37 +454,60 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
       join pay_scales p on p.id=e.pay_scale_id
       where s.status='filled' and en.entry_date between '${start}' and '${end}'
       order by en.entry_date,coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
-    `); return { schedule: departmentId ? await applyOverrides(departmentId, "schedule", schedule) : schedule };
+    `);
+    const [mergedSchedule, employees] = await Promise.all([departmentId ? applyOverrides(departmentId, "schedule", schedule) : schedule, loadStickneyEmployees(departmentId)]);
+    return { schedule: mergedSchedule, employees };
   }
   if (module === "preplans") {
-    const [preplans, preplanImports] = await Promise.all([
-      read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`),
-      read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`),
-    ]);
-    return { preplans: departmentId ? await applyOverrides(departmentId, "preplan", preplans) : preplans, preplanImports };
+    const [preplans, preplanImports] = await Promise.all([read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`), read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`)]);
+    return {
+      preplans: departmentId ? await applyOverrides(departmentId, "preplan", preplans) : preplans,
+      preplanImports,
+    };
   }
-  if (module === "hydrants") { const hydrants = await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`); return { hydrants: departmentId ? await applyOverrides(departmentId, "hydrant", hydrants) : hydrants }; }
+  if (module === "hydrants") {
+    const hydrants = await read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`);
+    return {
+      hydrants: departmentId ? await applyOverrides(departmentId, "hydrant", hydrants) : hydrants,
+    };
+  }
   if (module === "fleet" || module === "inventory") {
-    const [apparatus, compartments, inventory, inventoryPhotos, fleetChecksResult, readinessResult, workOrdersResult] = await Promise.all([
-      fleetApparatus(),
-      read<StickneyInventoryCompartment>(`select id,apparatus_id,label,side,sort_order from stickney_inventory_compartments order by apparatus_id,sort_order,label`),
-      read<StickneyInventoryItem>(`select id,apparatus_id,compartment_id,name,manufacturer,model,serial_number,barcode,quantity_required,equipment_category,check_types,source_form,item_order,retired_at from stickney_inventory_equipment where retired_at is null order by apparatus_id,item_order,name`),
-      read<StickneyInventoryPhoto>(`select id,apparatus_id,compartment_id,equipment_id,view_level,door_state,original_filename,mime_type,byte_size,approval_status,captured_at from stickney_inventory_photo_views where replaced_at is null order by captured_at desc`),
-      module === "fleet" ? optionalRead<StickneyFleetCheck>(`select c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at,count(i.id)::int as item_count,count(i.id) filter(where i.result='pending')::int as pending_count,count(i.id) filter(where i.result in ('failed','missing','damaged'))::int as failed_count,max(i.numeric_reading) filter(where i.numeric_reading is not null) as latest_odometer from inventory_checks c left join inventory_check_items i on i.check_id=c.id where c.apparatus_id in(select id from stickney_inventory_apparatus) and c.status in ('in_progress','completed') group by c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at order by c.started_at desc`) : Promise.resolve({ rows: [], connected: false }),
-      module === "fleet" ? optionalRead<StickneyReadinessException>(`select id,apparatus_id,result,priority,coalesce(notes,'') as notes,status,out_of_service,opened_by,opened_at,issue_categories,assigned_employee_names from inventory_readiness_exceptions where apparatus_id in(select id from stickney_inventory_apparatus) and status<>'resolved' order by opened_at desc`) : Promise.resolve({ rows: [], connected: false }),
-      module === "fleet" ? optionalRead<StickneyWorkOrder>(`select id,apparatus_id,status,priority,summary,coalesce(details,'') as details,coalesce(assigned_to,'') as assigned_to,opened_by,opened_at,due_at,assigned_employee_names,repair_date,repair_cost,vendor,resolution_notes from inventory_work_orders where apparatus_id in(select id from stickney_inventory_apparatus) order by opened_at desc`) : Promise.resolve({ rows: [], connected: false }),
-    ]);
-    return { apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus, compartments, inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory, inventoryPhotos, fleetChecks: fleetChecksResult.rows, readinessExceptions: readinessResult.rows, workOrders: workOrdersResult.rows, fleetSources: { checks: fleetChecksResult.connected, readinessExceptions: readinessResult.connected, workOrders: workOrdersResult.connected } };
+    const [apparatus, compartments, inventory, inventoryPhotos, fleetChecksResult, readinessResult, workOrdersResult] = await Promise.all([fleetApparatus(), read<StickneyInventoryCompartment>(`select id,apparatus_id,label,side,sort_order from stickney_inventory_compartments order by apparatus_id,sort_order,label`), read<StickneyInventoryItem>(`select id,apparatus_id,compartment_id,name,manufacturer,model,serial_number,barcode,quantity_required,equipment_category,check_types,source_form,item_order,retired_at from stickney_inventory_equipment where retired_at is null order by apparatus_id,item_order,name`), read<StickneyInventoryPhoto>(`select id,apparatus_id,compartment_id,equipment_id,view_level,door_state,original_filename,mime_type,byte_size,approval_status,captured_at from stickney_inventory_photo_views where replaced_at is null order by captured_at desc`), module === "fleet" ? optionalRead<StickneyFleetCheck>(`select c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at,count(i.id)::int as item_count,count(i.id) filter(where i.result='pending')::int as pending_count,count(i.id) filter(where i.result in ('failed','missing','damaged'))::int as failed_count,max(i.numeric_reading) filter(where i.numeric_reading is not null) as latest_odometer from inventory_checks c left join inventory_check_items i on i.check_id=c.id where c.apparatus_id in(select id from stickney_inventory_apparatus) and c.status in ('in_progress','completed') group by c.id,c.apparatus_id,c.check_type,c.status,c.started_by,c.started_at,c.completed_at order by c.started_at desc`) : Promise.resolve({ rows: [], connected: false }), module === "fleet" ? optionalRead<StickneyReadinessException>(`select id,apparatus_id,result,priority,coalesce(notes,'') as notes,status,out_of_service,opened_by,opened_at,issue_categories,assigned_employee_names from inventory_readiness_exceptions where apparatus_id in(select id from stickney_inventory_apparatus) and status<>'resolved' order by opened_at desc`) : Promise.resolve({ rows: [], connected: false }), module === "fleet" ? optionalRead<StickneyWorkOrder>(`select id,apparatus_id,status,priority,summary,coalesce(details,'') as details,coalesce(assigned_to,'') as assigned_to,opened_by,opened_at,due_at,assigned_employee_names,repair_date,repair_cost,vendor,resolution_notes from inventory_work_orders where apparatus_id in(select id from stickney_inventory_apparatus) order by opened_at desc`) : Promise.resolve({ rows: [], connected: false })]);
+    return {
+      apparatus: departmentId ? await applyOverrides(departmentId, "apparatus", apparatus) : apparatus,
+      compartments,
+      inventory: departmentId ? await applyOverrides(departmentId, "inventory", inventory) : inventory,
+      inventoryPhotos,
+      fleetChecks: fleetChecksResult.rows,
+      readinessExceptions: readinessResult.rows,
+      workOrders: workOrdersResult.rows,
+      fleetSources: {
+        checks: fleetChecksResult.connected,
+        readinessExceptions: readinessResult.connected,
+        workOrders: workOrdersResult.connected,
+      },
+    };
   }
-  if (module === "duties") { const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`); return { duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties, dutyContext: chicagoDutyContext() }; }
+  if (module === "duties") {
+    const duties = await read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`);
+    return {
+      duties: departmentId ? await applyOverrides(departmentId, "duty", duties) : duties,
+      dutyContext: chicagoDutyContext(),
+    };
+  }
   if (module === "documents") {
-    const [boxCards, policies] = await Promise.all([
-      read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`),
-      read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`),
-    ]);
-    return { boxCards: departmentId ? await applyOverrides(departmentId, "box_card", boxCards) : boxCards, policies: departmentId ? await applyOverrides(departmentId, "policy", policies) : policies };
+    const [boxCards, policies] = await Promise.all([read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`), read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`)]);
+    return {
+      boxCards: departmentId ? await applyOverrides(departmentId, "box_card", boxCards) : boxCards,
+      policies: departmentId ? await applyOverrides(departmentId, "policy", policies) : policies,
+    };
   }
-  if (module === "phones") { const phoneNumbers = await read<StickneyPhoneNumber>(`select id,category,name,emergency_number,non_emergency_number,notes,sort_order from important_phone_numbers order by category,sort_order,name`); return { phoneNumbers: departmentId ? await applyOverrides(departmentId, "phone", phoneNumbers) : phoneNumbers }; }
+  if (module === "phones") {
+    const phoneNumbers = await read<StickneyPhoneNumber>(`select id,category,name,emergency_number,non_emergency_number,notes,sort_order from important_phone_numbers order by category,sort_order,name`);
+    return {
+      phoneNumbers: departmentId ? await applyOverrides(departmentId, "phone", phoneNumbers) : phoneNumbers,
+    };
+  }
   return {};
 }
 

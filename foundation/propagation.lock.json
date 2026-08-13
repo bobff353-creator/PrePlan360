@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.6",
-  "generatedAt": "2026-08-13T22:34:23.808Z",
+  "release": "2026.08.13.10",
+  "generatedAt": "2026-08-13T23:31:17.678Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -10,24 +10,24 @@
   "futureDepartments": "automatic-through-shared-route",
   "modules": {
     "application-shell": {
-      "demo": "56c717c40222de8c575d62e0e2e1c758b58efea282ed4e3a162e293ee019f0c9",
-      "departments": "65c0defc7a99767585de373cb7d70fc14f353cdbc4f18ef2062e4aa2608c6220"
+      "demo": "ae7ebd0670960e9b0d5742c3f46180b4f72e011c37ec2b20c4d6393d21eb4674",
+      "departments": "619032e3710b188239eeab9892cb8aaf108e3d688e8ae5983d6ae7c5f24545fd"
     },
     "live-operations": {
       "demo": "e9f8de0b61dc0f8847e96f7964b86cfd5ec1cfa47ccea6cb0052f7b7f1f009ca",
       "departments": "cb8db598069217e58ed245c30d55ceb2f06cde677890fe69e6d8a1cfb963a732"
     },
     "roster-and-staffing": {
-      "demo": "4be946024558406f309bde015547468a46eeee40e2fa8ee8535c7c13c0f22d90",
-      "departments": "ff78dd0f95847240a7b268f8bacb7e677bf55a356955cca19301054cd179895e"
+      "demo": "e39d0c9abe517c867cd21c7287219e4145e700da1aefabb83fe60c86c14c86ce",
+      "departments": "190bb33abe12f6975ee853e1bf1b943cbb2dd94a34ba68799b66e77b4718c2e6"
     },
     "scheduling": {
-      "demo": "94a526a9efdfc316f90ac91697fd936e543bd6d8b67041702bdc635cde24bd89",
-      "departments": "ca576cdc59648004cdbf454cc8b402f82450db5e603c3cb55e53770a6a06e4e1"
+      "demo": "8033a974d3b22a1f85c4a854d58a361c8ec6c9d17788505303c5ae5dab3fb8c0",
+      "departments": "a2c605998856d4d8f840f570826c4a97b869188ed74cb8f03e7107b4f54068f8"
     },
     "daily-log-and-duties": {
       "demo": "1b119d8300875fcdcd2afebfae4502c3f5091f37912ca8a7fa88cdbe33d0a02c",
-      "departments": "6302176152b6c8571a17a474246f16b05d17d67bb5d8a1d8dc80e28a0ebf6eac"
+      "departments": "4ac4c26b8de252ce6fdebb48e5c8cdad7effd9006866009729a14cecef86f63c"
     },
     "owner-foundation": {
       "demo": "8cc8db95b984557fdbef6f599ecc42474722fb7791b707e81ff607eca6c113b5",

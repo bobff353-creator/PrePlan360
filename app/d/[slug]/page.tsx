@@ -4,7 +4,7 @@ import "../../live-ops-foundation.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
-import { loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
+import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
 import AssetManager from "./asset-manager";
 import ReferenceLibrary from "./reference-library";
 import StickneyWorkspace from "./stickney-workspace";
@@ -32,9 +32,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string }> }) {
   const { slug } = await params;
   const department = await getDepartmentBySlug(slug);
-  if (!department) return <main className="department-app-missing"><h1>Department app not found.</h1><a href="/portal">Return to department sign in</a></main>;
+  if (!department)
+    return (
+      <main className="department-app-missing">
+        <h1>Department app not found.</h1>
+        <a href="/portal">Return to department sign in</a>
+      </main>
+    );
   const user = await requireChatGPTUser(`/d/${slug}`);
-  if (!(await canAccessDepartment(user.userId, department.id))) return <main className="department-app-missing"><h1>Department access required.</h1><p>This app is not assigned to your signed-in account.</p><a href="/portal">Return to department sign in</a></main>;
+  if (!(await canAccessDepartment(user.userId, department.id)))
+    return (
+      <main className="department-app-missing">
+        <h1>Department access required.</h1>
+        <p>This app is not assigned to your signed-in account.</p>
+        <a href="/portal">Return to department sign in</a>
+      </main>
+    );
   const owner = await isOwner(user.userId);
   const foundation = await getDepartmentFoundation(department.id);
   const visibleModules = orderedVisibleModules(foundation);
@@ -43,15 +56,24 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const active = visibleModules.find(([key]) => key === selected) || visibleModules[0];
   const supportSession = owner && query.support ? await getSupportSession(query.support) : null;
   const ownerSupport = !!supportSession && supportSession.owner_user_id === user.userId && supportSession.department_id === department.id && supportSession.status === "active";
-  const permissionByModule = ({ "live-ops": "live_ops", respond: "respond", staffing: "staffing", scheduling: "scheduling", preplans: "preplans", fleet: "fleet", inventory: "inventory", duties: "duties", documents: "documents", phones: "phones", hydrants: "hydrants" } as const)[active[0] as "live-ops" | "respond" | "staffing" | "scheduling" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
+  const permissionByModule = (
+    {
+      "live-ops": "live_ops",
+      respond: "respond",
+      staffing: "staffing",
+      scheduling: "scheduling",
+      preplans: "preplans",
+      fleet: "fleet",
+      inventory: "inventory",
+      duties: "duties",
+      documents: "documents",
+      phones: "phones",
+      hydrants: "hydrants",
+    } as const
+  )[active[0] as "live-ops" | "respond" | "staffing" | "scheduling" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
   const editable = permissionByModule ? await canDepartmentPermission(user.userId, department.id, permissionByModule, ownerSupport ? supportSession?.id : "") : false;
   const supportQuery = ownerSupport ? `&support=${encodeURIComponent(supportSession.id)}` : "";
-  const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([
-    listDepartmentPreplans(department.id),
-    listSharedPreplans(department.id),
-    listDepartmentHydrants(department.id),
-    listSharedHydrants(department.id),
-  ]) : null;
+  const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([listDepartmentPreplans(department.id), listSharedPreplans(department.id), listDepartmentHydrants(department.id), listSharedHydrants(department.id)]) : null;
   const configurableModule = active[0] === "live-ops" || active[0] === "respond" ? active[0] : null;
   const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
   const isStickney = department.slug === "stickney";
@@ -64,28 +86,196 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       stickneyConnectionError = error instanceof Error ? error.message : "The Stickney data connection is unavailable.";
       stickneyData = {};
     }
+  } else if (active[0] === "staffing" || active[0] === "scheduling") {
+    try {
+      const employees = await loadDepartmentEmployeeOverlays(department.id);
+      stickneyData =
+        active[0] === "staffing"
+          ? { employees }
+          : {
+              employees,
+              schedule: await loadDepartmentScheduleOverlays(department.id),
+            };
+    } catch (error) {
+      stickneyConnectionError = error instanceof Error ? error.message : "The department personnel workspace is unavailable.";
+      stickneyData = {};
+    }
   }
-  const style = { "--dept-primary": department.brand_primary, "--dept-bg": department.brand_secondary, "--dept-accent": department.brand_accent, "--dept-action": department.brand_action, "--dept-alert": department.brand_alert } as CSSProperties;
+  const style = {
+    "--dept-primary": department.brand_primary,
+    "--dept-bg": department.brand_secondary,
+    "--dept-accent": department.brand_accent,
+    "--dept-action": department.brand_action,
+    "--dept-alert": department.brand_alert,
+  } as CSSProperties;
 
-  return <main className="department-app" style={style}>
-    <aside className="dept-app-sidebar"><div className="dept-app-brand"><DepartmentLogo department={department}/><div><b>{department.app_title || department.name}</b><small>Department operations</small></div></div><nav>{visibleModules.map(([key, label, number]) => <a className={active[0] === key ? "active" : ""} href={`/d/${slug}?module=${key}${supportQuery}`} key={key}><span>{number}</span>{label}</a>)}</nav><div className="dept-sidebar-foot"><span><i/> {ownerSupport ? "Audited owner support" : "Secure department app"}</span><form method="post" action="/api/member/logout"><button type="submit">Sign out</button></form></div></aside>
-    <section className="dept-app-workspace"><header><button className="dept-mobile-mark" aria-label="Department menu"><DepartmentLogo department={department}/></button><div><span>{department.name}</span><b>{active[1]}</b></div><div className="dept-user"><span>{user.displayName}</span>{owner ? <a href="/owner">Owner console</a> : <a href="/portal">Switch department</a>}</div></header>
-      <div className="dept-app-content"><div className="dept-app-heading"><div><span>DEPARTMENT WORKSPACE</span><h1>{active[1]}</h1><p>{department.welcome_message || `${department.name} operations, connected in one web app.`}</p></div><div className="dept-app-status"><i/> App configured</div></div>
-      {active[0] === "live-ops" || active[0] === "respond" || active[0] === "scheduling" ? <div className="dept-foundation-rulebar"><span>Foundation</span><b>{foundation.is_override ? "Department override" : "Owner master"}</b><small>{active[0] === "scheduling" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small></div> : null}
-      {active[0] === "live-ops" && moduleData ? <LiveOpsBoard departmentId={department.id} departmentName={department.name} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : active[0] === "respond" && moduleData ? <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : stickneyData ? <><StickneyWorkspace module={active[0]} departmentId={department.id} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined}/>{active[0] === "fleet" ? <details id="native-assets" className="stickney-archive"><summary>VIN, barcode, QR, and odometer capture</summary><AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/></details> : null}{referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : null}</> : active[0] === "dashboard" ? <Dashboard department={department.name} stations={department.station_count} vehicles={department.vehicle_count} weather={department.weather_location} supportQuery={supportQuery} modules={visibleModules}/> : active[0] === "fleet" ? <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/> : referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]}/> : active[0] === "inspections" ? <ComingSoon/> : <ModuleEmpty moduleName={active[1]}/>}
-      </div>
-    </section>
-  </main>;
+  return (
+    <main className="department-app" style={style}>
+      <aside className="dept-app-sidebar">
+        <div className="dept-app-brand">
+          <DepartmentLogo department={department} />
+          <div>
+            <b>{department.app_title || department.name}</b>
+            <small>Department operations</small>
+          </div>
+        </div>
+        <nav>
+          {visibleModules.map(([key, label, number]) => (
+            <a className={active[0] === key ? "active" : ""} href={`/d/${slug}?module=${key}${supportQuery}`} key={key}>
+              <span>{number}</span>
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="dept-sidebar-foot">
+          <span>
+            <i /> {ownerSupport ? "Audited owner support" : "Secure department app"}
+          </span>
+          <form method="post" action="/api/member/logout">
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+      </aside>
+      <section className="dept-app-workspace">
+        <header>
+          <button className="dept-mobile-mark" aria-label="Department menu">
+            <DepartmentLogo department={department} />
+          </button>
+          <div>
+            <span>{department.name}</span>
+            <b>{active[1]}</b>
+          </div>
+          <div className="dept-user">
+            <span>{user.displayName}</span>
+            {owner ? <a href="/owner">Owner console</a> : <a href="/portal">Switch department</a>}
+          </div>
+        </header>
+        <div className="dept-app-content">
+          <div className="dept-app-heading">
+            <div>
+              <span>DEPARTMENT WORKSPACE</span>
+              <h1>{active[1]}</h1>
+              <p>{department.welcome_message || `${department.name} operations, connected in one web app.`}</p>
+            </div>
+            <div className="dept-app-status">
+              <i /> App configured
+            </div>
+          </div>
+          {active[0] === "live-ops" || active[0] === "respond" || active[0] === "scheduling" ? (
+            <div className="dept-foundation-rulebar">
+              <span>Foundation</span>
+              <b>{foundation.is_override ? "Department override" : "Owner master"}</b>
+              <small>{active[0] === "scheduling" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small>
+            </div>
+          ) : null}
+          {active[0] === "live-ops" && moduleData ? (
+            <LiveOpsBoard departmentId={department.id} departmentName={department.name} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+          ) : active[0] === "respond" && moduleData ? (
+            <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+          ) : stickneyData ? (
+            <>
+              <StickneyWorkspace module={active[0]} departmentId={department.id} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
+              {active[0] === "fleet" ? (
+                <details id="native-assets" className="stickney-archive">
+                  <summary>VIN, barcode, QR, and odometer capture</summary>
+                  <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+                </details>
+              ) : null}
+              {referenceData ? <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]} /> : null}
+            </>
+          ) : active[0] === "dashboard" ? (
+            <Dashboard department={department.name} stations={department.station_count} vehicles={department.vehicle_count} weather={department.weather_location} supportQuery={supportQuery} modules={visibleModules} />
+          ) : active[0] === "fleet" ? (
+            <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+          ) : referenceData ? (
+            <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]} />
+          ) : active[0] === "inspections" ? (
+            <ComingSoon />
+          ) : (
+            <ModuleEmpty moduleName={active[1]} />
+          )}
+        </div>
+      </section>
+    </main>
+  );
 }
 
 function Dashboard({ department, stations, vehicles, weather, supportQuery, modules: dashboardModules }: { department: string; stations: number; vehicles: number; weather: string; supportQuery: string; modules: ReadonlyArray<readonly [string, string, string]> }) {
-  return <><div className="dept-metrics"><article><span>Stations</span><b>{stations}</b><small>Configured locations</small></article><article><span>Vehicles</span><b>{vehicles}</b><small>Configured apparatus</small></article><article><span>Weather location</span><b className="metric-text">{weather || "Not set"}</b><small>{weather ? "Location saved" : "Add in Build & branding"}</small></article><article className="attention"><span>Live integrations</span><b className="metric-text">Not connected</b><small>Truthful setup status</small></article></div><div className="dept-home-grid"><section><span className="dept-section-label">READY TO BUILD</span><h2>{department} workspace</h2><p>The department identity is live. Operational modules remain clean until authorized records or integrations are connected.</p><div className="dept-module-grid">{dashboardModules.filter(([key]) => key !== "dashboard").slice(0, 6).map(([key, label, number]) => <a href={`?module=${key}${supportQuery}`} key={key}><span>{number}</span><b>{label}</b><small>Open module</small></a>)}</div></section><aside><span className="dept-section-label">CURRENT STATUS</span><h2>No active incident</h2><p>No live CAD or operational feed is connected to this department app.</p><div className="dept-safe-state"><i/> Available for configured workflows</div></aside></div></>;
+  return (
+    <>
+      <div className="dept-metrics">
+        <article>
+          <span>Stations</span>
+          <b>{stations}</b>
+          <small>Configured locations</small>
+        </article>
+        <article>
+          <span>Vehicles</span>
+          <b>{vehicles}</b>
+          <small>Configured apparatus</small>
+        </article>
+        <article>
+          <span>Weather location</span>
+          <b className="metric-text">{weather || "Not set"}</b>
+          <small>{weather ? "Location saved" : "Add in Build & branding"}</small>
+        </article>
+        <article className="attention">
+          <span>Live integrations</span>
+          <b className="metric-text">Not connected</b>
+          <small>Truthful setup status</small>
+        </article>
+      </div>
+      <div className="dept-home-grid">
+        <section>
+          <span className="dept-section-label">READY TO BUILD</span>
+          <h2>{department} workspace</h2>
+          <p>The department identity is live. Operational modules remain clean until authorized records or integrations are connected.</p>
+          <div className="dept-module-grid">
+            {dashboardModules
+              .filter(([key]) => key !== "dashboard")
+              .slice(0, 6)
+              .map(([key, label, number]) => (
+                <a href={`?module=${key}${supportQuery}`} key={key}>
+                  <span>{number}</span>
+                  <b>{label}</b>
+                  <small>Open module</small>
+                </a>
+              ))}
+          </div>
+        </section>
+        <aside>
+          <span className="dept-section-label">CURRENT STATUS</span>
+          <h2>No active incident</h2>
+          <p>No live CAD or operational feed is connected to this department app.</p>
+          <div className="dept-safe-state">
+            <i /> Available for configured workflows
+          </div>
+        </aside>
+      </div>
+    </>
+  );
 }
 
 function ComingSoon() {
-  return <section className="dept-module-empty coming-soon"><div className="dept-empty-mark">LOCKED</div><span className="dept-section-label">INSPECTIONS</span><h2>Coming soon.</h2><p>The inspections workspace is hidden from department use while it is under owner development. No inspection names, occupancies, schedules, or compliance figures are exposed here.</p><a href="/portal">Return to department portal</a></section>;
+  return (
+    <section className="dept-module-empty coming-soon">
+      <div className="dept-empty-mark">LOCKED</div>
+      <span className="dept-section-label">INSPECTIONS</span>
+      <h2>Coming soon.</h2>
+      <p>The inspections workspace is hidden from department use while it is under owner development. No inspection names, occupancies, schedules, or compliance figures are exposed here.</p>
+      <a href="/portal">Return to department portal</a>
+    </section>
+  );
 }
 
 function ModuleEmpty({ moduleName }: { moduleName: string }) {
-  return <section className="dept-module-empty"><div className="dept-empty-mark">+</div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>Ready for department configuration.</h2><p>This module is part of the branded department app, but no department records or live integration have been connected yet.</p><a href="/portal">Return to department portal</a></section>;
+  return (
+    <section className="dept-module-empty">
+      <div className="dept-empty-mark">+</div>
+      <span className="dept-section-label">{moduleName.toUpperCase()}</span>
+      <h2>Ready for department configuration.</h2>
+      <p>This module is part of the branded department app, but no department records or live integration have been connected yet.</p>
+      <a href="/portal">Return to department portal</a>
+    </section>
+  );
 }
