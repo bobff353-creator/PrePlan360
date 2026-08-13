@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- protected operational images are streamed by authenticated API routes */
 import type { StickneyModuleData } from "@/db/stickney";
 
 type Props = {
@@ -42,8 +43,8 @@ export default function StickneyWorkspace({ module, departmentId, data, connecti
   if (module === "scheduling") return <Schedule data={data}/>;
   if (module === "preplans") return <Preplans data={data}/>;
   if (module === "hydrants") return <Hydrants data={data}/>;
-  if (module === "fleet") return <Fleet data={data}/>;
-  if (module === "inventory") return <Inventory data={data}/>;
+  if (module === "fleet") return <Fleet departmentId={departmentId} data={data}/>;
+  if (module === "inventory") return <Inventory departmentId={departmentId} data={data}/>;
   if (module === "duties") return <Duties data={data}/>;
   if (module === "documents") return <Documents data={data}/>;
   if (module === "phones") return <Phones data={data}/>;
@@ -87,21 +88,21 @@ function Hydrants({ data }: { data: StickneyModuleData }) {
   return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>HYDRANTS</span><h2>Stickney hydrant records</h2></div><b>{hydrants.length}</b></div>{hydrants.length ? <div className="stickney-card-grid">{hydrants.map((hydrant) => <article key={hydrant.id}><span>{hydrant.service_status || "Status not entered"}</span><h3>{hydrant.hydrant_number || "Unnumbered hydrant"}</h3><p>{hydrant.address}</p><small>{[hydrant.manufacturer,hydrant.model,hydrant.notes].filter(Boolean).join(" · ")}</small></article>)}</div> : <Empty title="No Stickney hydrants are stored" text="The source currently has zero field-hydrant records. Nothing was deleted during this connection."/>}</section>;
 }
 
-function Fleet({ data }: { data: StickneyModuleData }) {
+function Fleet({ departmentId, data }: { departmentId: string; data: StickneyModuleData }) {
   const apparatus = data.apparatus ?? [];
   const compartments = data.compartments ?? [];
   const photos = data.inventoryPhotos ?? [];
-  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>APPARATUS</span><h2>Vehicles and apparatus</h2><p>Current profiles from Stickney&apos;s operational inventory.</p></div><b>{apparatus.length}</b></div>{apparatus.length ? <div className="stickney-card-grid apparatus">{apparatus.map((unit) => { const unitCompartments = compartments.filter((item) => item.apparatus_id === unit.id); const photoCount = photos.filter((item) => item.apparatus_id === unit.id).length; return <article key={unit.id}><span>{unit.asset_type || "Apparatus"}</span><h3>{unit.name}</h3><p>{[unit.year,unit.manufacturer,unit.model].filter(Boolean).join(" ") || "Vehicle details not entered"}</p><dl><div><dt>Compartments</dt><dd>{unitCompartments.length}</dd></div><div><dt>Photo records</dt><dd>{photoCount}</dd></div><div><dt>Weekly due</dt><dd>{unit.weekly_due_day == null ? "Not set" : dayNames[unit.weekly_due_day] || `Day ${unit.weekly_due_day}`}</dd></div></dl></article>; })}</div> : <Empty title="No apparatus profiles" text="The Stickney inventory source returned no apparatus profiles."/>}</section>;
+  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>APPARATUS</span><h2>Vehicles and apparatus</h2><p>Current profiles from Stickney&apos;s operational inventory.</p></div><b>{apparatus.length}</b></div>{apparatus.length ? <div className="stickney-card-grid apparatus">{apparatus.map((unit) => { const unitCompartments = compartments.filter((item) => item.apparatus_id === unit.id); const unitPhotos = photos.filter((item) => item.apparatus_id === unit.id); return <article key={unit.id}>{unitPhotos[0] ? <img className="stickney-apparatus-photo" src={`/api/departments/${departmentId}/stickney-inventory-photo/${unitPhotos[0].id}`} alt={`${unit.name} inventory view`}/> : null}<span>{unit.asset_type || "Apparatus"}</span><h3>{unit.name}</h3><p>{[unit.year,unit.manufacturer,unit.model].filter(Boolean).join(" ") || "Vehicle details not entered"}</p><dl><div><dt>Compartments</dt><dd>{unitCompartments.length}</dd></div><div><dt>Photos</dt><dd>{unitPhotos.length}</dd></div><div><dt>Weekly due</dt><dd>{unit.weekly_due_day == null ? "Not set" : dayNames[unit.weekly_due_day] || `Day ${unit.weekly_due_day}`}</dd></div></dl></article>; })}</div> : <Empty title="No apparatus profiles" text="The Stickney inventory source returned no apparatus profiles."/>}</section>;
 }
 
-function Inventory({ data }: { data: StickneyModuleData }) {
+function Inventory({ departmentId, data }: { departmentId: string; data: StickneyModuleData }) {
   const apparatus = data.apparatus ?? [];
   const compartments = data.compartments ?? [];
   const items = data.inventory ?? [];
   const photos = data.inventoryPhotos ?? [];
   const unitName = new Map(apparatus.map((item) => [item.id, item.name]));
   const compartmentName = new Map(compartments.map((item) => [item.id, item.label]));
-  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>INVENTORY</span><h2>Apparatus equipment</h2><p>All active records from the Stickney operational inventory bridge.</p></div><b>{items.length.toLocaleString()}</b></div><div className="stickney-photo-status"><b>{photos.length} private inventory photo records</b><span>The photo metadata is connected. Original private files stay protected in Stickney&apos;s Supabase bucket and are not made public by this build.</span></div>{items.length ? <div className="stickney-table inventory"><table><thead><tr><th>Apparatus</th><th>Compartment</th><th>Item</th><th>Required</th><th>Category</th><th>Identification</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td>{unitName.get(item.apparatus_id) || "Unknown unit"}</td><td>{item.compartment_id ? compartmentName.get(item.compartment_id) || "Unlabeled" : "Not assigned"}</td><td><b>{item.name}</b><small>{[item.manufacturer,item.model].filter(Boolean).join(" ")}</small></td><td>{item.quantity_required}</td><td>{item.equipment_category || (item.check_types ?? []).join(", ") || "Uncategorized"}</td><td>{item.serial_number || item.barcode || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No active inventory" text="The Stickney operational inventory returned no active equipment records."/>}</section>;
+  return <section className="stickney-panel"><SourceNotice/><div className="stickney-section-head"><div><span>INVENTORY</span><h2>Apparatus equipment</h2><p>All active records from the Stickney operational inventory bridge.</p></div><b>{items.length.toLocaleString()}</b></div>{photos.length ? <div className="stickney-photo-gallery">{photos.map((photo) => <figure key={photo.id}><img src={`/api/departments/${departmentId}/stickney-inventory-photo/${photo.id}`} alt={`${unitName.get(photo.apparatus_id) || "Apparatus"} ${photo.view_level} inventory view`}/><figcaption><b>{unitName.get(photo.apparatus_id) || "Apparatus"}</b><span>{[photo.view_level, photo.door_state].filter(Boolean).join(" · ")}</span></figcaption></figure>)}</div> : <div className="stickney-photo-status"><b>No inventory pictures stored</b><span>The source currently has no active inventory photo views.</span></div>}{items.length ? <div className="stickney-table inventory"><table><thead><tr><th>Apparatus</th><th>Compartment</th><th>Item</th><th>Required</th><th>Category</th><th>Identification</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td>{unitName.get(item.apparatus_id) || "Unknown unit"}</td><td>{item.compartment_id ? compartmentName.get(item.compartment_id) || "Unlabeled" : "Not assigned"}</td><td><b>{item.name}</b><small>{[item.manufacturer,item.model].filter(Boolean).join(" ")}</small></td><td>{item.quantity_required}</td><td>{item.equipment_category || (item.check_types ?? []).join(", ") || "Uncategorized"}</td><td>{item.serial_number || item.barcode || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No active inventory" text="The Stickney operational inventory returned no active equipment records."/>}</section>;
 }
 
 function Duties({ data }: { data: StickneyModuleData }) {
