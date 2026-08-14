@@ -1,6 +1,8 @@
 import type { Department, DepartmentHydrant, DepartmentPreplan, SharedHydrant, SharedPreplan } from "@/db/access";
-import PreplanMap, { type MapHydrant, type MapPoint, type MapPreplan } from "./preplan-map";
-import PreplanDetail, { type PreplanDetailHydrant } from "./preplan-detail";
+import PreplanMap from "./preplan-map-client";
+import { type MapHydrant, type MapPoint, type MapPreplan } from "./preplan-map";
+import PreplanDetail from "./preplan-detail-client";
+import { type PreplanDetailHydrant } from "./preplan-detail";
 
 type Props = {
   kind: "preplans" | "hydrants";

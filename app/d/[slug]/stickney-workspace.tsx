@@ -5,11 +5,12 @@ import type { DepartmentScheduleRequest } from "@/db/access";
 import StaffingWorkspace from "./staffing-workspace";
 import FleetWorkspace from "./fleet-workspace";
 import DailyDutiesWorkspace from "./daily-duties-workspace";
-import PreplanMap from "./preplan-map";
+import PreplanMap from "./preplan-map-client";
 import ScheduleCalendar from "./schedule-calendar";
 import DocumentsWorkspace from "./documents-workspace";
 import ScheduleRequestsWorkspace from "./schedule-requests-workspace";
-import PreplanDetail, { type PreplanDetailHydrant } from "./preplan-detail";
+import PreplanDetail from "./preplan-detail-client";
+import { type PreplanDetailHydrant } from "./preplan-detail";
 
 type Props = {
   module: string;
