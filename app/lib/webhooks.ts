@@ -103,9 +103,11 @@ export async function storeWebhookEvent(input: {
   summary: string;
   normalized: Record<string, unknown>;
   rawPayload: string;
+  departmentId?: string | null;
+  status?: string;
 }) {
   const result = await db().prepare("INSERT OR IGNORE INTO webhook_events (id,source,external_id,event_type,status,department_id,summary,normalized_json,raw_payload,received_at,processed_at) VALUES (?,?,?,?,?,?,?,?,?,?,NULL)")
-    .bind(id("wh"), input.source, input.externalId, input.eventType, "received", null, input.summary.slice(0, 500), JSON.stringify(input.normalized), input.rawPayload, now())
+    .bind(id("wh"), input.source, input.externalId, input.eventType, input.status || "received", input.departmentId || null, input.summary.slice(0, 500), JSON.stringify(input.normalized), input.rawPayload, now())
     .run();
   return { duplicate: Number(result.meta.changes || 0) === 0 };
 }

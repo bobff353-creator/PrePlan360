@@ -363,6 +363,49 @@ export const webhookEvents = sqliteTable("webhook_events", {
   index("idx_webhook_events_status_received").on(table.status, table.receivedAt),
 ]);
 
+export const departmentIntegrations = sqliteTable("department_integrations", {
+  departmentId: text("department_id").primaryKey(),
+  mapsEnabled: integer("maps_enabled").notNull().default(0),
+  streetViewEnabled: integer("street_view_enabled").notNull().default(0),
+  routesEnabled: integer("routes_enabled").notNull().default(0),
+  googleBrowserKey: text("google_browser_key").notNull().default(""),
+  googleMapId: text("google_map_id").notNull().default(""),
+  googleVerifiedAt: text("google_verified_at"),
+  googleVerificationJson: text("google_verification_json").notNull().default("{}"),
+  cadEnabled: integer("cad_enabled").notNull().default(0),
+  cadProvider: text("cad_provider").notNull().default(""),
+  cadSigningSecretCipher: text("cad_signing_secret_cipher").notNull().default(""),
+  cadVerifiedAt: text("cad_verified_at"),
+  cadLastEventAt: text("cad_last_event_at"),
+  resendEnabled: integer("resend_enabled").notNull().default(0),
+  resendReceivingAddress: text("resend_receiving_address").notNull().default(""),
+  resendApiKeyCipher: text("resend_api_key_cipher").notNull().default(""),
+  resendWebhookSecretCipher: text("resend_webhook_secret_cipher").notNull().default(""),
+  resendWebhookId: text("resend_webhook_id").notNull().default(""),
+  resendProviderVerifiedAt: text("resend_provider_verified_at"),
+  resendLastEventAt: text("resend_last_event_at"),
+  nightlyExportEnabled: integer("nightly_export_enabled").notNull().default(0),
+  nightlyExportUrl: text("nightly_export_url").notNull().default(""),
+  nightlyExportSecretCipher: text("nightly_export_secret_cipher").notNull().default(""),
+  nightlyExportVerifiedAt: text("nightly_export_verified_at"),
+  nightlyExportLastAttemptAt: text("nightly_export_last_attempt_at"),
+  nightlyExportLastSuccessAt: text("nightly_export_last_success_at"),
+  nightlyExportLastStatus: text("nightly_export_last_status").notNull().default("not_configured"),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const departmentExportDeliveries = sqliteTable("department_export_deliveries", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  deliveryMode: text("delivery_mode").notNull(),
+  status: text("status").notNull(),
+  endpoint: text("endpoint").notNull(),
+  httpStatus: integer("http_status"),
+  summary: text("summary").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+}, (table) => [index("idx_department_exports_department_created").on(table.departmentId, table.createdAt)]);
+
 export const departmentPreplans = sqliteTable("department_preplans", {
   id: text("id").primaryKey(),
   departmentId: text("department_id").notNull(),

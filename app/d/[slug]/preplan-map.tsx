@@ -31,20 +31,22 @@ type Props = {
   hydrants: MapHydrant[];
 };
 
-type GoogleMapConfig = { configured: boolean; browserKey: string; mapId: string };
+type GoogleMapConfig = { configured: boolean; browserKey: string; mapId: string; streetViewEnabled: boolean; routesEnabled: boolean };
 type GoogleWindow = Window & { google?: any; __preplanGoogleMapsPromise?: Promise<void> };
 
 function finite(value: number | null): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function loadGoogleMaps(key: string) {
+function loadGoogleMaps(config: GoogleMapConfig) {
   const target = window as GoogleWindow;
   if (target.google?.maps) return Promise.resolve();
   if (target.__preplanGoogleMapsPromise) return target.__preplanGoogleMapsPromise;
   target.__preplanGoogleMapsPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+    const params = new URLSearchParams({ key: config.browserKey, v: "weekly", loading: "async", auth_referrer_policy: "origin" });
+    if (config.mapId) params.set("map_ids", config.mapId);
+    script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
@@ -123,12 +125,12 @@ export default function PreplanMap({ departmentSlug, preplans, hydrants }: Props
           if (active) setState("plot");
           return;
         }
-        await loadGoogleMaps(config.browserKey);
+        await loadGoogleMaps(config);
         if (!active || !host.current) return;
         const google = (window as GoogleWindow).google;
         const map = new google.maps.Map(host.current, {
           center: records[0], zoom: 15, mapId: config.mapId || undefined,
-          mapTypeControl: true, streetViewControl: true, fullscreenControl: true,
+          mapTypeControl: true, streetViewControl: config.streetViewEnabled, fullscreenControl: true,
         });
         const bounds = new google.maps.LatLngBounds();
         mappedPreplans.forEach((record) => {
@@ -158,6 +160,6 @@ export default function PreplanMap({ departmentSlug, preplans, hydrants }: Props
       {state !== "google" ? <PlotMap preplans={preplans} hydrants={hydrants}/> : null}
       <div className="preplan-map-legend"><span><i className="building"/>Saved footprint</span><span><i className="pin"/>Preplan location only</span><span><i className="hydrant"/>Hydrant</span></div>
     </div>
-    <div className="preplan-map-truth"><b>{mappedPreplans.length} mapped preplans · {mappedHydrants.length} mapped hydrants</b><span>{state === "google" ? "Live Google basemap with department records overlaid." : "Add a restricted Google Maps browser key in Owner Integrations to enable the live basemap. This fallback uses only saved record coordinates."}</span></div>
+    <div className="preplan-map-truth"><b>{mappedPreplans.length} mapped preplans · {mappedHydrants.length} mapped hydrants</b><span>{state === "google" ? "Live Google basemap with department records overlaid." : "Add and verify a restricted Google Maps browser key in Department integrations to enable the live basemap. This fallback uses only saved record coordinates."}</span></div>
   </section>;
 }

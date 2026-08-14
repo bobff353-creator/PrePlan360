@@ -1,3 +1,5 @@
+import { getDepartmentIntegrationBySlug } from "@/app/lib/department-integrations";
+
 type DepartmentMapKeySet = Record<string, string>;
 
 function departmentKeys(): DepartmentMapKeySet {
@@ -9,13 +11,18 @@ function departmentKeys(): DepartmentMapKeySet {
   }
 }
 
-export function departmentMapConfig(departmentSlug: string) {
+export async function departmentMapConfig(departmentSlug: string) {
   const keys = departmentKeys();
-  const browserKey = String(keys[departmentSlug] || keys.default || process.env.GOOGLE_MAPS_BROWSER_KEY || "").trim();
+  const integration = await getDepartmentIntegrationBySlug(departmentSlug);
+  const fallbackKey = String(keys[departmentSlug] || keys.default || process.env.GOOGLE_MAPS_BROWSER_KEY || "").trim();
+  const browserKey = String(integration?.google_browser_key || fallbackKey).trim();
+  const enabled = integration ? Boolean(integration.maps_enabled) : Boolean(browserKey);
   return {
-    configured: Boolean(browserKey),
-    browserKey,
-    mapId: String(process.env.GOOGLE_MAPS_MAP_ID || "").trim(),
+    configured: enabled && Boolean(browserKey),
+    browserKey: enabled ? browserKey : "",
+    mapId: String(integration?.google_map_id || process.env.GOOGLE_MAPS_MAP_ID || "").trim(),
+    streetViewEnabled: integration ? Boolean(integration.street_view_enabled) : true,
+    routesEnabled: integration ? Boolean(integration.routes_enabled) : false,
   };
 }
 
