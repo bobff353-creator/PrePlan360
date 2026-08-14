@@ -272,6 +272,111 @@
   overflow-y: auto;
   padding: 14px 20px 20px;
 }
+.schx-day-personnel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #101923;
+}
+.schx-day-personnel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.schx-day-personnel h3 {
+  margin: 3px 0 0;
+  font-size: 15px;
+}
+.schx-day-personnel > header > b {
+  font: 800 25px Georgia, serif;
+}
+.schx-day-personnel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+.schx-day-personnel-grid > article {
+  min-width: 0;
+  padding: 10px 12px;
+  background: #0d151e;
+}
+.schx-day-personnel-grid > article > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.schx-day-personnel-grid strong {
+  font-size: 11px;
+}
+.schx-day-personnel-grid > article > header span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.schx-day-personnel-grid > article > div {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+.schx-day-personnel-grid p {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  margin: 0;
+  padding-left: 7px;
+  border-left: 3px solid var(--shift-color);
+}
+.schx-day-personnel-grid p b,
+.schx-day-personnel-grid p span,
+.schx-day-personnel-grid p em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+}
+.schx-day-personnel-grid p b {
+  color: color-mix(in srgb, var(--shift-color) 55%, white);
+}
+.schx-day-personnel-grid p span {
+  color: var(--muted);
+}
+.schx-day-personnel-grid p em {
+  grid-column: 1 / -1;
+  color: #ff9b97;
+  font-style: normal;
+  font-weight: 800;
+}
+.schx-day-personnel-grid p.not-eligible {
+  border-left-color: #ff4b46;
+}
+.schx-day-breakdown {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0b121a;
+}
+.schx-day-breakdown > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.schx-day-breakdown > summary span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.schx-day-breakdown > div {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
 .schx-day-shift {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--shift-color) 38%, #ffffff14);
@@ -427,6 +532,9 @@
     padding: 12px 15px 15px;
   }
   .schx-day-roster {
+    grid-template-columns: 1fr;
+  }
+  .schx-day-personnel-grid {
     grid-template-columns: 1fr;
   }
 }

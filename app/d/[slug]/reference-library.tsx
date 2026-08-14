@@ -45,7 +45,7 @@ export default function ReferenceLibrary(props: Props) {
   const mapHydrants: MapHydrant[] = [...props.ownHydrants.map((record) => ({ id: `own-${record.id}`, name: record.hydrant_number, location: record.location, latitude: numberOrNull(record.latitude), longitude: numberOrNull(record.longitude), status: record.status, targetId: `hydrant-${record.id}` })), ...props.sharedHydrants.map((record) => ({ id: `shared-${record.id}`, name: record.hydrant_number, location: record.location, latitude: numberOrNull(record.latitude), longitude: numberOrNull(record.longitude), status: record.status, targetId: `shared-hydrant-${record.id}` }))];
   return <div className="reference-workspace">
     <PrivacyBanner/>
-    {props.showMap !== false ? <PreplanMap departmentSlug={props.department.slug} preplans={mapPreplans} hydrants={mapHydrants}/> : null}
+    {props.showMap !== false ? <PreplanMap departmentId={props.department.id} departmentSlug={props.department.slug} preplans={mapPreplans} hydrants={mapHydrants} editable={props.editable}/> : null}
     <div className="reference-columns">
       <section className="reference-panel"><div className="reference-panel-head"><div><span>YOUR DEPARTMENT</span><h2>{isPreplans ? "Preplan records" : "Hydrant records"}</h2></div><b>{isPreplans ? props.ownPreplans.length : props.ownHydrants.length}</b></div>
         {props.editable ? isPreplans ? <PreplanCreate department={props.department} supportSessionId={props.supportSessionId}/> : <HydrantCreate department={props.department} supportSessionId={props.supportSessionId}/> : <div className="reference-readonly-note">Department members can view records. Only authorized administrators can add records or change sharing.</div>}

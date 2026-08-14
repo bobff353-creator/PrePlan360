@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.67",
-  "generatedAt": "2026-08-14T18:06:14.794Z",
+  "release": "2026.08.14.68",
+  "generatedAt": "2026-08-14T18:51:14.296Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -11,7 +11,7 @@
   "modules": {
     "application-shell": {
       "demo": "d1abf390a805325b69481f5481e83d1aa381f5aee94e565b58109a6c2a4bf789",
-      "departments": "317e809ea47b8124b39ba4583e5f3eecd09823abc65cdee61003a1a56441b5a3"
+      "departments": "9bc732b31a2e84ed0cecd47fa150b7ad8f13afcd8be9e260f3ae1c1c7f756bff"
     },
     "live-operations": {
       "demo": "07469b3bb04b9298cb38162ce5b309e4af597b65b34fb790bb03049aef779cca",
@@ -22,8 +22,8 @@
       "departments": "8fda9827a1c6c74aa0a59b2b956d14c7313c2c2baa80492f27af71dab9019323"
     },
     "scheduling": {
-      "demo": "9791f92e3406bf0e301a445ec501220c925e77b6081f63fa3847b32f435c2f72",
-      "departments": "0ca7dde4877779bcf040f2f65046611cffc439d8a36bee3696cc69c849e2d8e0"
+      "demo": "1b49b517ea523dce6a0d86fc8bb685a2e8ed3f0ef495f74985c927adaf30b0cf",
+      "departments": "15e80897e2f06cdb361618db027a9e63b4e6edb0754b1ce668538f6b309dee00"
     },
     "daily-log-and-duties": {
       "demo": "8cf23fc5b9253e176ef8a21c2fc4fc8cbe4a1c9e8d3f7e2f0f87a6c2fb3f4054",
@@ -39,11 +39,15 @@
     },
     "box-cards-and-documents": {
       "demo": "dee3ba0a4fc70e88ad42e162334c1de156a593596fac3ad2c765d62c85013f9b",
-      "departments": "4f60c978a32de6231e8ff67ab3825963348fa06d53004c548337f643d4c70e27"
+      "departments": "4dd85a1fbb3c6bf76b1f4a66aa90bde5f89330847e56856a5f6af38125871afc"
+    },
+    "apparatus-and-logistics": {
+      "demo": "35eeedc273f4e0118afeedce494b1e43bfd2c17d6868fc82786d48628ad0ad0a",
+      "departments": "4f1911d0b18ea3b279f17863280cf96c382221af5f10f5b2b0b01782ebaf79fa"
     },
     "preplans": {
-      "demo": "d969fb56fbdcfd72fc47baaa4ab98c59ee2e42e69530e14ebd64913bab622841",
-      "departments": "0bfa19049cf89664af00c242cb311a87136de8fb4208c4e5b2627b0ed2afda81"
+      "demo": "fab0e841a44ecbfd08fdde67a84bad235b5cc7986f653cfc0f034b548e19b9dd",
+      "departments": "f6072764b37e964be2e250a682c329260e217a5f7e5cd511b5587343fe697247"
     },
     "respond": {
       "demo": "b2330e35eeece30f296c6caa782e8fe65d54756b32e0a0f06414b936b18b9d10",

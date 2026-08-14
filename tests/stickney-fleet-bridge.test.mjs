@@ -14,8 +14,11 @@ test("Stickney apparatus checks use the department-filtered Fleet bridge", () =>
 });
 
 test("the Apparatus workspace exposes daily and weekly connected check activity", () => {
-  assert.match(workspace, /Daily, weekly, inventory, and air-pack checks/);
-  assert.match(workspace, /checks\.map\(\(check\)/);
+  assert.match(workspace, /Daily and weekly apparatus checks/);
+  assert.match(workspace, /sourceChecks\.map\(\(check\)/);
+  assert.match(workspace, /Daily Vehicle Check/);
+  assert.match(workspace, /Weekly Apparatus Check/);
+  assert.match(workspace, /Complete & submit check/);
   assert.match(workspace, /check\.item_count/);
   assert.match(workspace, /check\.pending_count/);
   assert.match(workspace, /check\.failed_count/);

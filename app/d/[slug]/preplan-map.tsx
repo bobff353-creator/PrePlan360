@@ -26,9 +26,11 @@ export type MapHydrant = {
 };
 
 type Props = {
+  departmentId: string;
   departmentSlug: string;
   preplans: MapPreplan[];
   hydrants: MapHydrant[];
+  editable: boolean;
 };
 
 type GoogleMapConfig = { configured: boolean; browserKey: string; mapId: string; streetViewEnabled: boolean; routesEnabled: boolean };
@@ -105,7 +107,7 @@ function PlotMap({ preplans, hydrants }: { preplans: MapPreplan[]; hydrants: Map
   </svg>;
 }
 
-export default function PreplanMap({ departmentSlug, preplans, hydrants }: Props) {
+export default function PreplanMap({ departmentId, departmentSlug, preplans, hydrants, editable }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"checking" | "google" | "plot" | "error">("checking");
   const mappedPreplans = useMemo(() => preplans.filter((record) => finite(record.latitude) && finite(record.longitude) || record.footprint.length >= 3), [preplans]);
@@ -160,6 +162,6 @@ export default function PreplanMap({ departmentSlug, preplans, hydrants }: Props
       {state !== "google" ? <PlotMap preplans={preplans} hydrants={hydrants}/> : null}
       <div className="preplan-map-legend"><span><i className="building"/>Saved footprint</span><span><i className="pin"/>Preplan location only</span><span><i className="hydrant"/>Hydrant</span></div>
     </div>
-    <div className="preplan-map-truth"><b>{mappedPreplans.length} mapped preplans · {mappedHydrants.length} mapped hydrants</b><span>{state === "google" ? "Live Google basemap with department records overlaid." : "Add and verify a restricted Google Maps browser key in Department integrations to enable the live basemap. This fallback uses only saved record coordinates."}</span></div>
+    <div className="preplan-map-truth"><b>{mappedPreplans.length} mapped preplans · {mappedHydrants.length} mapped hydrants</b><span>{state === "google" ? "Live Google basemap with department records overlaid." : "Add and verify a restricted Google Maps browser key in this department's Build & Branding Integration Center. This fallback uses only saved record coordinates."}</span>{state !== "google" && editable ? <a href={`/departments/${departmentId}#integrations`}>Set up Google Maps</a> : null}</div>
   </section>;
 }

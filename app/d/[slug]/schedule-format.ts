@@ -71,6 +71,75 @@ export function scheduleStaffingLabel(summary: ScheduleStaffingSummary) {
   return `${summary.assigned} assigned`;
 }
 
+export type ScheduleDayRosterAssignment = {
+  id: string;
+  scheduleId: string;
+  scheduleName: string;
+  start: string;
+  end: string;
+  color: string;
+  role: string;
+  eligible: boolean;
+};
+
+export type ScheduleDayRosterPerson = {
+  id: string;
+  name: string;
+  rank: string;
+  assignments: ScheduleDayRosterAssignment[];
+};
+
+type ScheduleDaySource = {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  color: string;
+  assignments: Array<{
+    id: string;
+    employee_id?: string;
+    employee_name: string;
+    rank?: string;
+    role?: string;
+  }>;
+};
+
+export function scheduleDayRoster(
+  schedules: ScheduleDaySource[],
+  eligibleAssignmentIds?: ReadonlySet<string>,
+) {
+  const people = new Map<string, ScheduleDayRosterPerson>();
+  for (const schedule of schedules) {
+    for (const assignment of schedule.assignments) {
+      const employeeId = String(assignment.employee_id || "").trim();
+      const name = String(assignment.employee_name || "Employee not entered").trim();
+      const key = employeeId || `name:${name.toLocaleLowerCase()}`;
+      const person = people.get(key) || {
+        id: key,
+        name,
+        rank: String(assignment.rank || "").trim(),
+        assignments: [],
+      };
+      if (!person.rank && assignment.rank) person.rank = assignment.rank;
+      if (!person.assignments.some((row) => row.id === assignment.id)) {
+        person.assignments.push({
+          id: assignment.id,
+          scheduleId: schedule.id,
+          scheduleName: schedule.name,
+          start: schedule.start,
+          end: schedule.end,
+          color: schedule.color,
+          role: String(assignment.role || "").trim(),
+          eligible:
+            !eligibleAssignmentIds || eligibleAssignmentIds.has(assignment.id),
+        });
+      }
+      people.set(key, person);
+    }
+  }
+  return [...people.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export type CalendarScheduleRow = {
   id: string;
   work_date: string;

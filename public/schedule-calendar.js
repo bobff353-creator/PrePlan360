@@ -103,17 +103,140 @@ function schxCalendarStaffingLabel(staffing) {
   return `${staffing.assigned} assigned`;
 }
 
+function schxCalendarDayRoster(items) {
+  const people = new Map();
+  items.forEach((shift) => {
+    const template = schxTemplate(shift.templateId);
+    shift.assignments.forEach((assignment) => {
+      const member = rstMember(assignment.memberId);
+      const key = assignment.memberId || member?.name || "unavailable";
+      const person = people.get(key) || {
+        id: key,
+        name: member?.name || "Roster member unavailable",
+        rank: member?.rank || "",
+        assignments: [],
+      };
+      person.assignments.push({
+        shiftName: shift.name,
+        start: template?.start || "Start not set",
+        end: template?.end || "",
+        color: schxColorHex(template?.color),
+        role: assignment.role || "",
+        unit: assignment.unit || "",
+        eligible: schxAssignmentEligible(shift, assignment),
+      });
+      people.set(key, person);
+    });
+  });
+  return [...people.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function schxCalendarDayPersonnel(roster) {
+  return (
+    '<section class="schx-day-personnel"><header><div><span class="modtitle">PERSONNEL SCHEDULED</span><h3>Who is working this day</h3></div><b>' +
+    roster.length +
+    '</b></header><div class="schx-day-personnel-grid">' +
+    (roster.length
+      ? roster
+          .map(
+            (person) =>
+              '<article><header><strong>' +
+              schxEsc(person.name) +
+              "</strong>" +
+              (person.rank ? "<span>" + schxEsc(person.rank) + "</span>" : "") +
+              "</header><div>" +
+              person.assignments
+                .map(
+                  (assignment) =>
+                    '<p class="' +
+                    (assignment.eligible ? "" : "not-eligible") +
+                    '" style="--shift-color:' +
+                    assignment.color +
+                    '"><b>' +
+                    schxEsc(assignment.shiftName) +
+                    "</b><span>" +
+                    schxEsc(
+                      assignment.start +
+                        (assignment.end ? "–" + assignment.end : "") +
+                        (assignment.role ? " · " + assignment.role : "") +
+                        (assignment.unit ? " · " + assignment.unit : ""),
+                    ) +
+                    "</span>" +
+                    (assignment.eligible
+                      ? ""
+                      : "<em>Review role or employment date</em>") +
+                    "</p>",
+                )
+                .join("") +
+              "</div></article>",
+          )
+          .join("")
+      : "<p>No employees are assigned to this date.</p>") +
+    "</div></section>"
+  );
+}
+
+function schxCalendarShiftDetail(shift) {
+  const template = schxTemplate(shift.templateId);
+  const color = schxColorHex(template?.color);
+  const staffing = schxCalendarStaffing(shift);
+  const belowMinimum = staffing.belowMinimum;
+  return (
+    '<article class="schx-day-shift ' +
+    (belowMinimum ? "below-minimum" : "") +
+    '" style="--shift-color:' +
+    color +
+    '"><header><div><span class="modtitle">SCHEDULE</span><h3>' +
+    schxEsc(shift.name) +
+    '</h3></div><div class="schx-day-coverage"><b>' +
+    schxEsc(template?.start || "Start not set") +
+    (template?.end ? "–" + schxEsc(template.end) : "") +
+    "</b>" +
+    (belowMinimum
+      ? "<span>" +
+        schxEsc(
+          staffing.openShifts
+            ? schxCalendarStaffingLabel(staffing) +
+                " · " +
+                staffing.assigned +
+                " assigned"
+            : schxCalendarStaffingLabel(staffing),
+        ) +
+        "</span>"
+      : "<small>Minimum met · " +
+        staffing.assigned +
+        " assigned</small>") +
+    '</div></header><div class="schx-day-roster">' +
+    (shift.assignments.length
+      ? shift.assignments
+          .map((assignment) => {
+            const member = rstMember(assignment.memberId);
+            const details = [assignment.role, member?.rank, assignment.unit].filter(Boolean);
+            const eligible = schxAssignmentEligible(shift, assignment);
+            return (
+              '<div class="' +
+              (eligible ? "" : "not-eligible") +
+              '"><strong>' +
+              schxEsc(member?.name || "Roster member unavailable") +
+              "</strong><span>" +
+              schxEsc(details.join(" · ") || "Position not entered") +
+              "</span>" +
+              (eligible ? "" : "<em>Does not count: date or role conflict</em>") +
+              "</div>"
+            );
+          })
+          .join("")
+      : "<p>No employees assigned.</p>") +
+    '</div><footer><button class="btn" onclick="schxCalendarOpenShift(\'' +
+    shift.id +
+    "')\">Open schedule</button></footer></article>"
+  );
+}
+
 function schxCalendarDayView(groups) {
   if (!schxCalendarDay) return "";
   const items = groups.get(schxCalendarDay) || [];
-  const assigned = items.reduce(
-    (count, shift) => count + shift.assignments.length,
-    0,
-  );
-  const coverageGaps = items.filter((shift) => {
-    const coverage = schxCoverage(shift);
-    return coverage.total < coverage.minimum;
-  }).length;
+  const roster = schxCalendarDayRoster(items);
   return (
     '<div class="schx-day-overlay" role="presentation" onclick="if(event.target===this)schxCalendarCloseDay()"><section class="schx-day-view" role="dialog" aria-modal="true" aria-labelledby="schx-day-title"><header class="schx-day-head"><div><span class="modtitle">DAY VIEW</span><h2 id="schx-day-title">' +
     schxEsc(schxLabelDate(schxCalendarDay)) +
@@ -122,75 +245,18 @@ function schxCalendarDayView(groups) {
     " schedule" +
     (items.length === 1 ? "" : "s") +
     " · " +
-    assigned +
-    " assigned" +
-    (coverageGaps ? " · " + coverageGaps + " below minimum" : "") +
+    roster.length +
+    " people scheduled" +
     '</p></div><button class="btn" onclick="schxCalendarCloseDay()">Close</button></header><nav class="schx-day-nav" aria-label="Day controls"><button class="btn" onclick="schxCalendarMoveDay(-1)">Previous day</button><button class="btn" onclick="schxCalendarOpenDay(schxDate(0))">Today</button><button class="btn" onclick="schxCalendarMoveDay(1)">Next day</button></nav><div class="schx-day-content">' +
     (items.length
-      ? items
-          .map((shift) => {
-            const template = schxTemplate(shift.templateId);
-            const color = schxColorHex(template?.color);
-            const staffing = schxCalendarStaffing(shift);
-            const belowMinimum = staffing.belowMinimum;
-            return (
-              '<article class="schx-day-shift ' +
-              (belowMinimum ? "below-minimum" : "") +
-              '" style="--shift-color:' +
-              color +
-              '"><header><div><span class="modtitle">SCHEDULE</span><h3>' +
-              schxEsc(shift.name) +
-              '</h3></div><div class="schx-day-coverage"><b>' +
-              schxEsc(template?.start || "Start not set") +
-              (template?.end ? "–" + schxEsc(template.end) : "") +
-              "</b>" +
-              (belowMinimum
-                ? "<span>" +
-                  schxEsc(
-                    staffing.openShifts
-                      ? schxCalendarStaffingLabel(staffing) +
-                          " · " +
-                          staffing.assigned +
-                          " assigned"
-                      : schxCalendarStaffingLabel(staffing),
-                  ) +
-                  "</span>"
-                : "<small>Minimum met · " +
-                  staffing.assigned +
-                  " assigned</small>") +
-              '</div></header><div class="schx-day-roster">' +
-              (shift.assignments.length
-                ? shift.assignments
-                    .map((assignment) => {
-                      const member = rstMember(assignment.memberId);
-                      const details = [
-                        assignment.role,
-                        member?.rank,
-                        assignment.unit,
-                      ].filter(Boolean);
-                      const eligible = schxAssignmentEligible(shift, assignment);
-                      return (
-                        '<div class="' +
-                        (eligible ? "" : "not-eligible") +
-                        '"><strong>' +
-                        schxEsc(member?.name || "Roster member unavailable") +
-                        "</strong><span>" +
-                        schxEsc(details.join(" · ") || "Position not entered") +
-                        "</span>" +
-                        (eligible
-                          ? ""
-                          : "<em>Does not count: date or role conflict</em>") +
-                        "</div>"
-                      );
-                    })
-                    .join("")
-                : "<p>No employees assigned.</p>") +
-              '</div><footer><button class="btn" onclick="schxCalendarOpenShift(\'' +
-              shift.id +
-              "')\">Open schedule</button></footer></article>"
-            );
-          })
-          .join("")
+      ? schxCalendarDayPersonnel(roster) +
+        '<details class="schx-day-breakdown"><summary>Shift coverage details<span>' +
+        items.length +
+        " schedule" +
+        (items.length === 1 ? "" : "s") +
+        "</span></summary><div>" +
+        items.map(schxCalendarShiftDetail).join("") +
+        "</div></details>"
       : '<div class="schx-day-empty"><strong>No schedules for this date.</strong><p>This day has no saved schedule or staffing assignments.</p></div>') +
     "</div></section></div>"
   );

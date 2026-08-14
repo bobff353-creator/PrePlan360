@@ -339,7 +339,7 @@ function Preplans({ source, departmentId, departmentSlug, data, editable, suppor
         </div>
         <b>{preplans.length + imports.length}</b>
       </div>
-      <PreplanMap departmentSlug={departmentSlug} preplans={preplans.map((plan) => ({ id: plan.id, name: plan.business_name, address: plan.address, latitude: plan.latitude, longitude: plan.longitude, footprint: stickneyFootprint(plan.footprint_json), targetId: `stickney-preplan-${plan.id}` }))} hydrants={hydrants.map((hydrant) => ({ id: hydrant.id, name: hydrant.hydrant_number || "Unnumbered hydrant", location: hydrant.address, latitude: hydrant.latitude, longitude: hydrant.longitude, status: hydrant.service_status || "Status not entered", href: `/d/${departmentSlug}?module=hydrants${support}` }))}/>
+      <PreplanMap departmentId={departmentId} departmentSlug={departmentSlug} preplans={preplans.map((plan) => ({ id: plan.id, name: plan.business_name, address: plan.address, latitude: plan.latitude, longitude: plan.longitude, footprint: stickneyFootprint(plan.footprint_json), targetId: `stickney-preplan-${plan.id}` }))} hydrants={hydrants.map((hydrant) => ({ id: hydrant.id, name: hydrant.hydrant_number || "Unnumbered hydrant", location: hydrant.address, latitude: hydrant.latitude, longitude: hydrant.longitude, status: hydrant.service_status || "Status not entered", href: `/d/${departmentSlug}?module=hydrants${support}` }))} editable={editable}/>
       {preplans.length ? (
         <div className="stickney-card-grid">
           {preplans.map((plan) => (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import type { StickneyScheduleAssignment } from "@/db/stickney";
 import {
+  scheduleDayRoster,
   scheduleDisplayName,
   scheduleStaffingLabel,
   scheduleStaffingSummary,
@@ -206,6 +207,13 @@ export default function ScheduleCalendar({
     month: "long",
     year: "numeric",
   });
+  const selectedDaySchedules = selectedDate
+    ? byDate.get(selectedDate) || []
+    : [];
+  const selectedDayRoster = scheduleDayRoster(
+    selectedDaySchedules,
+    eligibleIds,
+  );
   // This shared renderer mirrors the demo's slide cadence across every department.
   return (
     <section
@@ -411,14 +419,10 @@ export default function ScheduleCalendar({
                 <span>DAY VIEW</span>
                 <h2 id="schedule-day-title">{dayLabel(selectedDate)}</h2>
                 <p>
-                  {(byDate.get(selectedDate) || []).length} schedule
-                  {(byDate.get(selectedDate) || []).length === 1 ? "" : "s"}
+                  {selectedDaySchedules.length} schedule
+                  {selectedDaySchedules.length === 1 ? "" : "s"}
                   {" · "}
-                  {(byDate.get(selectedDate) || []).reduce(
-                    (count, schedule) => count + schedule.assignments.length,
-                    0,
-                  )}{" "}
-                  assigned
+                  {selectedDayRoster.length} people scheduled
                 </p>
               </div>
               <button type="button" onClick={() => setSelectedDate(null)}>
@@ -443,8 +447,55 @@ export default function ScheduleCalendar({
               </button>
             </nav>
             <div className="schedule-day-content">
-              {(byDate.get(selectedDate) || []).length ? (
-                (byDate.get(selectedDate) || []).map((schedule) => {
+              {selectedDaySchedules.length ? (
+                <>
+                  <section className="schedule-day-personnel">
+                    <header>
+                      <div>
+                        <span>PERSONNEL SCHEDULED</span>
+                        <h3>Who is working this day</h3>
+                      </div>
+                      <b>{selectedDayRoster.length}</b>
+                    </header>
+                    <div className="schedule-day-personnel-grid">
+                      {selectedDayRoster.length ? (
+                        selectedDayRoster.map((person) => (
+                          <article key={person.id}>
+                            <header>
+                              <strong>{person.name}</strong>
+                              {person.rank ? <span>{person.rank}</span> : null}
+                            </header>
+                            <div>
+                              {person.assignments.map((assignment) => (
+                                <p
+                                  className={assignment.eligible ? "" : "not-eligible"}
+                                  style={{ "--shift-color": assignment.color } as CSSProperties}
+                                  key={assignment.id}
+                                >
+                                  <b>{assignment.scheduleName}</b>
+                                  <span>
+                                    {assignment.start || "Start not set"}
+                                    {assignment.end ? `–${assignment.end}` : ""}
+                                    {assignment.role ? ` · ${assignment.role}` : ""}
+                                  </span>
+                                  {!assignment.eligible ? <em>Review role or employment date</em> : null}
+                                </p>
+                              ))}
+                            </div>
+                          </article>
+                        ))
+                      ) : (
+                        <p>No employees are assigned to this date.</p>
+                      )}
+                    </div>
+                  </section>
+                  <details className="schedule-day-breakdown">
+                    <summary>
+                      Shift coverage details
+                      <span>{selectedDaySchedules.length} schedule{selectedDaySchedules.length === 1 ? "" : "s"}</span>
+                    </summary>
+                    <div>
+                {selectedDaySchedules.map((schedule) => {
                   const staffing = scheduleStaffingSummary(
                     schedule.assignments.length,
                     schedule.staffingCount,
@@ -506,7 +557,10 @@ export default function ScheduleCalendar({
                     </div>
                   </article>
                   );
-                })
+                })}
+                    </div>
+                  </details>
+                </>
               ) : (
                 <div className="schedule-day-empty">
                   <strong>No schedules for this date.</strong>

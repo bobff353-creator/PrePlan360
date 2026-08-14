@@ -22,6 +22,20 @@ test("department build exposes the shared secure integration center", async () =
   assert.match(migration, /department_export_deliveries/);
 });
 
+test("department preplans use Google Maps when configured and expose setup when not", async () => {
+  const [map, demoMap] = await Promise.all([
+    readFile(new URL("../app/d/[slug]/preplan-map.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/preplans-upgrade.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(map, /maps\.googleapis\.com\/maps\/api\/js/);
+  assert.match(map, /new google\.maps\.Polygon/);
+  assert.match(map, /new google\.maps\.Marker/);
+  assert.match(map, /Set up Google Maps/);
+  assert.match(map, /departments\/\$\{departmentId\}#integrations/);
+  assert.match(demoMap, /Real department builds overlay saved building footprints and hydrants on Google Maps/);
+  assert.match(demoMap, /Open department builds/);
+});
+
 test("nightly export is HTTPS-only, signed, and excludes credentials", async () => {
   const [delivery, cron, vercel] = await Promise.all([
     read("app/lib/department-export.ts"),

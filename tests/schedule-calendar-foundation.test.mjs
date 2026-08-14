@@ -6,6 +6,7 @@ import {
   nextCalendarShift,
   normalizeImportedScheduleText,
   scheduleDisplayName,
+  scheduleDayRoster,
   scheduleStaffingLabel,
   scheduleStaffingSummary,
 } from "../app/d/[slug]/schedule-format.ts";
@@ -25,7 +26,7 @@ test("demo calendar uses saved shift colors and rotates crowded days", async () 
   assert.match(source, /schxCoverage\(shift\)/);
   assert.match(source, /open shift/);
   assert.match(source, /Verify roles/);
-  assert.match(source, /coverage\.total < coverage\.minimum/);
+  assert.match(source, /coverage\.total < minimum/);
 });
 
 test("shared department calendar groups schedule rows and offers slide controls", async () => {
@@ -125,6 +126,37 @@ test("calendar separates saved assignments, open shifts, and role qualification"
   const unconfiguredMinimum = scheduleStaffingSummary(4, 0, 0);
   assert.equal(scheduleStaffingLabel(unconfiguredMinimum), "4 assigned");
   assert.equal(unconfiguredMinimum.openShifts, 0);
+});
+
+test("day view lists each scheduled employee once and retains every shift detail", () => {
+  const schedules = [
+    {
+      id: "gold-day",
+      name: "Gold",
+      start: "06:00",
+      end: "18:00",
+      color: "#c89b2c",
+      assignments: [
+        { id: "a-1", employee_id: "one", employee_name: "Eagle, Deandre", rank: "Firefighter", role: "Driver / Engineer" },
+      ],
+    },
+    {
+      id: "gold-night",
+      name: "Gold 1",
+      start: "18:00",
+      end: "06:00",
+      color: "#c89b2c",
+      assignments: [
+        { id: "a-2", employee_id: "one", employee_name: "Eagle, Deandre", rank: "Firefighter", role: "Firefighter" },
+        { id: "a-3", employee_id: "two", employee_name: "Ramey, Bivian", rank: "Firefighter", role: "Firefighter" },
+      ],
+    },
+  ];
+  const roster = scheduleDayRoster(schedules, new Set(["a-1", "a-2", "a-3"]));
+  assert.equal(roster.length, 2);
+  assert.equal(roster[0].name, "Eagle, Deandre");
+  assert.deepEqual(roster[0].assignments.map((row) => row.scheduleName), ["Gold", "Gold 1"]);
+  assert.equal(roster[1].name, "Ramey, Bivian");
 });
 
 test("Live Ops selects the next calendar start and groups its assigned members", () => {
