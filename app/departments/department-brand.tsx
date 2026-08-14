@@ -19,7 +19,7 @@ export function DepartmentEditor({ department, supportSessionId }: { department:
       <label>Gold / accent<input type="color" name="brand_accent" defaultValue={department.brand_accent}/></label>
       <label>Blue / action<input type="color" name="brand_action" defaultValue={department.brand_action}/></label>
       <label>Orange / alert<input type="color" name="brand_alert" defaultValue={department.brand_alert}/></label>
-      <label>Weather location<input name="weather_location" defaultValue={department.weather_location} placeholder="City, state or station coordinates"/></label>
+      <label>Weather coordinates<input name="weather_location" defaultValue={department.weather_location} placeholder="41.7500, -87.6400"/><small>Verified latitude, longitude coordinates connect National Weather Service forecasts and active alerts.</small></label>
       <label>Stations<input required min="0" max="99" type="number" name="station_count" defaultValue={department.station_count}/></label>
       <label>Vehicles<input required min="0" max="999" type="number" name="vehicle_count" defaultValue={department.vehicle_count}/></label>
       <button className="access-primary" type="submit">Save branding and profile</button>

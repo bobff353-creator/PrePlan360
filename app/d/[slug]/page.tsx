@@ -170,7 +170,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
-            <LiveOpsBoard departmentId={department.id} departmentName={department.name} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : active[0] === "respond" && moduleData ? (
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (
