@@ -367,3 +367,13 @@
   if (params.get("module") === "resources") { current = "resources"; resTab = "box"; }
   if (current === "resources" && typeof render === "function") render();
 })();
+
+(function loadPolicyLibrary() {
+  const stylesheet = document.createElement("link");
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = "/policies-upgrade.css?v=20260813-policy-reader";
+  document.head.appendChild(stylesheet);
+  const script = document.createElement("script");
+  script.src = "/policies-upgrade.js?v=20260813-policy-reader";
+  document.body.appendChild(script);
+})();

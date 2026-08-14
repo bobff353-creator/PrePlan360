@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.28",
-  "generatedAt": "2026-08-14T01:58:27.723Z",
+  "release": "2026.08.13.30",
+  "generatedAt": "2026-08-14T02:14:16.268Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -23,7 +23,7 @@
     },
     "scheduling": {
       "demo": "79d1137a7263685bfbf1346fbb94628c11a0d31576228811d052ff3b1b37dab8",
-      "departments": "53e20795d1c4ec6d3a9d830779c3159174c883bd85cbb534f3cd4cd5e5b28a34"
+      "departments": "968e565754d9c360fbb8d4b7565cdc09a6fb8ad3547141681aca30730dae9c08"
     },
     "daily-log-and-duties": {
       "demo": "70c48a09bf6618e9591c35e3e6300bcc4db0c19d460db808b689610afaea8ff5",
@@ -38,8 +38,8 @@
       "departments": "603de990f5ce8c3b64bd9facbb978a69b4889cf6394169b1d766eb5618d69208"
     },
     "box-cards-and-documents": {
-      "demo": "33857faaccb5393d362535858c0a4a3ded30514833e8e347802e8926e6347540",
-      "departments": "c7e62d4d84e9d453cd469d02ab53828a34c928c3d09262eb841c7842b2e8549e"
+      "demo": "1fc97ef7c3eddf911339d239586ad0b623a83df039656a5fee6d969a70f2f5f0",
+      "departments": "0b7f3c48e837527202fabeac4bf29821a0687854a72394339391d84638e3c8cb"
     },
     "preplans": {
       "demo": "d969fb56fbdcfd72fc47baaa4ab98c59ee2e42e69530e14ebd64913bab622841",

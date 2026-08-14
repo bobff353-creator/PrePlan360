@@ -68,6 +68,13 @@ function printCard(card: StickneyBoxCard) {
   popup.document.close();
 }
 
+function printPolicy(policy: StickneyPolicy) {
+  const popup = window.open("", "_blank", "noopener,noreferrer");
+  if (!popup) return;
+  popup.document.write(`<!doctype html><html><head><title>${escapeHtml(policy.title)}</title><style>body{font:14px Arial,sans-serif;max-width:800px;margin:30px auto;padding:0 24px;color:#111}header{border-bottom:3px solid #111}h1{margin:5px 0}article{white-space:pre-wrap;line-height:1.65;margin-top:24px}footer{border-top:1px solid #aaa;margin-top:28px;padding-top:10px;font-size:11px;color:#555}</style></head><body><header><b>${escapeHtml(policy.category || "General")}</b><h1>${escapeHtml(policy.title)}</h1><p>${escapeHtml(policy.policy_number || "Policy number not entered")} · ${policy.effective_date ? `Effective ${escapeHtml(policy.effective_date.slice(0, 10))}` : "Effective date not entered"}</p></header><article>${escapeHtml(policy.body || "No policy body was imported.")}</article><footer>PrePlan 360 policy copy · verify against the department-adopted source.</footer><script>window.onload=function(){window.print()}</script></body></html>`);
+  popup.document.close();
+}
+
 function EditableRecord({ departmentId, recordType, recordId, fields, editable, supportSessionId }: { departmentId: string; recordType: "box_card" | "policy"; recordId: string; fields: EditableField[]; editable: boolean; supportSessionId: string }) {
   if (!editable) return null;
   return (
@@ -94,10 +101,24 @@ export default function DocumentsWorkspace({ departmentId, boxCards, policies, e
   const [view, setView] = useState<"box-cards" | "policies">("box-cards");
   const [activeGroup, setActiveGroup] = useState(groups[0] || "Unassigned");
   const [search, setSearch] = useState("");
+  const [policySearch, setPolicySearch] = useState("");
+  const [policyCategory, setPolicyCategory] = useState("All");
+  const [policyPage, setPolicyPage] = useState(0);
+  const [selectedPolicyId, setSelectedPolicyId] = useState("");
   const visibleCards = useMemo(() => {
     const query = search.trim().toLowerCase();
     return boxCards.filter((card) => (card.department || "Unassigned") === activeGroup && (!query || `${card.box_number} ${card.title} ${card.address} ${card.access_notes} ${card.details}`.toLowerCase().includes(query)));
   }, [activeGroup, boxCards, search]);
+  const policyCategories = useMemo(() => ["All", ...Array.from(new Set(policies.map((policy) => policy.category || "General"))).sort((a, b) => a.localeCompare(b))], [policies]);
+  const filteredPolicies = useMemo(() => {
+    const query = policySearch.trim().toLowerCase();
+    return policies.filter((policy) => (policyCategory === "All" || (policy.category || "General") === policyCategory) && (!query || `${policy.policy_number} ${policy.title} ${policy.category} ${policy.body}`.toLowerCase().includes(query)));
+  }, [policies, policyCategory, policySearch]);
+  const policyPageSize = 8;
+  const policyPageCount = Math.max(1, Math.ceil(filteredPolicies.length / policyPageSize));
+  const visiblePolicyPage = Math.min(policyPage, policyPageCount - 1);
+  const visiblePolicies = filteredPolicies.slice(visiblePolicyPage * policyPageSize, visiblePolicyPage * policyPageSize + policyPageSize);
+  const selectedPolicy = policies.find((policy) => policy.id === selectedPolicyId) ?? null;
 
   return (
     <section className="stickney-panel department-documents" data-grouped-box-cards="active">
@@ -153,21 +174,37 @@ export default function DocumentsWorkspace({ departmentId, boxCards, policies, e
           })}</div> : <div className="stickney-empty"><b>No matching Box Cards</b><span>Choose another town or clear the search.</span></div>}
         </div>
       ) : (
-        <div className="department-policy-grid" role="tabpanel">
-          {policies.map((policy) => (
-            <details key={policy.id}>
-              <summary><span>{[policy.policy_number, policy.category].filter(Boolean).join(" · ")}</span><b>{policy.title}</b></summary>
-              <p>{policy.body || "No policy body was imported."}</p>
-              <small>{policy.effective_date ? `Effective ${policy.effective_date.slice(0, 10)}` : "Effective date not entered"}</small>
-              <EditableRecord departmentId={departmentId} recordType="policy" recordId={policy.id} editable={editable} supportSessionId={supportSessionId} fields={[
-                { name: "title", label: "Title", value: policy.title },
-                { name: "policy_number", label: "Policy number", value: policy.policy_number },
-                { name: "category", label: "Category", value: policy.category },
-                { name: "effective_date", label: "Effective date", value: policy.effective_date },
-                { name: "body", label: "Policy body", value: policy.body, multiline: true },
-              ]} />
-            </details>
-          ))}
+        <div className="department-policy-library" role="tabpanel">
+          <div className="department-policy-toolbar">
+            <div><span>POLICY LIBRARY</span><h3>Open one document at a time</h3><p>Search by title, policy number, category, or document text.</p></div>
+            <label><span>Find a policy, SOG, or SOP</span><input aria-label="Search policy documents" value={policySearch} onChange={(event) => { setPolicySearch(event.target.value); setPolicyPage(0); }} placeholder="Search documents" /></label>
+          </div>
+          <div className="department-policy-categories" role="tablist" aria-label="Policy categories">
+            {policyCategories.map((category) => {
+              const count = category === "All" ? policies.length : policies.filter((policy) => (policy.category || "General") === category).length;
+              return <button type="button" role="tab" aria-selected={category === policyCategory} className={category === policyCategory ? "active" : ""} key={category} onClick={() => { setPolicyCategory(category); setPolicyPage(0); }}><span>{category}</span><b>{count}</b></button>;
+            })}
+          </div>
+          <div className="department-policy-results"><b>{filteredPolicies.length} document{filteredPolicies.length === 1 ? "" : "s"}</b><span>Page {visiblePolicyPage + 1} of {policyPageCount} · up to {policyPageSize} shown</span></div>
+          <div className="department-policy-list">
+            {visiblePolicies.length ? visiblePolicies.map((policy) => (
+              <button type="button" className="department-policy-row" key={policy.id} onClick={() => setSelectedPolicyId(policy.id)}>
+                <span className="department-policy-icon">DOC</span>
+                <span><b>{policy.title}</b><small>{[policy.policy_number, policy.category].filter(Boolean).join(" · ") || "General"}</small></span>
+                <span>{policy.effective_date ? `Effective ${policy.effective_date.slice(0, 10)}` : "Date not entered"}</span>
+                <strong>Open →</strong>
+              </button>
+            )) : <div className="stickney-empty"><b>No matching policies</b><span>Choose another category or clear the search.</span></div>}
+          </div>
+          <div className="department-policy-pagination"><button type="button" disabled={visiblePolicyPage === 0} onClick={() => setPolicyPage((current) => Math.max(0, current - 1))}>← Previous</button><span>{visiblePolicyPage * policyPageSize + (visiblePolicies.length ? 1 : 0)}–{Math.min((visiblePolicyPage + 1) * policyPageSize, filteredPolicies.length)} of {filteredPolicies.length}</span><button type="button" disabled={visiblePolicyPage >= policyPageCount - 1} onClick={() => setPolicyPage((current) => Math.min(policyPageCount - 1, current + 1))}>Next →</button></div>
+          <div className="document-publish-boundary"><b>No scroll-of-death</b><span>The library shows a controlled result page. Full policy text opens in a focused reader.</span></div>
+          {selectedPolicy ? <div className="department-policy-overlay" role="presentation" onClick={(event) => { if (event.currentTarget === event.target) setSelectedPolicyId(""); }}><section className="department-policy-reader" role="dialog" aria-modal="true" aria-labelledby="department-policy-title"><header><div><span>{[selectedPolicy.policy_number, selectedPolicy.category].filter(Boolean).join(" · ") || "Policy document"}</span><h2 id="department-policy-title">{selectedPolicy.title}</h2><p>{selectedPolicy.effective_date ? `Effective ${selectedPolicy.effective_date.slice(0, 10)}` : "Effective date not entered"}</p></div><button type="button" onClick={() => setSelectedPolicyId("")}>Close</button></header><div className="department-policy-body"><article>{selectedPolicy.body || "No policy body was imported."}</article>{editable ? <EditableRecord departmentId={departmentId} recordType="policy" recordId={selectedPolicy.id} editable={editable} supportSessionId={supportSessionId} fields={[
+            { name: "title", label: "Title", value: selectedPolicy.title },
+            { name: "policy_number", label: "Policy number", value: selectedPolicy.policy_number },
+            { name: "category", label: "Category", value: selectedPolicy.category },
+            { name: "effective_date", label: "Effective date", value: selectedPolicy.effective_date },
+            { name: "body", label: "Policy body", value: selectedPolicy.body, multiline: true },
+          ]} /> : null}</div><footer><span>{editable ? "Authorized admin editor available below the document." : "View-only policy document."}</span><button type="button" onClick={() => printPolicy(selectedPolicy)}>Print / Save PDF</button></footer></section></div> : null}
         </div>
       )}
       <div className="document-publish-boundary"><b>{editable ? "Authorized admin editing enabled" : "View-only department access"}</b><span>Every Box Card must be checked against its original document before operational use.</span></div>
