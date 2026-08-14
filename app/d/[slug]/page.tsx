@@ -190,6 +190,8 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <AssetManager department={department} selectedAssetId={query.asset} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : referenceData ? (
             <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]} />
+          ) : active[0] === "documents" ? (
+            <DocumentsFoundation owner={owner} />
           ) : active[0] === "inspections" ? (
             <ComingSoon owner={owner} />
           ) : (
@@ -254,6 +256,18 @@ function Dashboard({ department, stations, vehicles, weather, supportQuery, modu
         </aside>
       </div>
     </>
+  );
+}
+
+function DocumentsFoundation({ owner }: { owner: boolean }) {
+  return (
+    <section className="dept-module-empty" data-box-card-release="owner-preview" aria-label="Box Card publishing status">
+      <div className="dept-empty-mark">LIB</div>
+      <span className="dept-section-label">POLICIES & BOX CARDS</span>
+      <h2>Grouped Box Card foundation ready. Department records not published.</h2>
+      <p>The shared owner build now supports town/group tabs, secure browser-safe source imports, structured alarm rows, and autosaved owner edits. Only the signed-in, verified platform owner can build drafts; this department remains empty until an authorized administrator publishes verified cards to tenant storage.</p>
+      <a aria-label={owner ? "Open owner Box Card development workbench" : "Return to department portal"} href={owner ? "/demo?owner=1&module=box-cards" : "/portal"}>{owner ? "Open owner Box Card workbench" : "Return to department portal"}</a>
+    </section>
   );
 }
 
