@@ -6,6 +6,8 @@ import {
   nextCalendarShift,
   normalizeImportedScheduleText,
   scheduleDisplayName,
+  scheduleStaffingLabel,
+  scheduleStaffingSummary,
 } from "../app/d/[slug]/schedule-format.ts";
 
 test("demo calendar uses saved shift colors and rotates crowded days", async () => {
@@ -21,7 +23,8 @@ test("demo calendar uses saved shift colors and rotates crowded days", async () 
   assert.match(source, /class=\"schx-day-view\"/);
   assert.match(source, /Open schedule/);
   assert.match(source, /schxCoverage\(shift\)/);
-  assert.match(source, /BELOW MINIMUM/);
+  assert.match(source, /open shift/);
+  assert.match(source, /Verify roles/);
   assert.match(source, /coverage\.total < coverage\.minimum/);
 });
 
@@ -60,7 +63,8 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(calendar, /className=\"schedule-day-view\"/);
   assert.match(calendar, /assignment\.role, assignment\.rank/);
   assert.match(calendar, /minimumStaffing > 0/);
-  assert.match(calendar, /BELOW MINIMUM/);
+  assert.match(calendar, /scheduleStaffingLabel/);
+  assert.match(calendar, /openShifts/);
   assert.match(calendar, /eligibleAssignmentIds/);
   assert.match(calendar, /UPCOMING SHIFTS/);
   assert.match(calendar, /Calendar view/);
@@ -107,6 +111,20 @@ test("Stickney imported shift names decode cleanly without repeating their saved
     "Imported shift",
   );
   assert.equal(scheduleDisplayName("Red 1", "18:00", "06:00"), "Red 1");
+});
+
+test("calendar separates saved assignments, open shifts, and role qualification", () => {
+  const importedRoleMismatch = scheduleStaffingSummary(4, 0, 4);
+  assert.equal(scheduleStaffingLabel(importedRoleMismatch), "Verify roles · 0/4");
+  assert.equal(importedRoleMismatch.openShifts, 0);
+
+  const vacancy = scheduleStaffingSummary(3, 3, 4);
+  assert.equal(scheduleStaffingLabel(vacancy), "1 open shift");
+  assert.equal(vacancy.openShifts, 1);
+
+  const unconfiguredMinimum = scheduleStaffingSummary(4, 0, 0);
+  assert.equal(scheduleStaffingLabel(unconfiguredMinimum), "4 assigned");
+  assert.equal(unconfiguredMinimum.openShifts, 0);
 });
 
 test("Live Ops selects the next calendar start and groups its assigned members", () => {

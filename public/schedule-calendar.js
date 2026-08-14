@@ -79,11 +79,35 @@ function schxCalendarOpenShift(id) {
   schxSelect(id);
 }
 
+function schxCalendarStaffing(shift) {
+  const coverage = schxCoverage(shift);
+  const assigned = shift.assignments.length;
+  const minimum = Math.max(0, Number(coverage.minimum) || 0);
+  const openShifts = minimum > 0 ? Math.max(0, minimum - assigned) : 0;
+  const belowMinimum = minimum > 0 && coverage.total < minimum;
+  return {
+    assigned,
+    qualified: coverage.total,
+    minimum,
+    openShifts,
+    belowMinimum,
+    hasQualificationGap: coverage.total < assigned,
+  };
+}
+
+function schxCalendarStaffingLabel(staffing) {
+  if (staffing.openShifts > 0)
+    return `${staffing.openShifts} open shift${staffing.openShifts === 1 ? "" : "s"}`;
+  if (staffing.belowMinimum && staffing.hasQualificationGap)
+    return `Verify roles · ${staffing.qualified}/${staffing.minimum}`;
+  return `${staffing.assigned} assigned`;
+}
+
 function schxCalendarDayView(groups) {
   if (!schxCalendarDay) return "";
   const items = groups.get(schxCalendarDay) || [];
   const assigned = items.reduce(
-    (count, shift) => count + schxCoverage(shift).total,
+    (count, shift) => count + shift.assignments.length,
     0,
   );
   const coverageGaps = items.filter((shift) => {
@@ -107,8 +131,8 @@ function schxCalendarDayView(groups) {
           .map((shift) => {
             const template = schxTemplate(shift.templateId);
             const color = schxColorHex(template?.color);
-            const coverage = schxCoverage(shift);
-            const belowMinimum = coverage.total < coverage.minimum;
+            const staffing = schxCalendarStaffing(shift);
+            const belowMinimum = staffing.belowMinimum;
             return (
               '<article class="schx-day-shift ' +
               (belowMinimum ? "below-minimum" : "") +
@@ -121,16 +145,19 @@ function schxCalendarDayView(groups) {
               (template?.end ? "–" + schxEsc(template.end) : "") +
               "</b>" +
               (belowMinimum
-                ? "<span>BELOW MINIMUM · " +
-                  coverage.total +
-                  "/" +
-                  coverage.minimum +
+                ? "<span>" +
+                  schxEsc(
+                    staffing.openShifts
+                      ? schxCalendarStaffingLabel(staffing) +
+                          " · " +
+                          staffing.assigned +
+                          " assigned"
+                      : schxCalendarStaffingLabel(staffing),
+                  ) +
                   "</span>"
                 : "<small>Minimum met · " +
-                  coverage.total +
-                  "/" +
-                  coverage.minimum +
-                  "</small>") +
+                  staffing.assigned +
+                  " assigned</small>") +
               '</div></header><div class="schx-day-roster">' +
               (shift.assignments.length
                 ? shift.assignments
@@ -210,10 +237,8 @@ function schxCalendar() {
         const shift = items[slide];
         const template = shift ? schxTemplate(shift.templateId) : null;
         const color = schxColorHex(template?.color);
-        const coverage = shift ? schxCoverage(shift) : null;
-        const belowMinimum = Boolean(
-          coverage && coverage.total < coverage.minimum,
-        );
+        const staffing = shift ? schxCalendarStaffing(shift) : null;
+        const belowMinimum = Boolean(staffing?.belowMinimum);
         const names = shift
           ? shift.assignments
               .map((assignment) => rstMember(assignment.memberId)?.name)
@@ -250,13 +275,14 @@ function schxCalendar() {
               schxEsc(template ? template.start : "Start not set") +
               (template?.end ? `–${schxEsc(template.end)}` : "") +
               "</small>" +
-              (belowMinimum
-                ? '<span class="schx-coverage-warning">BELOW MINIMUM · ' +
-                  coverage.total +
-                  "/" +
-                  coverage.minimum +
+              (staffing.openShifts ||
+              (belowMinimum && staffing.hasQualificationGap)
+                ? '<span class="schx-coverage-warning">' +
+                  schxEsc(schxCalendarStaffingLabel(staffing)) +
                   "</span>"
-                : "<strong>" + coverage.total + " assigned</strong>") +
+                : "<strong>" +
+                  schxEsc(schxCalendarStaffingLabel(staffing)) +
+                  "</strong>") +
               "<p>" +
               schxEsc(
                 names.slice(0, 3).join(" · ") || "No employees assigned",

@@ -31,6 +31,46 @@ export function scheduleDisplayName(name: string, start: string, end: string) {
   return label || normalized || "Unnamed shift";
 }
 
+export type ScheduleStaffingSummary = {
+  assigned: number;
+  qualified: number;
+  minimum: number;
+  openShifts: number;
+  belowMinimum: boolean;
+  hasQualificationGap: boolean;
+};
+
+export function scheduleStaffingSummary(
+  assignedCount: number,
+  qualifiedCount: number,
+  minimumStaffing: number,
+): ScheduleStaffingSummary {
+  const assigned = Math.max(0, Math.trunc(Number(assignedCount) || 0));
+  const qualified = Math.min(
+    assigned,
+    Math.max(0, Math.trunc(Number(qualifiedCount) || 0)),
+  );
+  const minimum = Math.max(0, Math.trunc(Number(minimumStaffing) || 0));
+  return {
+    assigned,
+    qualified,
+    minimum,
+    openShifts: minimum > 0 ? Math.max(0, minimum - assigned) : 0,
+    belowMinimum: minimum > 0 && qualified < minimum,
+    hasQualificationGap: qualified < assigned,
+  };
+}
+
+export function scheduleStaffingLabel(summary: ScheduleStaffingSummary) {
+  if (summary.openShifts > 0) {
+    return `${summary.openShifts} open shift${summary.openShifts === 1 ? "" : "s"}`;
+  }
+  if (summary.belowMinimum && summary.hasQualificationGap) {
+    return `Verify roles · ${summary.qualified}/${summary.minimum}`;
+  }
+  return `${summary.assigned} assigned`;
+}
+
 export type CalendarScheduleRow = {
   id: string;
   work_date: string;

@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import type { StickneyScheduleAssignment } from "@/db/stickney";
-import { scheduleDisplayName } from "./schedule-format";
+import {
+  scheduleDisplayName,
+  scheduleStaffingLabel,
+  scheduleStaffingSummary,
+} from "./schedule-format";
 
 const SHIFT_COLORS = [
   "#8b1e24",
@@ -263,11 +267,14 @@ export default function ScheduleCalendar({
             Math.max(0, schedules.length - 1),
           );
           const active = schedules[activeIndex];
-          const activeBelowMinimum = Boolean(
-            active &&
-              minimumStaffing > 0 &&
-              active.staffingCount < minimumStaffing,
-          );
+          const activeStaffing = active
+            ? scheduleStaffingSummary(
+                active.assignments.length,
+                active.staffingCount,
+                minimumStaffing,
+              )
+            : null;
+          const activeBelowMinimum = Boolean(activeStaffing?.belowMinimum);
           const outside = monthKey(day) !== month;
           return (
             <article
@@ -299,12 +306,13 @@ export default function ScheduleCalendar({
                     {active.start || "Start not set"}
                     {active.end ? `–${active.end}` : ""}
                   </small>
-                  {activeBelowMinimum ? (
+                  {activeStaffing?.openShifts ||
+                  (activeBelowMinimum && activeStaffing?.hasQualificationGap) ? (
                     <span className="schedule-coverage-warning">
-                      BELOW MINIMUM · {active.staffingCount}/{minimumStaffing}
+                      {scheduleStaffingLabel(activeStaffing)}
                     </span>
                   ) : (
-                    <strong>{active.staffingCount} assigned</strong>
+                    <strong>{scheduleStaffingLabel(activeStaffing!)}</strong>
                   )}
                   <p>
                     {active.assignments
@@ -370,12 +378,13 @@ export default function ScheduleCalendar({
           </header>
           <div>
             {upcoming.length ? upcoming.map((schedule) => {
-              const belowMinimum = minimumStaffing > 0 && schedule.staffingCount < minimumStaffing;
+              const staffing = scheduleStaffingSummary(schedule.assignments.length, schedule.staffingCount, minimumStaffing);
+              const belowMinimum = staffing.belowMinimum;
               return (
                 <article className={belowMinimum ? "below-minimum" : ""} key={schedule.id} style={{ "--shift-color": schedule.color } as CSSProperties}>
                   <time dateTime={schedule.date}>{dayLabel(schedule.date)}</time>
                   <div><h3>{schedule.name}</h3><p>{schedule.start || "Start not set"}{schedule.end ? `-${schedule.end}` : ""} - {schedule.assignments.map((assignment) => assignment.employee_name).join(" - ") || "No employees assigned"}</p></div>
-                  {belowMinimum ? <span>BELOW MINIMUM - {schedule.staffingCount}/{minimumStaffing}</span> : <strong>{schedule.staffingCount} assigned</strong>}
+                  {staffing.openShifts || (belowMinimum && staffing.hasQualificationGap) ? <span>{scheduleStaffingLabel(staffing)}</span> : <strong>{scheduleStaffingLabel(staffing)}</strong>}
                   <button type="button" onClick={() => { setSelectedDate(schedule.date); setMonth(schedule.date.slice(0, 7)); }}>Open day</button>
                 </article>
               );
@@ -436,9 +445,12 @@ export default function ScheduleCalendar({
             <div className="schedule-day-content">
               {(byDate.get(selectedDate) || []).length ? (
                 (byDate.get(selectedDate) || []).map((schedule) => {
-                  const belowMinimum =
-                    minimumStaffing > 0 &&
-                    schedule.staffingCount < minimumStaffing;
+                  const staffing = scheduleStaffingSummary(
+                    schedule.assignments.length,
+                    schedule.staffingCount,
+                    minimumStaffing,
+                  );
+                  const belowMinimum = staffing.belowMinimum;
                   return (
                   <article
                     className={`schedule-day-shift ${belowMinimum ? "below-minimum" : ""}`}
@@ -459,13 +471,13 @@ export default function ScheduleCalendar({
                         </b>
                         {belowMinimum ? (
                           <span>
-                            BELOW MINIMUM · {schedule.staffingCount}/
-                            {minimumStaffing}
+                            {staffing.openShifts > 0
+                              ? `${scheduleStaffingLabel(staffing)} · ${staffing.assigned} assigned`
+                              : scheduleStaffingLabel(staffing)}
                           </span>
                         ) : minimumStaffing > 0 ? (
                           <small>
-                            Minimum met · {schedule.staffingCount}/
-                            {minimumStaffing}
+                            Minimum met · {staffing.assigned} assigned
                           </small>
                         ) : null}
                       </div>
