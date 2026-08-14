@@ -62,6 +62,7 @@ export type StickneyPreplan = {
   address: string;
   latitude: number | null;
   longitude: number | null;
+  footprint_json?: string;
   construction_type: string;
   floor_count: number;
   suggested_fire_flow_gpm: number;
@@ -459,10 +460,11 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
     return { schedule: mergedSchedule, employees };
   }
   if (module === "preplans") {
-    const [preplans, preplanImports] = await Promise.all([read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`), read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`)]);
+    const [preplans, preplanImports, hydrants] = await Promise.all([read<StickneyPreplan>(`select id,business_name,address,latitude,longitude,construction_type,floor_count,suggested_fire_flow_gpm,contact_info,construction,access_info,alarm_system,knox_box,riser,fdc,sprinkler_system,status,updated_at from field_preplans order by business_name`), read<StickneyPreplanImport>(`select id,business_name,address,status,latitude,longitude,linked_preplan_id from field_preplan_imports order by business_name,address`), read<StickneyHydrant>(`select id,hydrant_number,address,latitude,longitude,service_status,manufacturer,model,notes,updated_at from field_hydrants order by hydrant_number,address`)]);
     return {
       preplans: departmentId ? await applyOverrides(departmentId, "preplan", preplans) : preplans,
       preplanImports,
+      hydrants: departmentId ? await applyOverrides(departmentId, "hydrant", hydrants) : hydrants,
     };
   }
   if (module === "hydrants") {

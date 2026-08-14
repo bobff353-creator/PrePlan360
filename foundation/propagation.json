@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.11",
+  "release": "2026.08.13.16",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -92,10 +92,21 @@
         "public/preplans-upgrade.js"
       ],
       "departments": [
+        "app/d/[slug]/page.tsx",
         "app/d/[slug]/reference-library.tsx",
+        "app/d/[slug]/preplan-map.tsx",
+        "app/d/[slug]/stickney-workspace.tsx",
         "app/reference-library.css",
+        "app/owner/integrations/page.tsx",
+        "app/integrations.css",
+        "app/api/map-config/route.ts",
         "app/api/departments/[id]/preplans/route.ts",
-        "db/access.ts"
+        "app/api/departments/[id]/preplans/[recordId]/route.ts",
+        "app/lib/maps.ts",
+        "db/access.ts",
+        "db/schema.ts",
+        "db/stickney.ts",
+        "drizzle/0012_preplan_map_geometry.sql"
       ]
     },
     "respond": {

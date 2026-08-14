@@ -3,10 +3,12 @@ import { STICKNEY_WORK_ROLES, stickneyEmployeeActiveOn, stickneyEmployeeRoles, t
 import StaffingWorkspace from "./staffing-workspace";
 import FleetWorkspace from "./fleet-workspace";
 import DailyDutiesWorkspace from "./daily-duties-workspace";
+import PreplanMap from "./preplan-map";
 
 type Props = {
   module: string;
   departmentId: string;
+  departmentSlug: string;
   data: StickneyModuleData;
   editable: boolean;
   supportSessionId?: string;
@@ -53,6 +55,15 @@ function documentHref(value: string) {
   }
 }
 
+function stickneyFootprint(value?: string) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)).map((point) => ({ lat: Number(point.lat), lng: Number(point.lng) })) : [];
+  } catch {
+    return [];
+  }
+}
+
 function EditableRecord({
   departmentId,
   recordType,
@@ -93,7 +104,7 @@ function EditableRecord({
   );
 }
 
-export default function StickneyWorkspace({ module, departmentId, data, editable, supportSessionId = "", connectionError }: Props) {
+export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, editable, supportSessionId = "", connectionError }: Props) {
   if (connectionError) {
     return (
       <section className="stickney-panel">
@@ -105,7 +116,7 @@ export default function StickneyWorkspace({ module, departmentId, data, editable
   if (module === "dashboard" && data.summary) return <StickneyDashboard data={data} />;
   if (module === "staffing") return <Staffing departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "preplans") return <Preplans departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "preplans") return <Preplans departmentId={departmentId} departmentSlug={departmentSlug} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "hydrants") return <Hydrants departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "fleet") return <Fleet departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "inventory") return <Inventory departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
@@ -278,9 +289,11 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
   );
 }
 
-function Preplans({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Preplans({ departmentId, departmentSlug, data, editable, supportSessionId }: { departmentId: string; departmentSlug: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const preplans = data.preplans ?? [];
   const imports = data.preplanImports ?? [];
+  const hydrants = data.hydrants ?? [];
+  const support = supportSessionId ? `&support=${encodeURIComponent(supportSessionId)}` : "";
   return (
     <section className="stickney-panel">
       <SourceNotice />
@@ -292,10 +305,11 @@ function Preplans({ departmentId, data, editable, supportSessionId }: { departme
         </div>
         <b>{preplans.length + imports.length}</b>
       </div>
+      <PreplanMap departmentSlug={departmentSlug} preplans={preplans.map((plan) => ({ id: plan.id, name: plan.business_name, address: plan.address, latitude: plan.latitude, longitude: plan.longitude, footprint: stickneyFootprint(plan.footprint_json), targetId: `stickney-preplan-${plan.id}` }))} hydrants={hydrants.map((hydrant) => ({ id: hydrant.id, name: hydrant.hydrant_number || "Unnumbered hydrant", location: hydrant.address, latitude: hydrant.latitude, longitude: hydrant.longitude, status: hydrant.service_status || "Status not entered", href: `/d/${departmentSlug}?module=hydrants${support}` }))}/>
       {preplans.length ? (
         <div className="stickney-card-grid">
           {preplans.map((plan) => (
-            <article key={plan.id}>
+            <article key={plan.id} id={`stickney-preplan-${plan.id}`}>
               <span>{plan.status || "Preplan"}</span>
               <h3>{plan.business_name}</h3>
               <p>{plan.address}</p>
@@ -331,6 +345,9 @@ function Preplans({ departmentId, data, editable, supportSessionId }: { departme
                     value: plan.business_name,
                   },
                   { name: "address", label: "Address", value: plan.address },
+                  { name: "latitude", label: "Verified latitude", value: plan.latitude },
+                  { name: "longitude", label: "Verified longitude", value: plan.longitude },
+                  { name: "footprint_json", label: "Verified footprint JSON", value: plan.footprint_json || "[]", multiline: true },
                   {
                     name: "construction_type",
                     label: "Construction",
@@ -434,6 +451,8 @@ function Hydrants({ departmentId, data, editable, supportSessionId }: { departme
                     value: hydrant.hydrant_number,
                   },
                   { name: "address", label: "Address", value: hydrant.address },
+                  { name: "latitude", label: "Verified latitude", value: hydrant.latitude },
+                  { name: "longitude", label: "Verified longitude", value: hydrant.longitude },
                   {
                     name: "service_status",
                     label: "Status",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.11",
-  "generatedAt": "2026-08-13T23:41:14.511Z",
+  "release": "2026.08.13.16",
+  "generatedAt": "2026-08-14T00:16:29.733Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -10,36 +10,36 @@
   "futureDepartments": "automatic-through-shared-route",
   "modules": {
     "application-shell": {
-      "demo": "ae7ebd0670960e9b0d5742c3f46180b4f72e011c37ec2b20c4d6393d21eb4674",
-      "departments": "619032e3710b188239eeab9892cb8aaf108e3d688e8ae5983d6ae7c5f24545fd"
+      "demo": "551acff2eed2bd33495df9502545018377a9c268cdb37aae5168e831b5e39e91",
+      "departments": "5dfabb48a6e65e82b462a8bf19354932d3654a43816e67d9cc56bc2ed924c62e"
     },
     "live-operations": {
       "demo": "e9f8de0b61dc0f8847e96f7964b86cfd5ec1cfa47ccea6cb0052f7b7f1f009ca",
       "departments": "cb8db598069217e58ed245c30d55ceb2f06cde677890fe69e6d8a1cfb963a732"
     },
     "roster-and-staffing": {
-      "demo": "d11575f340a73b49eac20d060658af072dd9cb0f868eb5fe702df8baa2714e49",
-      "departments": "190bb33abe12f6975ee853e1bf1b943cbb2dd94a34ba68799b66e77b4718c2e6"
+      "demo": "fb47efac4d82e33907973c72247fb97e1eb9f70984e50f366c7a48981b980cc9",
+      "departments": "cf45f8547bcde2581d61290c2956f7ebb62a217b1cf21562c4a8dd8adc6f6151"
     },
     "scheduling": {
-      "demo": "b2f9da132855a875d594abf865e38efbf333025341d5c5bf0fd5d0b99ac05e18",
-      "departments": "a2c605998856d4d8f840f570826c4a97b869188ed74cb8f03e7107b4f54068f8"
+      "demo": "ee08bd780d14bf1d8c11ff5353f68890bbd0f539e727bff7c3edcef03d594212",
+      "departments": "a381070e5880141691e296077349108761dd2125504573251b3b50fddcedff3e"
     },
     "daily-log-and-duties": {
       "demo": "1b119d8300875fcdcd2afebfae4502c3f5091f37912ca8a7fa88cdbe33d0a02c",
-      "departments": "4ac4c26b8de252ce6fdebb48e5c8cdad7effd9006866009729a14cecef86f63c"
+      "departments": "5bee451f90c30245ea4aa5ff613e31fadef1f02cfc70b6baeb23af3416b6a4d4"
     },
     "owner-foundation": {
       "demo": "8cc8db95b984557fdbef6f599ecc42474722fb7791b707e81ff607eca6c113b5",
       "departments": "501b5829d70cbb0aaae59eddcd128b95a589c8ce816e6763d3a43de342e446d2"
     },
     "preplans": {
-      "demo": "8e02339f8159c04358a268fb75015f112ee730a86035b326e7c0217b30607e36",
-      "departments": "280bdd97d2b686b3d6e1193bf787d553fffd694b8c7b038aeea1748c854e6e50"
+      "demo": "d969fb56fbdcfd72fc47baaa4ab98c59ee2e42e69530e14ebd64913bab622841",
+      "departments": "3e5047727412e69942a8ecbcc9d69422e6004844f748dab02cdcdda9a87aa6fd"
     },
     "respond": {
       "demo": "31dc21b7ef3063f025b9a27a496ccdf32ff57c23e0a3d7284e91852e7dce3a9b",
-      "departments": "ed15301ff74b131ba152709582ce61fc3c7c1a0fdb6fc83d40cc75620a1d6626"
+      "departments": "4b23447649a92aa161f8d16c5fd58a548db08687769cc5d534a91c63e13ec447"
     }
   }
 }

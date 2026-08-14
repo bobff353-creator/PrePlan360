@@ -55,6 +55,9 @@ const definitions: Record<
     fields: {
       business_name: 160,
       address: 240,
+      latitude: 30,
+      longitude: 30,
+      footprint_json: 4000,
       construction_type: 120,
       floor_count: 10,
       access_info: 2000,
@@ -69,6 +72,8 @@ const definitions: Record<
     fields: {
       hydrant_number: 120,
       address: 240,
+      latitude: 30,
+      longitude: 30,
       service_status: 80,
       manufacturer: 120,
       model: 120,
@@ -221,6 +226,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (recordType === "duty" && !data.duty) return new Response("Duty is required", { status: 400 });
   for (const field of ["schedule_sms_opt_in", "station_notify_email", "station_notify_text"]) data[field] = data[field] === "1" ? "1" : "0";
   if (recordType === "preplan") data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
+  if (recordType === "preplan" || recordType === "hydrant") {
+    for (const [field, min, max] of [["latitude", -90, 90], ["longitude", -180, 180]] as const) {
+      const raw = String(data[field] || "");
+      if (!raw) continue;
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < min || value > max) return new Response(`${field} is not a valid coordinate`, { status: 400 });
+      data[field] = String(value);
+    }
+  }
+  if (recordType === "preplan") {
+    try {
+      const parsed = JSON.parse(String(data.footprint_json || "[]"));
+      if (!Array.isArray(parsed) || parsed.length > 40 || parsed.some((point) => !Number.isFinite(point?.lat) || point.lat < -90 || point.lat > 90 || !Number.isFinite(point?.lng) || point.lng < -180 || point.lng > 180)) throw new Error();
+      if (parsed.length > 0 && parsed.length < 3) return new Response("A footprint requires at least three verified corners", { status: 400 });
+      data.footprint_json = JSON.stringify(parsed);
+    } catch {
+      return new Response("Footprint JSON must be an array of valid latitude and longitude points", { status: 400 });
+    }
+  }
   if (recordType === "duty") data.day_of_week = String(Math.max(0, Math.min(6, Number(data.day_of_week) || 0)));
   const at = now();
   await db().prepare("INSERT INTO stickney_record_overrides (id,department_id,record_type,source_record_id,data_json,status,created_by,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(department_id,record_type,source_record_id) DO UPDATE SET data_json=excluded.data_json,status='active',updated_by=excluded.updated_by,updated_at=excluded.updated_at").bind(id("override"), departmentId, recordType, recordId, JSON.stringify(data), "active", user.userId, user.userId, at, at).run();
