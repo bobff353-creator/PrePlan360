@@ -42,6 +42,7 @@ body.live-ops-display main{padding:12px 16px 28px}
 .radar-takeover header>b{font:900 34px var(--mono)}
 .radar-takeover-map{position:relative;min-height:0;overflow:hidden;border:1px solid #26394b;border-radius:12px;background:#08131c}
 .radar-takeover-frame{width:100%;height:100%;border:0;background:white}
+.demo-radar-inline{position:relative;min-height:330px;margin-bottom:8px}
 .radar-takeover footer span{color:#aebcca;font-size:11px;font-weight:700}
 .radar-takeover-actions{display:flex;gap:8px}
 .demo-radar{position:absolute;inset:0;overflow:hidden;background:radial-gradient(circle at 54% 46%,rgba(15,75,103,.9),transparent 8%),linear-gradient(150deg,#081a26,#102c3a 55%,#09151d)}

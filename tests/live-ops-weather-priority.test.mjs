@@ -11,7 +11,7 @@ test("the owner demo uses compact military-time weather and radar priority", asy
     read("public/live-ops-priority.css"),
   ]);
   assert.match(script, /rotationSec: 12/);
-  assert.match(script, /fireflow360\.liveBoard\.v5/);
+  assert.match(script, /fireflow360\.liveBoard\.v6/);
   assert.match(script, /sourceRefreshMin: 5/);
   assert.match(script, /radarRefreshMin: 5/);
   assert.match(script, /radarDisplaySec: 30/);
@@ -30,6 +30,8 @@ test("the owner demo uses compact military-time weather and radar priority", asy
   assert.match(script, /bc_training_url/);
   assert.match(script, /bc_source_refresh/);
   assert.match(script, /loadDemoLodd/);
+  assert.match(script, /function radarSourceMarkup\(\) \{\s*return simulatedRadarMarkup\(\)/);
+  assert.doesNotMatch(script, /iframe class="radar-takeover-frame"/);
   assert.match(script, /go\('inv'\)|internalPanelAction\("inv"/);
   assert.match(script, /internalPanelAction\("duty"/);
   assert.match(styles, /body\.live-ops-display \.brand,body\.live-ops-display \.top/);
@@ -37,7 +39,7 @@ test("the owner demo uses compact military-time weather and radar priority", asy
 });
 
 test("every department inherits weather, radar, real records, visibility, and Respond priority", async () => {
-  const [board, page, incidentMonitor, incidentRoute, stickney, foundation, schema, migration, sourceMigration, css, weatherRoute, boardRoute] = await Promise.all([
+  const [board, page, incidentMonitor, incidentRoute, stickney, foundation, schema, migration, sourceMigration, css, weatherRoute, radarRoute, boardRoute] = await Promise.all([
     read("app/d/[slug]/live-ops-board.tsx"),
     read("app/d/[slug]/page.tsx"),
     read("app/station-incident-monitor.tsx"),
@@ -49,6 +51,7 @@ test("every department inherits weather, radar, real records, visibility, and Re
     read("drizzle/0015_live_ops_panel_sources.sql"),
     read("app/live-ops-foundation.css"),
     read("app/api/departments/[id]/weather/route.ts"),
+    read("app/api/departments/[id]/radar/route.ts"),
     read("app/api/departments/[id]/live-ops-board/route.ts"),
   ]);
   assert.match(page, /departmentSlug=\{department\.slug\}/);
@@ -69,7 +72,9 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(board, /https:\/\/stickney-firehouse-manager\.vercel\.app\/inventory/);
   assert.match(board, /module=duties/);
   assert.match(board, /Record Pass, Fail, or Missing/);
-  assert.match(board, /function LiveSourceFrame/);
+  assert.match(board, /function OfficialRadar/);
+  assert.match(board, /\/api\/departments\/\$\{encodeURIComponent\(departmentId\)\}\/radar/);
+  assert.doesNotMatch(board, /<iframe[^>]+radar/i);
   assert.match(board, /radar loads only while shown/i);
   assert.match(board, /function militaryTime/);
   assert.match(board, /sourceData\?\.apparatus/);
@@ -77,7 +82,8 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(board, /sourceData\?\.scheduleCalendar/);
   assert.match(board, /calendarShiftDateLabel/);
   assert.match(board, /Board settings saved and applied to this department/);
-  assert.match(board, /Open radar source/);
+  assert.match(board, /Open NOAA radar/);
+  assert.match(board, /Open configured source/);
   assert.match(board, /assets\.filter/);
   assert.match(board, /ridingAssignments\.length \? `\$\{ridingAssignments\.length\} scheduled`/);
   assert.match(stickney, /if \(module === "live-ops"\)/);
@@ -99,6 +105,11 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(weatherRoute, /foundation\.live_board_alerts_url/);
   assert.match(weatherRoute, /searchParams\.get\("lat"\)/);
   assert.match(weatherRoute, /searchParams\.get\("lon"\)/);
+  assert.match(radarRoute, /canAccessDepartment/);
+  assert.match(radarRoute, /opengeo\.ncep\.noaa\.gov\/geoserver\/conus\/conus_bref_qcd\/ows/);
+  assert.match(radarRoute, /layers", "conus_bref_qcd"/);
+  assert.match(radarRoute, /styles", "radar_reflectivity"/);
+  assert.match(radarRoute, /Department weather coordinates are not configured/);
   assert.match(boardRoute, /Live Ops board saved/);
   assert.match(boardRoute, /boardSaved=1/);
   assert.match(page, /query\.boardSaved === "1"/);
@@ -125,6 +136,17 @@ test("department weather is authenticated and sourced from the National Weather 
   assert.doesNotMatch(route, /Math\.random|fictional|demo forecast/i);
 });
 
+test("department radar is authenticated and uses the official NOAA MRMS WMS image", async () => {
+  const route = await read("app/api/departments/[id]/radar/route.ts");
+  assert.match(route, /getChatGPTUser/);
+  assert.match(route, /canAccessDepartment/);
+  assert.match(route, /NOAA_RADAR_WMS/);
+  assert.match(route, /request", "GetMap"/);
+  assert.match(route, /format", "image\/png"/);
+  assert.match(route, /Cache-Control": "private, no-store"/);
+  assert.doesNotMatch(route, /Math\.random|fictional|demo radar/i);
+});
+
 test("the propagation contract covers both demo and shared department implementation", async () => {
   const propagation = JSON.parse(await read("foundation/propagation.json"));
   const liveOps = propagation.modules["live-operations"];
@@ -134,6 +156,7 @@ test("the propagation contract covers both demo and shared department implementa
   assert.ok(liveOps.departments.includes("app/station-incident-monitor.tsx"));
   assert.ok(liveOps.departments.includes("app/api/departments/[id]/active-incident/route.ts"));
   assert.ok(liveOps.departments.includes("app/api/departments/[id]/weather/route.ts"));
+  assert.ok(liveOps.departments.includes("app/api/departments/[id]/radar/route.ts"));
   assert.ok(liveOps.departments.includes("app/api/live-sources/lodd/route.ts"));
   assert.ok(liveOps.departments.includes("db/stickney.ts"));
   assert.ok(liveOps.departments.includes("drizzle/0014_live_ops_weather_priority.sql"));
