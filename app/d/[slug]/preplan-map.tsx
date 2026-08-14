@@ -155,7 +155,7 @@ export default function PreplanMap({ departmentId, departmentSlug, preplans, hyd
     return () => { active = false; };
   }, [departmentSlug, mappedHydrants, mappedPreplans]);
 
-  return <section className="preplan-map-panel">
+  return <section className="preplan-map-panel" id="preplan-map">
     <div className="preplan-map-head"><div><span>PREPLAN & WATER MAP</span><h2>Buildings and hydrants</h2><p>Click a saved building footprint or marker to open that record.</p></div><div className={`preplan-map-provider ${state}`}><i/>{state === "google" ? "Google map active" : state === "checking" ? "Checking map service" : "Coordinate plot"}</div></div>
     <div className="preplan-map-stage">
       <div ref={host} className={`preplan-google-map ${state === "google" ? "active" : ""}`}/>

@@ -28,7 +28,7 @@ function coordinates(value: string) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-export function GoogleIntegrationTest({ departmentId, departmentSlug, weatherLocation }: { departmentId: string; departmentSlug: string; weatherLocation: string }) {
+export function GoogleIntegrationTest({ departmentId, departmentSlug, weatherLocation, supportSessionId = "" }: { departmentId: string; departmentSlug: string; weatherLocation: string; supportSessionId?: string }) {
   const [state, setState] = useState<"idle" | "testing" | "ok" | "error">("idle");
   const [message, setMessage] = useState("Run this from the production domain after saving a restricted browser key.");
 
@@ -65,7 +65,7 @@ export function GoogleIntegrationTest({ departmentId, departmentSlug, weatherLoc
       const verified = await fetch(`/api/departments/${encodeURIComponent(departmentId)}/integrations/google-verified`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ maps: true, streetView: streetViewOk, routes: routesOk }),
+        body: JSON.stringify({ maps: true, streetView: streetViewOk, routes: routesOk, supportSessionId }),
       });
       if (!verified.ok) throw new Error(await verified.text() || "Verification could not be saved.");
       setState("ok");

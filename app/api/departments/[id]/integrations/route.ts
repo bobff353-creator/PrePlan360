@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { audit, canAdminDepartment, db, getDepartment, now } from "@/db/access";
+import { audit, canAdminDepartment, canWriteDepartment, db, getDepartment, isOwner, now } from "@/db/access";
 import { decryptIntegrationSecret, encryptIntegrationSecret, hmacSha256, integrationEncryptionReady } from "@/app/lib/integration-crypto";
 import { deliverDepartmentExport, validateDepartmentExportUrl } from "@/app/lib/department-export";
 import { ensureDepartmentIntegration, getDepartmentIntegration } from "@/app/lib/department-integrations";
@@ -13,22 +13,32 @@ function field(form: FormData, name: string, max = 500) {
   return String(form.get(name) || "").trim().slice(0, max);
 }
 
-function messageRedirect(request: Request, departmentId: string, status: "ok" | "error", message: string) {
-  const target = new URL(`/departments/${departmentId}`, request.url);
+function messageRedirect(request: Request, departmentId: string, supportSessionId: string, status: "ok" | "error", message: string) {
+  const target = new URL(supportSessionId ? `/owner/support/${encodeURIComponent(supportSessionId)}` : `/departments/${departmentId}`, request.url);
   target.searchParams.set("integration_status", status);
   target.searchParams.set("integration_message", message.slice(0, 240));
   target.hash = "integrations";
   return Response.redirect(target, 303);
 }
 
+function auditedDetail(detail: string, supportSessionId: string) {
+  return supportSessionId ? `${detail} Support session: ${supportSessionId}.` : detail;
+}
+
+async function canManageIntegrations(userId: string, departmentId: string, supportSessionId: string) {
+  if (!supportSessionId) return canAdminDepartment(userId, departmentId);
+  return (await isOwner(userId)) && canWriteDepartment(userId, departmentId, supportSessionId);
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getChatGPTUser();
   if (!user) return new Response("Sign in required", { status: 401 });
-  if (!(await canAdminDepartment(user.userId, id))) return new Response("Department administrator access required", { status: 403 });
+  const form = await request.formData();
+  const supportSessionId = field(form, "support_session_id", 120);
+  if (!(await canManageIntegrations(user.userId, id, supportSessionId))) return new Response("Department administrator access or an active owner support session is required", { status: 403 });
   if (!await getDepartment(id)) return new Response("Department not found", { status: 404 });
 
-  const form = await request.formData();
   const intent = field(form, "intent", 60);
   await ensureDepartmentIntegration(id, user.userId);
 
@@ -45,8 +55,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const changed = savedKey !== current.google_browser_key || mapId !== current.google_map_id || Number(mapsEnabled) !== current.maps_enabled || Number(streetViewEnabled) !== current.street_view_enabled || Number(routesEnabled) !== current.routes_enabled;
       await db().prepare("UPDATE department_integrations SET maps_enabled=?,street_view_enabled=?,routes_enabled=?,google_browser_key=?,google_map_id=?,google_verified_at=CASE WHEN ? THEN NULL ELSE google_verified_at END,google_verification_json=CASE WHEN ? THEN '{}' ELSE google_verification_json END,updated_by=?,updated_at=? WHERE department_id=?")
         .bind(mapsEnabled ? 1 : 0, streetViewEnabled ? 1 : 0, routesEnabled ? 1 : 0, savedKey, mapId, changed ? 1 : 0, changed ? 1 : 0, user.userId, now(), id).run();
-      await audit(user.userId, id, "department_maps_integration_updated", `Google Maps ${mapsEnabled ? "enabled" : "disabled"}; Street View ${streetViewEnabled ? "enabled" : "disabled"}; Routes ${routesEnabled ? "enabled" : "disabled"}.`);
-      return messageRedirect(request, id, "ok", changed ? "Google settings saved. Run the browser verification before treating them as live." : "Google settings saved.");
+      await audit(user.userId, id, "department_maps_integration_updated", auditedDetail(`Google Maps ${mapsEnabled ? "enabled" : "disabled"}; Street View ${streetViewEnabled ? "enabled" : "disabled"}; Routes ${routesEnabled ? "enabled" : "disabled"}.`, supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", changed ? "Google settings saved. Run the browser verification before treating them as live." : "Google settings saved.");
     }
 
     if (intent === "save-cad") {
@@ -59,8 +69,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const changed = savedSecret !== current.cad_signing_secret_cipher || provider !== current.cad_provider || Number(cadEnabled) !== current.cad_enabled;
       await db().prepare("UPDATE department_integrations SET cad_enabled=?,cad_provider=?,cad_signing_secret_cipher=?,cad_verified_at=CASE WHEN ? THEN NULL ELSE cad_verified_at END,updated_by=?,updated_at=? WHERE department_id=?")
         .bind(cadEnabled ? 1 : 0, provider, savedSecret, changed ? 1 : 0, user.userId, now(), id).run();
-      await audit(user.userId, id, "department_cad_integration_updated", `Signed CAD intake ${cadEnabled ? "enabled" : "disabled"} for ${provider || "unselected provider"}.`);
-      return messageRedirect(request, id, "ok", "CAD setup saved. Run the safe signed test before using the provider endpoint.");
+      await audit(user.userId, id, "department_cad_integration_updated", auditedDetail(`Signed CAD intake ${cadEnabled ? "enabled" : "disabled"} for ${provider || "unselected provider"}.`, supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", "CAD setup saved. Run the safe signed test before using the provider endpoint.");
     }
 
     if (intent === "test-cad") {
@@ -74,8 +84,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         body: raw,
       });
       if (!response.ok) throw new Error(`Signed CAD test returned HTTP ${response.status}.`);
-      await audit(user.userId, id, "department_cad_integration_verified", "Safe signed CAD test was accepted and stored without dispatching an incident.");
-      return messageRedirect(request, id, "ok", "Signed CAD test accepted and audited. No live incident was created.");
+      await audit(user.userId, id, "department_cad_integration_verified", auditedDetail("Safe signed CAD test was accepted and stored without dispatching an incident.", supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", "Signed CAD test accepted and audited. No live incident was created.");
     }
 
     if (intent === "save-resend") {
@@ -91,8 +101,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const changed = savedApiKey !== current.resend_api_key_cipher || savedWebhookSecret !== current.resend_webhook_secret_cipher || receivingAddress !== current.resend_receiving_address || Number(resendEnabled) !== current.resend_enabled;
       await db().prepare("UPDATE department_integrations SET resend_enabled=?,resend_receiving_address=?,resend_api_key_cipher=?,resend_webhook_secret_cipher=?,resend_provider_verified_at=CASE WHEN ? THEN NULL ELSE resend_provider_verified_at END,updated_by=?,updated_at=? WHERE department_id=?")
         .bind(resendEnabled ? 1 : 0, receivingAddress, savedApiKey, savedWebhookSecret, changed ? 1 : 0, user.userId, now(), id).run();
-      await audit(user.userId, id, "department_resend_integration_updated", `Resend inbound email ${resendEnabled ? "enabled" : "disabled"}; receiving address ${receivingAddress || "not set"}.`);
-      return messageRedirect(request, id, "ok", "Resend settings saved. Provision the webhook to verify the API key and endpoint.");
+      await audit(user.userId, id, "department_resend_integration_updated", auditedDetail(`Resend inbound email ${resendEnabled ? "enabled" : "disabled"}; receiving address ${receivingAddress || "not set"}.`, supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", "Resend settings saved. Provision the webhook to verify the API key and endpoint.");
     }
 
     if (intent === "provision-resend") {
@@ -109,8 +119,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const at = now();
       await db().prepare("UPDATE department_integrations SET resend_webhook_secret_cipher=?,resend_webhook_id=?,resend_provider_verified_at=?,updated_by=?,updated_at=? WHERE department_id=?")
         .bind(encryptIntegrationSecret(result.data.signing_secret), result.data.id, at, user.userId, at, id).run();
-      await audit(user.userId, id, "department_resend_provider_verified", existing ? "Existing Resend email.received webhook was verified." : "Resend email.received webhook was created and its signing secret stored encrypted.");
-      return messageRedirect(request, id, "ok", existing ? "Existing Resend webhook verified." : "Resend webhook created and signing secret stored securely.");
+      await audit(user.userId, id, "department_resend_provider_verified", auditedDetail(existing ? "Existing Resend email.received webhook was verified." : "Resend email.received webhook was created and its signing secret stored encrypted.", supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", existing ? "Existing Resend webhook verified." : "Resend webhook created and signing secret stored securely.");
     }
 
     if (intent === "save-export") {
@@ -126,22 +136,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const changed = endpoint !== current.nightly_export_url || savedSecret !== current.nightly_export_secret_cipher;
       await db().prepare("UPDATE department_integrations SET nightly_export_enabled=?,nightly_export_url=?,nightly_export_secret_cipher=?,nightly_export_verified_at=CASE WHEN ? THEN NULL ELSE nightly_export_verified_at END,nightly_export_last_status=CASE WHEN ? THEN 'verification_required' ELSE nightly_export_last_status END,updated_by=?,updated_at=? WHERE department_id=?")
         .bind(exportEnabled ? 1 : 0, endpoint, savedSecret, changed ? 1 : 0, changed ? 1 : 0, user.userId, now(), id).run();
-      await audit(user.userId, id, "department_nightly_export_updated", `Nightly signed export ${exportEnabled ? "enabled" : "disabled"}; endpoint ${endpoint ? "saved" : "not set"}.`);
-      return messageRedirect(request, id, "ok", "Nightly export settings saved. Test the department server before the scheduled job can send.");
+      await audit(user.userId, id, "department_nightly_export_updated", auditedDetail(`Nightly signed export ${exportEnabled ? "enabled" : "disabled"}; endpoint ${endpoint ? "saved" : "not set"}.`, supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", "Nightly export settings saved. Test the department server before the scheduled job can send.");
     }
 
     if (intent === "test-export" || intent === "send-export") {
       const integration = await getDepartmentIntegration(id);
       if (!integration.nightly_export_url || !integration.nightly_export_secret_cipher) throw new Error("Save an HTTPS endpoint and signing secret first.");
       const delivery = await deliverDepartmentExport(integration, intent === "test-export" ? "connection_test" : "manual");
-      await audit(user.userId, id, intent === "test-export" ? "department_export_verified" : "department_export_sent", delivery.summary);
-      return messageRedirect(request, id, "ok", intent === "test-export" ? "Department server accepted the signed connection test." : "Full department snapshot accepted by the department server.");
+      await audit(user.userId, id, intent === "test-export" ? "department_export_verified" : "department_export_sent", auditedDetail(delivery.summary, supportSessionId));
+      return messageRedirect(request, id, supportSessionId, "ok", intent === "test-export" ? "Department server accepted the signed connection test." : "Full department snapshot accepted by the department server.");
     }
 
     throw new Error("Unknown integration action.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Integration action failed.";
-    await audit(user.userId, id, "department_integration_error", `${intent || "unknown"}: ${message}`);
-    return messageRedirect(request, id, "error", message);
+    await audit(user.userId, id, "department_integration_error", auditedDetail(`${intent || "unknown"}: ${message}`, supportSessionId));
+    return messageRedirect(request, id, supportSessionId, "error", message);
   }
 }

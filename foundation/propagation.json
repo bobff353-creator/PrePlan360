@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.69",
+  "release": "2026.08.14.72",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -25,6 +25,11 @@
         "app/station-display-button.tsx",
         "app/station-display.css",
         "app/station-incident-monitor.tsx",
+        "app/owner/support/[sessionId]/page.tsx",
+        "app/departments/integration-center.tsx",
+        "app/departments/google-integration-test.tsx",
+        "app/api/departments/[id]/integrations/route.ts",
+        "app/api/departments/[id]/integrations/google-verified/route.ts",
         "app/api/departments/[id]/active-incident/route.ts",
         "db/foundation.ts",
         "db/department-source.ts"
@@ -218,6 +223,7 @@
         "app/d/[slug]/page.tsx",
         "app/d/[slug]/reference-library.tsx",
         "app/d/[slug]/preplan-map.tsx",
+        "app/d/[slug]/preplan-detail.tsx",
         "app/d/[slug]/stickney-workspace.tsx",
         "app/reference-library.css",
         "app/owner/integrations/page.tsx",

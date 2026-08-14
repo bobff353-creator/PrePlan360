@@ -15,7 +15,7 @@ function SubmitAction({ intent, children, secondary = false }: { intent: string;
   return <button className={secondary ? "access-secondary" : "access-primary"} type="submit" name="intent" value={intent}>{children}</button>;
 }
 
-export function DepartmentIntegrationCenter({ department, integration, deliveries, baseUrl, encryptionReady, status, message }: {
+export function DepartmentIntegrationCenter({ department, integration, deliveries, baseUrl, encryptionReady, status, message, supportSessionId = "" }: {
   department: Department;
   integration: DepartmentIntegration;
   deliveries: DepartmentExportDelivery[];
@@ -23,12 +23,15 @@ export function DepartmentIntegrationCenter({ department, integration, deliverie
   encryptionReady: boolean;
   status?: string;
   message?: string;
+  supportSessionId?: string;
 }) {
   const cadConfigured = Boolean(integration.cad_enabled && integration.cad_signing_secret_cipher);
   const resendConfigured = Boolean(integration.resend_enabled && integration.resend_api_key_cipher && integration.resend_receiving_address);
   const mapsConfigured = Boolean(integration.maps_enabled && integration.google_browser_key);
   const exportConfigured = Boolean(integration.nightly_export_enabled && integration.nightly_export_url && integration.nightly_export_secret_cipher);
   const action = `/api/departments/${department.id}/integrations`;
+  const supportField = supportSessionId ? <input type="hidden" name="support_session_id" value={supportSessionId}/> : null;
+  const supportQuery = supportSessionId ? `&support=${encodeURIComponent(supportSessionId)}` : "";
   return <section className="department-integrations" id="integrations">
     <div className="department-integration-heading"><div><span>DEPARTMENT CONNECTIONS</span><h2>Integration Center</h2><p>Configure this department’s maps, CAD intake, Resend email routing, and optional signed server backup. Saved is not the same as live: every card shows whether its real provider path has been verified.</p></div><span className={`integration-vault ${encryptionReady ? "ready" : "waiting"}`}><i/>{encryptionReady ? "Encrypted secret vault ready" : "Secret vault setup required"}</span></div>
     {status && message ? <div className={`integration-message ${status}`} role="status">{message}</div> : null}
@@ -38,15 +41,16 @@ export function DepartmentIntegrationCenter({ department, integration, deliverie
         <div className="department-integration-body">
           <p className="integration-purpose">One restricted browser key powers the department basemap, building footprints, hydrants, Street View fallback, and route checks. The key is browser-visible by design and must be limited to this production domain and only the enabled Google APIs.</p>
           <form method="post" action={action} className="integration-form">
+            {supportField}
             <label className="integration-switch"><input type="checkbox" name="maps_enabled" defaultChecked={Boolean(integration.maps_enabled)}/><span>Enable Google basemap for this department</span></label>
             <label className="integration-switch"><input type="checkbox" name="street_view_enabled" defaultChecked={Boolean(integration.street_view_enabled)}/><span>Enable Street View / A-side fallback</span></label>
             <label className="integration-switch"><input type="checkbox" name="routes_enabled" defaultChecked={Boolean(integration.routes_enabled)}/><span>Enable Google Routes checks</span></label>
             <label className="wide">Restricted Google browser key<input type="password" name="google_browser_key" autoComplete="new-password" placeholder={integration.google_browser_key ? "Saved — leave blank to keep" : "Paste the HTTP-referrer restricted key"}/><small>Required Google services: Maps JavaScript API; add Routes API when Routes is enabled. Restrict websites to this production domain.</small></label>
             <label>Google Map ID<input name="google_map_id" defaultValue={integration.google_map_id} placeholder="Optional styled map ID"/></label>
             <label className="integration-switch compact"><input type="checkbox" name="clear_google_browser_key"/><span>Remove saved browser key</span></label>
-            <div className="integration-actions wide"><SubmitAction intent="save-maps">Save Google setup</SubmitAction><a className="access-secondary" href={`/d/${department.slug}?module=preplans`}>Open department map ↗</a></div>
+            <div className="integration-actions wide"><SubmitAction intent="save-maps">Save Google setup</SubmitAction><a className="access-secondary" href={`/d/${department.slug}?module=preplans${supportQuery}`}>Open department map ↗</a></div>
           </form>
-          <GoogleIntegrationTest departmentId={department.id} departmentSlug={department.slug} weatherLocation={department.weather_location}/>
+          <GoogleIntegrationTest departmentId={department.id} departmentSlug={department.slug} weatherLocation={department.weather_location} supportSessionId={supportSessionId}/>
           <dl className="integration-facts"><div><dt>Production referrer</dt><dd>{`${baseUrl}/*`}</dd></div><div><dt>Last browser verification</dt><dd><When value={integration.google_verified_at}/></dd></div></dl>
         </div>
       </details>
@@ -57,6 +61,7 @@ export function DepartmentIntegrationCenter({ department, integration, deliverie
           <p className="integration-purpose">Each department gets its own endpoint and signing secret. A valid delivery is stored, deduplicated, and routed to this department, but it does not tone out or open an operational incident until dispatch rules are separately approved.</p>
           <code className="integration-endpoint">{baseUrl}/api/webhooks/cad/{department.id}</code>
           <form method="post" action={action} className="integration-form">
+            {supportField}
             <label className="integration-switch"><input type="checkbox" name="cad_enabled" defaultChecked={Boolean(integration.cad_enabled)}/><span>Enable signed CAD intake</span></label>
             <label>CAD provider<input name="cad_provider" defaultValue={integration.cad_provider} placeholder="Bryx, IamResponding, CentralSquare…"/></label>
             <GeneratedSecretField name="cad_signing_secret" label="HMAC-SHA256 signing secret" saved={Boolean(integration.cad_signing_secret_cipher)}/>
@@ -73,6 +78,7 @@ export function DepartmentIntegrationCenter({ department, integration, deliverie
           <p className="integration-purpose">Save the department’s Resend API key and receiving address, then let PrePlan 360 create or verify the email.received webhook. Resend signatures are checked against the raw request before metadata is stored.</p>
           <code className="integration-endpoint">{baseUrl}/api/webhooks/resend/{department.id}</code>
           <form method="post" action={action} className="integration-form">
+            {supportField}
             <label className="integration-switch"><input type="checkbox" name="resend_enabled" defaultChecked={Boolean(integration.resend_enabled)}/><span>Enable inbound CAD email</span></label>
             <label>Department receiving address<input type="email" name="resend_receiving_address" defaultValue={integration.resend_receiving_address} placeholder="calls@dispatch.department.gov"/></label>
             <label className="wide">Resend API key<input type="password" name="resend_api_key" autoComplete="new-password" placeholder={integration.resend_api_key_cipher ? "Saved securely — leave blank to keep" : "re_…"}/></label>
@@ -88,6 +94,7 @@ export function DepartmentIntegrationCenter({ department, integration, deliverie
         <div className="department-integration-body">
           <p className="integration-purpose">At 07:00 UTC nightly (1:00 a.m. CST / 2:00 a.m. CDT), PrePlan 360 can send this department’s saved profile, members, preplans, hydrants, apparatus, inventory, module records, settings, and sanitized event history to a department-owned HTTPS endpoint. Passwords, sessions, API keys, signing secrets, and raw webhook payloads are excluded.</p>
           <form method="post" action={action} className="integration-form">
+            {supportField}
             <label className="integration-switch"><input type="checkbox" name="nightly_export_enabled" defaultChecked={Boolean(integration.nightly_export_enabled)}/><span>Enable nightly signed department snapshot</span></label>
             <label className="wide">Department server HTTPS endpoint<input type="url" name="nightly_export_url" defaultValue={integration.nightly_export_url} placeholder="https://records.department.gov/api/preplan360-backup"/></label>
             <GeneratedSecretField name="nightly_export_secret" label="Department server HMAC signing secret" saved={Boolean(integration.nightly_export_secret_cipher)}/>

@@ -144,7 +144,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const dailyLogDate = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
   return (
-    <main className={`department-app${stationDisplay ? " station-embedded" : ""}`} style={style} data-foundation-release="2026.08.14.69" data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
+    <main className={`department-app${stationDisplay ? " station-embedded" : ""}`} style={style} data-foundation-release="2026.08.14.72" data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
       {stationDisplay ? <StationIncidentMonitor departmentId={department.id} departmentSlug={department.slug} currentModule={active[0]} responseSeconds={foundation.response_duration_seconds} supportSessionId={ownerSupport ? supportSession.id : ""}/> : null}
       <aside className="dept-app-sidebar">
         <input

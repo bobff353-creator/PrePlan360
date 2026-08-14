@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- protected operational images are streamed by authenticated API routes */
-import { STICKNEY_WORK_ROLES, stickneyEmployeeActiveOn, stickneyEmployeeRoles, type StickneyEmployee, type StickneyModuleData, type StickneyScheduleAssignment } from "@/db/stickney";
+import { STICKNEY_WORK_ROLES, stickneyEmployeeActiveOn, stickneyEmployeeRoles, type StickneyEmployee, type StickneyHydrant, type StickneyModuleData, type StickneyPreplan, type StickneyScheduleAssignment } from "@/db/stickney";
 import type { DepartmentSourcePresentation } from "@/db/department-source";
 import type { DepartmentScheduleRequest } from "@/db/access";
 import StaffingWorkspace from "./staffing-workspace";
@@ -9,6 +9,7 @@ import PreplanMap from "./preplan-map";
 import ScheduleCalendar from "./schedule-calendar";
 import DocumentsWorkspace from "./documents-workspace";
 import ScheduleRequestsWorkspace from "./schedule-requests-workspace";
+import PreplanDetail, { type PreplanDetailHydrant } from "./preplan-detail";
 
 type Props = {
   module: string;
@@ -186,6 +187,15 @@ function Staffing({ source, departmentId, data, editable, supportSessionId }: { 
   return <StaffingWorkspace departmentId={departmentId} employees={employees} sourceName={source.name} sourceSystem={source.systemName} employeePhotoRoute={source.employeePhotoRoute} editable={editable} supportSessionId={supportSessionId} />;
 }
 
+function sourceNearbyHydrants(plan: StickneyPreplan, hydrants: StickneyHydrant[]): PreplanDetailHydrant[] {
+  if (plan.latitude == null || plan.longitude == null) return [];
+  return hydrants
+    .filter((hydrant) => hydrant.latitude != null && hydrant.longitude != null)
+    .sort((a, b) => (Number(a.latitude) - Number(plan.latitude)) ** 2 + (Number(a.longitude) - Number(plan.longitude)) ** 2 - ((Number(b.latitude) - Number(plan.latitude)) ** 2 + (Number(b.longitude) - Number(plan.longitude)) ** 2))
+    .slice(0, 5)
+    .map((hydrant) => ({ name: hydrant.hydrant_number || "Unnumbered hydrant", location: hydrant.address, status: hydrant.service_status || "Status not entered", flowGpm: null }));
+}
+
 function ScheduleForm({ departmentId, supportSessionId, employees, assignment }: { departmentId: string; supportSessionId: string; employees: StickneyEmployee[]; assignment?: StickneyScheduleAssignment }) {
   // The API rechecks both the employment date and selected qualified role before saving.
   const eligibleEmployees = employees.filter((employee) => !assignment || employee.id === assignment.employee_id || stickneyEmployeeActiveOn(employee, assignment.work_date));
@@ -341,32 +351,14 @@ function Preplans({ source, departmentId, departmentSlug, data, editable, suppor
       </div>
       <PreplanMap departmentId={departmentId} departmentSlug={departmentSlug} preplans={preplans.map((plan) => ({ id: plan.id, name: plan.business_name, address: plan.address, latitude: plan.latitude, longitude: plan.longitude, footprint: stickneyFootprint(plan.footprint_json), targetId: `stickney-preplan-${plan.id}` }))} hydrants={hydrants.map((hydrant) => ({ id: hydrant.id, name: hydrant.hydrant_number || "Unnumbered hydrant", location: hydrant.address, latitude: hydrant.latitude, longitude: hydrant.longitude, status: hydrant.service_status || "Status not entered", href: `/d/${departmentSlug}?module=hydrants${support}` }))} editable={editable}/>
       {preplans.length ? (
-        <div className="stickney-card-grid">
-          {preplans.map((plan) => (
-            <article key={plan.id} id={`stickney-preplan-${plan.id}`}>
-              <span>{plan.status || "Preplan"}</span>
-              <h3>{plan.business_name}</h3>
-              <p>{plan.address}</p>
-              <dl>
-                <div>
-                  <dt>Construction</dt>
-                  <dd>{plan.construction_type || plan.construction || "Not entered"}</dd>
-                </div>
-                <div>
-                  <dt>Floors</dt>
-                  <dd>{plan.floor_count || "Not entered"}</dd>
-                </div>
-                <div>
-                  <dt>Fire flow</dt>
-                  <dd>{plan.suggested_fire_flow_gpm ? `${Number(plan.suggested_fire_flow_gpm).toLocaleString()} GPM` : "Not calculated"}</dd>
-                </div>
-                <div>
-                  <dt>Access</dt>
-                  <dd>{plan.access_info || plan.knox_box || "Not entered"}</dd>
-                </div>
-              </dl>
-              {plan.alarm_system || plan.sprinkler_system || plan.fdc ? <small>{[plan.alarm_system, plan.sprinkler_system, plan.fdc].filter(Boolean).join(" · ")}</small> : null}
-              <EditableRecord
+        <div className="stickney-card-grid preplan-detail-list">
+          {preplans.map((plan) => {
+            const footprint = stickneyFootprint(plan.footprint_json);
+            return <details className="stickney-preplan-detail" key={plan.id} id={`stickney-preplan-${plan.id}`}>
+              <summary><div><span>{plan.status || "Preplan"}</span><h3>{plan.business_name}</h3><p>{plan.address || "Address not entered"}</p></div><b>Open full property workspace</b></summary>
+              <div className="stickney-preplan-detail-body">
+                <PreplanDetail editable={editable} record={{ name: plan.business_name, address: plan.address, status: plan.status || "Preplan", sourceLabel: `${source.name} source record`, construction: plan.construction_type || plan.construction || "", floors: plan.floor_count ? String(plan.floor_count) : "", fireFlowGpm: Number(plan.suggested_fire_flow_gpm) > 0 ? Number(plan.suggested_fire_flow_gpm) : null, access: plan.access_info || "", alarm: plan.alarm_system || "", sprinkler: plan.sprinkler_system || "", fdc: plan.fdc || "", knox: plan.knox_box || "", riser: plan.riser || "", summary: "", contact: plan.contact_info || "", internalNotes: "", latitude: plan.latitude, longitude: plan.longitude, footprintCount: footprint.length, lastReviewed: "", visibility: "Department source record", updatedAt: plan.updated_at || "" }} hydrants={sourceNearbyHydrants(plan, hydrants)}/>
+                <EditableRecord
                 departmentId={departmentId}
                 recordType="preplan"
                 recordId={plan.id}
@@ -388,9 +380,26 @@ function Preplans({ source, departmentId, departmentSlug, data, editable, suppor
                     value: plan.construction_type,
                   },
                   {
+                    name: "construction",
+                    label: "Construction notes",
+                    value: plan.construction,
+                    multiline: true,
+                  },
+                  {
                     name: "floor_count",
                     label: "Floors",
                     value: plan.floor_count,
+                  },
+                  {
+                    name: "suggested_fire_flow_gpm",
+                    label: "Suggested fire flow GPM",
+                    value: plan.suggested_fire_flow_gpm,
+                  },
+                  {
+                    name: "contact_info",
+                    label: "Contact information",
+                    value: plan.contact_info,
+                    multiline: true,
                   },
                   {
                     name: "access_info",
@@ -409,10 +418,13 @@ function Preplans({ source, departmentId, departmentSlug, data, editable, suppor
                     value: plan.sprinkler_system,
                   },
                   { name: "fdc", label: "FDC", value: plan.fdc },
+                  { name: "knox_box", label: "Knox Box", value: plan.knox_box },
+                  { name: "riser", label: "Riser / standpipe", value: plan.riser },
                 ]}
-              />
-            </article>
-          ))}
+                />
+              </div>
+            </details>;
+          })}
         </div>
       ) : (
         <Empty title="No completed field preplans" text="No completed plans were returned from the source." />

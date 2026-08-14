@@ -61,11 +61,16 @@ const definitions: Record<
       longitude: 30,
       footprint_json: 4000,
       construction_type: 120,
+      construction: 2000,
       floor_count: 10,
+      suggested_fire_flow_gpm: 12,
+      contact_info: 2000,
       access_info: 2000,
       alarm_system: 500,
       sprinkler_system: 500,
       fdc: 500,
+      knox_box: 500,
+      riser: 500,
     },
   },
   hydrant: {
@@ -253,7 +258,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
   }
   for (const field of ["schedule_sms_opt_in", "station_notify_email", "station_notify_text"]) data[field] = data[field] === "1" ? "1" : "0";
-  if (recordType === "preplan") data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
+  if (recordType === "preplan") {
+    data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
+    data.suggested_fire_flow_gpm = String(Math.max(0, Math.min(100000, Number(data.suggested_fire_flow_gpm) || 0)));
+  }
   if (recordType === "preplan" || recordType === "hydrant") {
     for (const [field, min, max] of [["latitude", -90, 90], ["longitude", -180, 180]] as const) {
       const raw = String(data[field] || "");
