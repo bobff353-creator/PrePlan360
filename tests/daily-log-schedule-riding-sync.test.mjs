@@ -112,5 +112,8 @@ test("the owner and department Live Ops boards both render schedule-backed ridin
   assert.doesNotMatch(demoBoard, /DEMO_RIDING\.map/);
   assert.match(departmentBoard, /rank: item\.rank/);
   assert.match(departmentBoard, /item\.role} \$\{item\.rank}/);
-  assert.match(stickney, /where s\.status='filled' and en\.entry_date='\$\{today\}'/);
+  assert.match(departmentBoard, /nextCalendarShift\(sourceData\?\.scheduleCalendar/);
+  assert.match(departmentBoard, /Add or approve the next calendar shift/);
+  assert.match(stickney, /where s\.status='filled' and en\.entry_date between '\$\{today\}' and '\$\{calendarEnd\}'/);
+  assert.match(stickney, /scheduleCalendar: mergedScheduleCalendar/);
 });

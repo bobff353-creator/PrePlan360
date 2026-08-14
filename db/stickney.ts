@@ -252,6 +252,7 @@ export type StickneyModuleData = {
   summary?: StickneySummary;
   employees?: StickneyEmployee[];
   schedule?: StickneyScheduleAssignment[];
+  scheduleCalendar?: StickneyScheduleAssignment[];
   preplans?: StickneyPreplan[];
   preplanImports?: StickneyPreplanImport[];
   hydrants?: StickneyHydrant[];
@@ -442,7 +443,8 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
   if (module === "dashboard") return { summary: await summary() };
   if (module === "live-ops") {
     const today = chicagoDate();
-    const [apparatus, schedule, duties] = await Promise.all([
+    const calendarEnd = chicagoDate(35);
+    const [apparatus, scheduleCalendar, duties] = await Promise.all([
       fleetApparatus(),
       read<StickneyScheduleAssignment>(`
         select s.id,en.entry_date as work_date,t.name as shift_name,
@@ -454,17 +456,23 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
         join station_shift_types t on t.id=en.shift_type_id
         join employees e on e.id=s.employee_id
         join pay_scales p on p.id=e.pay_scale_id
-        where s.status='filled' and en.entry_date='${today}'
-        order by coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
+        where s.status='filled' and en.entry_date between '${today}' and '${calendarEnd}'
+        order by en.entry_date,coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
       `),
       read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`),
     ]);
-    const [mergedApparatus, mergedSchedule, mergedDuties] = await Promise.all([
+    const [mergedApparatus, mergedScheduleCalendar, mergedDuties] = await Promise.all([
       departmentId ? applyOverrides(departmentId, "apparatus", apparatus) : apparatus,
-      departmentId ? applyOverrides(departmentId, "schedule", schedule) : schedule,
+      departmentId ? applyOverrides(departmentId, "schedule", scheduleCalendar) : scheduleCalendar,
       departmentId ? applyOverrides(departmentId, "duty", duties) : duties,
     ]);
-    return { apparatus: mergedApparatus, schedule: mergedSchedule, duties: mergedDuties, dutyContext: chicagoDutyContext() };
+    return {
+      apparatus: mergedApparatus,
+      schedule: mergedScheduleCalendar.filter((assignment) => assignment.work_date === today),
+      scheduleCalendar: mergedScheduleCalendar,
+      duties: mergedDuties,
+      dutyContext: chicagoDutyContext(),
+    };
   }
   if (module === "staffing") return { employees: await loadStickneyEmployees(departmentId) };
   if (module === "scheduling") {

@@ -91,14 +91,15 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   } else if (active[0] === "live-ops" || active[0] === "staffing" || active[0] === "scheduling") {
     try {
       const employees = await loadDepartmentEmployeeOverlays(department.id);
+      const schedule = active[0] === "live-ops" || active[0] === "scheduling" ? await loadDepartmentScheduleOverlays(department.id) : [];
       stickneyData =
         active[0] === "live-ops"
-          ? { employees, schedule: await loadDepartmentScheduleOverlays(department.id) }
+          ? { employees, schedule, scheduleCalendar: schedule }
           : active[0] === "staffing"
           ? { employees }
           : {
               employees,
-              schedule: await loadDepartmentScheduleOverlays(department.id),
+              schedule,
             };
     } catch (error) {
       stickneyConnectionError = error instanceof Error ? error.message : "The department personnel workspace is unavailable.";

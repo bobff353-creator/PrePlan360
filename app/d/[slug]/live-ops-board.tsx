@@ -6,6 +6,7 @@ import type { DepartmentAsset, DepartmentModuleData, DepartmentModuleItem } from
 import { liveBoardPanels, liveBoardWidgets, type FoundationSettings, type LiveBoardWidth } from "@/db/foundation";
 import type { StickneyModuleData } from "@/db/stickney";
 import ModuleBuilder from "./module-builder";
+import { calendarShiftDateLabel, nextCalendarShift, type NextCalendarShift } from "./schedule-format";
 
 type WeatherPeriod = {
   name: string;
@@ -129,6 +130,11 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     if (saved.length) return saved;
     return (sourceData?.schedule || []).map((item) => ({ id: item.id, role: item.role || "Assignment", employee: item.employee_name, rank: item.rank, shift: item.shift_name }));
   }, [data.items, sourceData?.schedule]);
+  const calendarMinute = clock ? Math.floor(clock.getTime() / 60_000) : null;
+  const nextShift = useMemo(
+    () => calendarMinute === null ? null : nextCalendarShift(sourceData?.scheduleCalendar || sourceData?.schedule || [], new Date(calendarMinute * 60_000)),
+    [calendarMinute, sourceData?.schedule, sourceData?.scheduleCalendar],
+  );
 
   useEffect(() => {
     const update = () => setClock(new Date());
@@ -272,7 +278,7 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     <div className="live-ops-canvas">
       {visibleOrder.map((id) => <section key={id} className={`live-ops-widget width-${widths[id] || "half"}`} draggable={editable} onDragStart={() => setDragged(id)} onDragOver={(event: DragEvent<HTMLElement>) => event.preventDefault()} onDrop={() => drop(id)} onDragEnd={() => setDragged("")}>
         {editable ? <div className="live-widget-grip"><span>Move</span><b>≡</b></div> : null}
-        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items} ridingAssignments={ridingAssignments}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} lodd={lodd} sourceData={sourceData} departmentSlug={departmentSlug} refreshKey={sourceRefreshKey} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
+        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items} ridingAssignments={ridingAssignments} nextShift={nextShift} clock={clock}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} lodd={lodd} sourceData={sourceData} departmentSlug={departmentSlug} refreshKey={sourceRefreshKey} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
       </section>)}
       {!visibleOrder.length ? <div className="live-board-empty"><b>No board cards are visible.</b><span>{editable ? "Open Customize board to restore a card." : "An authorized department editor can restore this display."}</span></div> : null}
     </div>
@@ -294,7 +300,7 @@ function WeatherHeader({ departmentName, weather, index, clock, rotationSeconds,
   return <header className="live-weather-head"><div className="live-weather-copy"><span>{eyebrow}</span><h2>{title}</h2><p>{detail}</p></div><div className="live-ops-head-actions">{editable ? <button type="button" onClick={onSettings}>{settingsOpen ? "Close settings" : "Customize board"}</button> : null}<div className="live-ops-clock"><b>{militaryTime(clock)}</b><span>{clock ? clock.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : ""}</span><small><i/> Rotates every {rotationSeconds}s</small></div></div></header>;
 }
 
-function SummaryWidget({ settings, activeIncident, items, ridingAssignments }: { settings: FoundationSettings; activeIncident?: DepartmentModuleItem; items: DepartmentModuleItem[]; ridingAssignments: BoardRidingAssignment[] }) {
+function SummaryWidget({ settings, activeIncident, items, ridingAssignments, nextShift, clock }: { settings: FoundationSettings; activeIncident?: DepartmentModuleItem; items: DepartmentModuleItem[]; ridingAssignments: BoardRidingAssignment[]; nextShift: NextCalendarShift | null; clock: Date | null }) {
   const staffing = items.find((item) => item.item_type === "staffing");
   const officer = items.find((item) => ["officer", "oic", "officer_in_charge"].includes(item.item_type));
   const scheduledOfficer = ridingAssignments.find((item) => /officer|chief|captain|lieutenant|command/i.test(`${item.role} ${item.rank} ${item.employee}`));
@@ -302,7 +308,7 @@ function SummaryWidget({ settings, activeIncident, items, ridingAssignments }: {
     <article className={staffing || ridingAssignments.length ? "" : "unconnected"}><span>Staffing</span><strong>{staffing?.title || (ridingAssignments.length ? `${ridingAssignments.length} scheduled` : "Not connected")}</strong><small>{staffing?.summary || (ridingAssignments.length ? ridingAssignments[0].shift || "Today’s saved schedule" : "Connect scheduling to show coverage")}</small></article>
     <article><span>Officer in charge</span><strong>{officer?.title || scheduledOfficer?.employee || "Not assigned"}</strong><small>{officer?.summary || scheduledOfficer?.role || "No current command assignment"}</small></article>
     <article className={activeIncident ? "active" : ""}><span>Active call</span><strong>{activeIncident?.title || "None"}</strong><small>{activeIncident ? activeIncident.location || activeIncident.summary || "Department entry is active" : "No active department incident entry"}</small></article>
-    {settings.live_board_show_next_shift ? <article className="next-shift"><span>Next shift change</span><strong>{settings.shift_start_time}</strong><small>{settings.shift_hours_on} on / {settings.shift_hours_off} off rule</small></article> : null}
+    {settings.live_board_show_next_shift ? <article className="next-shift"><span>Next shift change</span><strong>{!clock ? "Checking calendar" : nextShift ? `${nextShift.shiftName} · ${nextShift.startTime}` : "Not scheduled"}</strong><small>{!clock ? "Loading approved schedule" : nextShift ? `${calendarShiftDateLabel(nextShift.workDate, clock)} · ${nextShift.assignmentCount} assigned` : "Add or approve the next calendar shift"}</small></article> : null}
   </div>;
 }
 

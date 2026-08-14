@@ -19,6 +19,9 @@ test("the owner demo uses compact military-time weather and radar priority", asy
   assert.match(script, /function militaryTime/);
   assert.match(script, /TODAY · SIMULATED|TOMORROW · SIMULATED|NEXT 5 HOURS · SIMULATED/);
   assert.match(script, /Riding [Aa]ssignments/);
+  assert.match(script, /function demoNextShift/);
+  assert.match(script, /shift\.status === "approved"/);
+  assert.doesNotMatch(script, /Shift A .* 0700/);
   assert.match(script, /if \(toneOn\) \{ if \(radarTakeover\) closeRadarTakeover/);
   assert.match(script, /Simulate incident override/);
   assert.match(script, /bc_equipment_url/);
@@ -27,7 +30,7 @@ test("the owner demo uses compact military-time weather and radar priority", asy
   assert.match(script, /bc_training_url/);
   assert.match(script, /bc_source_refresh/);
   assert.match(script, /loadDemoLodd/);
-  assert.match(script, /go\(\'inv\'\)|internalPanelAction\("inv"/);
+  assert.match(script, /go\('inv'\)|internalPanelAction\("inv"/);
   assert.match(script, /internalPanelAction\("duty"/);
   assert.match(styles, /body\.live-ops-display \.brand,body\.live-ops-display \.top/);
   assert.match(styles, /radar-takeover\.severe/);
@@ -64,10 +67,12 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(board, /function militaryTime/);
   assert.match(board, /sourceData\?\.apparatus/);
   assert.match(board, /sourceData\?\.schedule/);
+  assert.match(board, /sourceData\?\.scheduleCalendar/);
+  assert.match(board, /calendarShiftDateLabel/);
   assert.match(board, /assets\.filter/);
   assert.match(board, /ridingAssignments\.length \? `\$\{ridingAssignments\.length\} scheduled`/);
   assert.match(stickney, /if \(module === "live-ops"\)/);
-  assert.match(stickney, /where s\.status='filled' and en\.entry_date='\$\{today\}'/);
+  assert.match(stickney, /en\.entry_date between '\$\{today\}' and '\$\{calendarEnd\}'/);
   assert.match(stickney, /fleetApparatus\(\)/);
   assert.match(foundation, /board_rotation_seconds: 12/);
   assert.match(foundation, /live_board_radar_refresh_minutes: 5/);

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* global APPARATUS, CLOSECALLS, EQUIP, TRAINING, buildNav, current: writable, cycleRot: writable, nextBoardRotateAt: writable, paintRot: writable, render: writable, rotIdx: writable, setRot: writable, toneOn, toggleTone: writable, viewBoard: writable */
+/* global APPARATUS, CLOSECALLS, EQUIP, TRAINING, SCHX, buildNav, current: writable, cycleRot: writable, dlRidingSummary, nextBoardRotateAt: writable, paintRot: writable, render: writable, rotIdx: writable, schxTemplate, setRot: writable, toneOn, toggleTone: writable, viewBoard: writable */
 
 (function loadLiveOpsPriorityStyles() {
   if (document.querySelector('link[data-live-ops-priority]')) return;
@@ -61,6 +61,7 @@ let radarTakeover = null;
 let radarTakeoverTimer = null;
 let lastSourceRefresh = Date.now();
 let demoLodd = null;
+let nextSummaryRefreshAt = Date.now() + 60000;
 
 function cloneBoardDefaults() { return JSON.parse(JSON.stringify(BOARD_DEFAULTS)); }
 function safeText(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]; }); }
@@ -159,8 +160,26 @@ function widgetShell(id, body) { const width = boardCfg.widths[id] || "half"; re
 function boardRidingSummary() {
   return typeof dlRidingSummary === "function" ? dlRidingSummary() : { assignments: [], count: 0, minimum: 0, officer: null, scheduleName: "" };
 }
+function demoDateKey(date) { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"); }
+function demoNextShift() {
+  if (typeof SCHX === "undefined" || !Array.isArray(SCHX.shifts) || typeof schxTemplate !== "function") return null;
+  const now = new Date();
+  return SCHX.shifts.filter(function (shift) { return shift.status === "approved"; }).map(function (shift) {
+    const template = schxTemplate(shift.templateId), start = template && /^\d{1,2}:\d{2}$/.test(template.start) ? template.start : "";
+    const startsAt = start ? new Date(shift.date + "T" + start + ":00") : null;
+    return startsAt && Number.isFinite(startsAt.getTime()) ? { name: shift.name || "Scheduled shift", date: shift.date, start: start, startsAt: startsAt, count: Array.isArray(shift.assignments) ? shift.assignments.length : 0 } : null;
+  }).filter(function (shift) { return shift && shift.startsAt.getTime() > now.getTime(); }).sort(function (a, b) { return a.startsAt - b.startsAt; })[0] || null;
+}
+function demoShiftDateLabel(date) {
+  const now = new Date();
+  if (date === demoDateKey(now)) return "Today";
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  if (date === demoDateKey(tomorrow)) return "Tomorrow";
+  return new Date(date + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
 function renderBoardSummary() {
   const staffing = boardRidingSummary();
+  const nextShift = demoNextShift();
   const staffingValue = staffing.minimum ? staffing.count + " / " + staffing.minimum : String(staffing.count);
   const staffingDetail = staffing.count ? (staffing.minimum && staffing.count >= staffing.minimum ? "Complete · minimum met" : staffing.scheduleName || "Approved schedule") : "No approved staffing for today";
   const officerName = staffing.officer ? staffing.officer.name : "Not assigned";
@@ -170,7 +189,7 @@ function renderBoardSummary() {
     '<div class="btile"><span>Officer in Charge</span><strong>' + safeText(officerName) + '</strong><small>' + safeText(officerDetail) + '</small></div>',
     '<div class="btile"><span>Active Call</span><strong>None</strong><small>Respond takes over automatically</small></div>',
   ];
-  if (boardCfg.showNextShift) tiles.push('<div class="btile warn"><span>Next Shift Change</span><strong>Shift A · 0700</strong><small>In 14h 12m</small></div>');
+  if (boardCfg.showNextShift) tiles.push('<div class="btile warn"><span>Next Shift Change</span><strong>' + safeText(nextShift ? nextShift.name + " · " + nextShift.start : "Not scheduled") + '</strong><small>' + safeText(nextShift ? demoShiftDateLabel(nextShift.date) + " · " + nextShift.count + " assigned" : "Add or approve the next calendar shift") + '</small></div>');
   return '<div class="bsummary compact cols-' + tiles.length + '">' + tiles.join("") + '</div>';
 }
 function renderStationWidget() { return '<div class="card rotpanel"><h3 id="rotTitle">Station Information</h3><div id="rotBody"></div><div class="rotdots" id="rotDots"></div></div>'; }
@@ -337,6 +356,7 @@ setInterval(function () {
   const now = Date.now();
   const clock = document.getElementById("boardClock24");
   if (clock) clock.textContent = militaryTime(new Date());
+  if (now >= nextSummaryRefreshAt) { nextSummaryRefreshAt = now + 60000; const summary = document.querySelector('[data-widget="summary"] .bsummary'); if (summary) summary.outerHTML = renderBoardSummary(); }
   const countdown = document.getElementById("radarTakeoverCountdown");
   if (countdown && radarTakeover) countdown.textContent = Math.max(0, Math.ceil((radarTakeover.endsAt - now) / 1000)) + "s";
   if (toneOn) { if (radarTakeover) closeRadarTakeover(false); return; }
