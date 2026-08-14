@@ -22,6 +22,7 @@ type ScheduleGroup = {
   end: string;
   color: string;
   assignments: StickneyScheduleAssignment[];
+  staffingCount: number;
 };
 
 function colorFor(name: string, saved?: string) {
@@ -63,7 +64,10 @@ function dayLabel(value: string) {
   });
 }
 
-function groupRows(rows: StickneyScheduleAssignment[]) {
+function groupRows(
+  rows: StickneyScheduleAssignment[],
+  eligibleAssignmentIds: Set<string>,
+) {
   const groups = new Map<string, ScheduleGroup>();
   for (const row of rows) {
     const key = [
@@ -75,6 +79,7 @@ function groupRows(rows: StickneyScheduleAssignment[]) {
     const existing = groups.get(key);
     if (existing) {
       existing.assignments.push(row);
+      if (eligibleAssignmentIds.has(row.id)) existing.staffingCount += 1;
       if (!existing.color && row.shift_color)
         existing.color = colorFor(row.shift_name, row.shift_color);
       continue;
@@ -87,6 +92,7 @@ function groupRows(rows: StickneyScheduleAssignment[]) {
       end: row.end_time,
       color: colorFor(row.shift_name, row.shift_color),
       assignments: [row],
+      staffingCount: eligibleAssignmentIds.has(row.id) ? 1 : 0,
     });
   }
   return [...groups.values()].sort(
@@ -100,11 +106,22 @@ function groupRows(rows: StickneyScheduleAssignment[]) {
 export default function ScheduleCalendar({
   rows,
   today,
+  minimumStaffing = 0,
+  eligibleAssignmentIds,
 }: {
   rows: StickneyScheduleAssignment[];
   today: string;
+  minimumStaffing?: number;
+  eligibleAssignmentIds?: string[];
 }) {
-  const groups = useMemo(() => groupRows(rows), [rows]);
+  const eligibleIds = useMemo(
+    () => new Set(eligibleAssignmentIds ?? rows.map((row) => row.id)),
+    [eligibleAssignmentIds, rows],
+  );
+  const groups = useMemo(
+    () => groupRows(rows, eligibleIds),
+    [eligibleIds, rows],
+  );
   const initialMonth = groups.some((group) =>
     group.date.startsWith(today.slice(0, 7)),
   )
@@ -229,10 +246,15 @@ export default function ScheduleCalendar({
             Math.max(0, schedules.length - 1),
           );
           const active = schedules[activeIndex];
+          const activeBelowMinimum = Boolean(
+            active &&
+              minimumStaffing > 0 &&
+              active.staffingCount < minimumStaffing,
+          );
           const outside = monthKey(day) !== month;
           return (
             <article
-              className={`${outside ? "outside" : ""} ${date === today ? "today" : ""}`}
+              className={`${outside ? "outside" : ""} ${date === today ? "today" : ""} ${activeBelowMinimum ? "coverage-warning" : ""}`}
               key={date}
             >
               <header>
@@ -252,7 +274,7 @@ export default function ScheduleCalendar({
               </header>
               {active ? (
                 <div
-                  className="schedule-calendar-slide"
+                  className={`schedule-calendar-slide ${activeBelowMinimum ? "below-minimum" : ""}`}
                   style={{ "--shift-color": active.color } as CSSProperties}
                 >
                   <b>{active.name}</b>
@@ -260,7 +282,13 @@ export default function ScheduleCalendar({
                     {active.start || "Start not set"}
                     {active.end ? `–${active.end}` : ""}
                   </small>
-                  <strong>{active.assignments.length} assigned</strong>
+                  {activeBelowMinimum ? (
+                    <span className="schedule-coverage-warning">
+                      BELOW MINIMUM · {active.staffingCount}/{minimumStaffing}
+                    </span>
+                  ) : (
+                    <strong>{active.staffingCount} assigned</strong>
+                  )}
                   <p>
                     {active.assignments
                       .slice(0, 3)
@@ -313,6 +341,9 @@ export default function ScheduleCalendar({
         Slides advance every 5 seconds when a day has more than one schedule.
         Select a date for its complete day view, or use the arrows and dots to
         change the calendar card immediately.
+        {minimumStaffing > 0
+          ? ` Red coverage warnings use the saved minimum of ${minimumStaffing}; only date- and role-valid assignments count.`
+          : " Set a minimum staffing rule in the department foundation to enable coverage warnings."}
       </p>
       {selectedDate ? (
         <div
@@ -366,9 +397,13 @@ export default function ScheduleCalendar({
             </nav>
             <div className="schedule-day-content">
               {(byDate.get(selectedDate) || []).length ? (
-                (byDate.get(selectedDate) || []).map((schedule) => (
+                (byDate.get(selectedDate) || []).map((schedule) => {
+                  const belowMinimum =
+                    minimumStaffing > 0 &&
+                    schedule.staffingCount < minimumStaffing;
+                  return (
                   <article
-                    className="schedule-day-shift"
+                    className={`schedule-day-shift ${belowMinimum ? "below-minimum" : ""}`}
                     style={
                       { "--shift-color": schedule.color } as CSSProperties
                     }
@@ -379,21 +414,40 @@ export default function ScheduleCalendar({
                         <span>SCHEDULE</span>
                         <h3>{schedule.name}</h3>
                       </div>
-                      <b>
-                        {schedule.start || "Start not set"}
-                        {schedule.end ? `–${schedule.end}` : ""}
-                      </b>
+                      <div className="schedule-day-coverage">
+                        <b>
+                          {schedule.start || "Start not set"}
+                          {schedule.end ? `–${schedule.end}` : ""}
+                        </b>
+                        {belowMinimum ? (
+                          <span>
+                            BELOW MINIMUM · {schedule.staffingCount}/
+                            {minimumStaffing}
+                          </span>
+                        ) : minimumStaffing > 0 ? (
+                          <small>
+                            Minimum met · {schedule.staffingCount}/
+                            {minimumStaffing}
+                          </small>
+                        ) : null}
+                      </div>
                     </header>
                     <div className="schedule-day-roster">
                       {schedule.assignments.length ? (
                         schedule.assignments.map((assignment) => (
-                          <div key={assignment.id}>
+                          <div
+                            className={eligibleIds.has(assignment.id) ? "" : "not-eligible"}
+                            key={assignment.id}
+                          >
                             <strong>{assignment.employee_name}</strong>
                             <span>
                               {[assignment.role, assignment.rank]
                                 .filter(Boolean)
                                 .join(" · ") || "Position not entered"}
                             </span>
+                            {!eligibleIds.has(assignment.id) ? (
+                              <em>Does not count: date or role conflict</em>
+                            ) : null}
                           </div>
                         ))
                       ) : (
@@ -401,7 +455,8 @@ export default function ScheduleCalendar({
                       )}
                     </div>
                   </article>
-                ))
+                  );
+                })
               ) : (
                 <div className="schedule-day-empty">
                   <strong>No schedules for this date.</strong>

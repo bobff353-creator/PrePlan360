@@ -95,6 +95,12 @@
   box-shadow: inset 0 0 0 1px
     color-mix(in srgb, var(--dept-action) 65%, transparent);
 }
+.schedule-calendar-grid > article.coverage-warning {
+  background:
+    linear-gradient(135deg, #ff3f3a12 25%, transparent 25%) 0 0 / 12px 12px,
+    #42131738;
+  box-shadow: inset 0 0 0 2px #ff4b46c7, 0 0 16px #ff3f3a24;
+}
 .schedule-calendar-grid > article > header {
   display: flex;
   align-items: center;
@@ -140,6 +146,11 @@
   box-shadow: inset 0 0 0 1px
     color-mix(in srgb, var(--shift-color) 38%, transparent);
 }
+.schedule-calendar-slide.below-minimum {
+  border-left-color: #ff4b46;
+  background: linear-gradient(145deg, #5a171e99, #17141b);
+  box-shadow: inset 0 0 0 1px #ff4b4699, 0 0 14px #ff3f3a2e;
+}
 .schedule-calendar-slide b,
 .schedule-calendar-slide small,
 .schedule-calendar-slide strong,
@@ -162,6 +173,18 @@
   margin-top: 8px;
   color: color-mix(in srgb, var(--shift-color) 55%, white);
   font-size: 9px;
+}
+.schedule-coverage-warning {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 4px 6px;
+  border: 1px solid #ff6864;
+  border-radius: 5px;
+  background: #ff3f3a2b;
+  color: #ff9b97;
+  font: 900 8px Arial;
+  letter-spacing: 0.05em;
 }
 .schedule-calendar-slide p {
   display: -webkit-box;
@@ -309,6 +332,12 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--shift-color) 9%, #111923);
 }
+.schedule-day-shift.below-minimum {
+  border-color: #ff4b46c7;
+  border-left-color: #ff4b46;
+  background: linear-gradient(145deg, #4b151d70, #111923);
+  box-shadow: inset 0 0 0 1px #ff4b4638, 0 0 18px #ff3f3a24;
+}
 .schedule-day-shift > header {
   display: flex;
   align-items: center;
@@ -325,6 +354,25 @@
 .schedule-day-shift > header b {
   color: color-mix(in srgb, var(--shift-color) 55%, white);
   font: 800 11px monospace;
+}
+.schedule-day-coverage {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+.schedule-day-coverage span {
+  padding: 4px 7px;
+  border: 1px solid #ff6864;
+  border-radius: 5px;
+  background: #ff3f3a2b;
+  color: #ff9b97;
+  font: 900 8px Arial;
+  letter-spacing: 0.05em;
+}
+.schedule-day-coverage small {
+  color: #6fe0a1;
+  font-size: 8px;
+  font-weight: 800;
 }
 .schedule-day-roster {
   display: grid;
@@ -350,9 +398,18 @@
   font-size: 10px;
 }
 .schedule-day-roster span,
-.schedule-day-roster p {
+.schedule-day-roster p,
+.schedule-day-roster em {
   color: #8399aa;
   font-size: 9px;
+}
+.schedule-day-roster em {
+  color: #ff9b97;
+  font-style: normal;
+  font-weight: 800;
+}
+.schedule-day-roster > div.not-eligible {
+  background: #25141a;
 }
 .schedule-day-roster p {
   margin: 0;

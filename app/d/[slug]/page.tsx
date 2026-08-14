@@ -195,7 +195,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <div className="dept-foundation-rulebar">
               <span>Foundation</span>
               <b>{foundation.is_override ? "Department override" : "Owner master"}</b>
-              <small>{active[0] === "scheduling" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small>
+              <small>{active[0] === "scheduling" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · ${foundation.minimum_staffing > 0 ? `minimum ${foundation.minimum_staffing}` : "minimum not configured"} · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small>
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
@@ -204,7 +204,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (
             <>
-              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
+              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} minimumStaffing={foundation.minimum_staffing} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
               {active[0] === "fleet" ? (
                 <details id="native-assets" className="stickney-archive">
                   <summary>VIN, barcode, QR, and odometer capture</summary>

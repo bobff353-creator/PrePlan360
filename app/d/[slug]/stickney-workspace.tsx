@@ -12,6 +12,7 @@ type Props = {
   departmentId: string;
   departmentSlug: string;
   data: StickneyModuleData;
+  minimumStaffing: number;
   editable: boolean;
   supportSessionId?: string;
   connectionError?: string;
@@ -111,7 +112,7 @@ function EditableRecord({
   );
 }
 
-export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, editable, supportSessionId = "", connectionError }: Props) {
+export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, minimumStaffing, editable, supportSessionId = "", connectionError }: Props) {
   if (connectionError) {
     return (
       <section className="stickney-panel">
@@ -122,7 +123,7 @@ export default function StickneyWorkspace({ module, departmentId, departmentSlug
   }
   if (module === "dashboard" && data.summary) return <StickneyDashboard data={data} />;
   if (module === "staffing") return <Staffing departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} minimumStaffing={minimumStaffing} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "preplans") return <Preplans departmentId={departmentId} departmentSlug={departmentSlug} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "hydrants") return <Hydrants departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "fleet") return <Fleet departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
@@ -236,7 +237,7 @@ function ScheduleForm({ departmentId, supportSessionId, employees, assignment }:
   );
 }
 
-function Schedule({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Schedule({ departmentId, data, minimumStaffing, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; minimumStaffing: number; editable: boolean; supportSessionId: string }) {
   const rows = data.schedule ?? [];
   const employees = new Map((data.employees ?? []).map((employee) => [employee.id, employee]));
   const grouped = Map.groupBy(rows, (row) => row.work_date);
@@ -256,7 +257,12 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
         <b>{rows.filter(eligible).length}</b>
       </div>
       {editable && (data.employees ?? []).length ? <ScheduleForm departmentId={departmentId} supportSessionId={supportSessionId} employees={data.employees ?? []} /> : null}
-      <ScheduleCalendar rows={rows} today={chicagoDate()} />
+      <ScheduleCalendar
+        rows={rows}
+        today={chicagoDate()}
+        minimumStaffing={minimumStaffing}
+        eligibleAssignmentIds={rows.filter(eligible).map((row) => row.id)}
+      />
       {rows.length ? (
         <details className="stickney-archive schedule-assignment-records">
           <summary>Assignment records</summary>

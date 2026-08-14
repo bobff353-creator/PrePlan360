@@ -20,10 +20,13 @@ test("demo calendar uses saved shift colors and rotates crowded days", async () 
   assert.match(source, /function schxCalendarOpenDay/);
   assert.match(source, /class=\"schx-day-view\"/);
   assert.match(source, /Open schedule/);
+  assert.match(source, /schxCoverage\(shift\)/);
+  assert.match(source, /BELOW MINIMUM/);
+  assert.match(source, /coverage\.total < coverage\.minimum/);
 });
 
 test("shared department calendar groups schedule rows and offers slide controls", async () => {
-  const [calendar, workspace, route, propagation] = await Promise.all([
+  const [calendar, workspace, route, propagation, foundation, editor, migration] = await Promise.all([
     readFile(
       new URL("../app/d/[slug]/schedule-calendar.tsx", import.meta.url),
       "utf8",
@@ -43,6 +46,9 @@ test("shared department calendar groups schedule rows and offers slide controls"
       new URL("../foundation/propagation.json", import.meta.url),
       "utf8",
     ),
+    readFile(new URL("../db/foundation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/owner/demo/foundation-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0017_schedule_minimum_staffing.sql", import.meta.url), "utf8"),
   ]);
   assert.match(calendar, /Map\.groupBy\(groups/);
   assert.match(calendar, /window\.setInterval/);
@@ -50,9 +56,16 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(calendar, /setSelectedDate\(date\)/);
   assert.match(calendar, /className=\"schedule-day-view\"/);
   assert.match(calendar, /assignment\.role, assignment\.rank/);
+  assert.match(calendar, /minimumStaffing > 0/);
+  assert.match(calendar, /BELOW MINIMUM/);
+  assert.match(calendar, /eligibleAssignmentIds/);
   assert.match(workspace, /name="shift_color"/);
+  assert.match(workspace, /rows\.filter\(eligible\)/);
   assert.match(route, /data\.shift_color/);
   assert.match(propagation, /schedule-calendar\.tsx/);
+  assert.match(foundation, /minimum_staffing/);
+  assert.match(editor, /name="minimum_staffing"/);
+  assert.match(migration, /ADD `minimum_staffing`/);
 });
 
 test("Stickney imported shift names decode cleanly without repeating their saved times", () => {

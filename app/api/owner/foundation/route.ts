@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     shift_hours_on: bounded(form, "shift_hours_on", 1, 168, current.shift_hours_on),
     shift_hours_off: bounded(form, "shift_hours_off", 0, 336, current.shift_hours_off),
     shift_start_time: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(form.get("shift_start_time") || "")) ? String(form.get("shift_start_time")) : current.shift_start_time,
+    minimum_staffing: bounded(form, "minimum_staffing", 0, 500, current.minimum_staffing),
     overtime_period_days: bounded(form, "overtime_period_days", 1, 366, current.overtime_period_days),
     overtime_threshold_hours: bounded(form, "overtime_threshold_hours", 1, 1000, current.overtime_threshold_hours),
     overtime_assignment_rule: String(form.get("overtime_assignment_rule") || "").trim().slice(0, 240) || current.overtime_assignment_rule,

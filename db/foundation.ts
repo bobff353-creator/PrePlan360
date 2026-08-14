@@ -68,6 +68,7 @@ export type FoundationSettings = {
   shift_hours_on: number;
   shift_hours_off: number;
   shift_start_time: string;
+  minimum_staffing: number;
   overtime_period_days: number;
   overtime_threshold_hours: number;
   overtime_assignment_rule: string;
@@ -113,6 +114,7 @@ type FoundationRow = {
   shift_hours_on: number;
   shift_hours_off: number;
   shift_start_time: string;
+  minimum_staffing: number;
   overtime_period_days: number;
   overtime_threshold_hours: number;
   overtime_assignment_rule: string;
@@ -149,6 +151,7 @@ const defaultSettings: Omit<FoundationSettings, "scope" | "department_id" | "is_
   shift_hours_on: 24,
   shift_hours_off: 48,
   shift_start_time: "07:00",
+  minimum_staffing: 0,
   overtime_period_days: 14,
   overtime_threshold_hours: 212,
   overtime_assignment_rule: "Department-defined rotation",
@@ -252,12 +255,16 @@ function normalize(row: FoundationRow | null, scope: "master" | "department", de
     department_id: departmentId,
     module_order: [...savedOrder, ...remainder],
     hidden_modules: hidden,
+    minimum_staffing: Math.max(
+      0,
+      Math.min(500, Number(row?.minimum_staffing) || 0),
+    ),
     daily_log_equipment_accountability: row ? Boolean(row.daily_log_equipment_accountability) : defaultSettings.daily_log_equipment_accountability,
     is_override: isOverride,
   };
 }
 
-const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_equipment_url,live_board_closecalls_url,live_board_lodd_url,live_board_training_url,live_board_source_refresh_minutes,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_radar_display_seconds,live_board_severe_radar_seconds,live_board_show_next_shift,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,daily_log_equipment_accountability,updated_at";
+const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_equipment_url,live_board_closecalls_url,live_board_lodd_url,live_board_training_url,live_board_source_refresh_minutes,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_radar_display_seconds,live_board_severe_radar_seconds,live_board_show_next_shift,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,minimum_staffing,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,daily_log_equipment_accountability,updated_at";
 
 export async function getMasterFoundation(): Promise<FoundationSettings> {
   const row = await db().prepare(`SELECT ${settingsColumns} FROM platform_foundation_settings WHERE id='master'`).first<FoundationRow>();
@@ -326,7 +333,7 @@ export async function saveFoundation(settings: FoundationSettings, actorUserId: 
     "live_board_equipment_url", "live_board_closecalls_url", "live_board_lodd_url", "live_board_training_url", "live_board_source_refresh_minutes",
     "live_board_weather_url", "live_board_alerts_url", "live_board_radar_url", "live_board_radar_refresh_minutes", "live_board_radar_display_seconds",
     "live_board_severe_radar_seconds", "live_board_show_next_shift", "live_board_external_links_json",
-    "shift_hours_on", "shift_hours_off", "shift_start_time", "overtime_period_days", "overtime_threshold_hours", "overtime_assignment_rule",
+    "shift_hours_on", "shift_hours_off", "shift_start_time", "minimum_staffing", "overtime_period_days", "overtime_threshold_hours", "overtime_assignment_rule",
     "scheduling_notes", "overtime_notes", "daily_log_equipment_accountability", "updated_by", "updated_at",
   ];
   const values = [
@@ -335,7 +342,7 @@ export async function saveFoundation(settings: FoundationSettings, actorUserId: 
     settings.live_board_equipment_url, settings.live_board_closecalls_url, settings.live_board_lodd_url, settings.live_board_training_url, settings.live_board_source_refresh_minutes,
     settings.live_board_weather_url, settings.live_board_alerts_url, settings.live_board_radar_url, settings.live_board_radar_refresh_minutes,
     settings.live_board_radar_display_seconds, settings.live_board_severe_radar_seconds, settings.live_board_show_next_shift ? 1 : 0, JSON.stringify(settings.live_board_external_links),
-    settings.shift_hours_on, settings.shift_hours_off, settings.shift_start_time, settings.overtime_period_days, settings.overtime_threshold_hours,
+    settings.shift_hours_on, settings.shift_hours_off, settings.shift_start_time, settings.minimum_staffing, settings.overtime_period_days, settings.overtime_threshold_hours,
     settings.overtime_assignment_rule, settings.scheduling_notes, settings.overtime_notes, settings.daily_log_equipment_accountability ? 1 : 0, actorUserId, now(),
   ];
   const assignments = columns.map((column) => `${column}=excluded.${column}`).join(",");

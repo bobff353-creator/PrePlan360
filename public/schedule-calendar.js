@@ -83,9 +83,13 @@ function schxCalendarDayView(groups) {
   if (!schxCalendarDay) return "";
   const items = groups.get(schxCalendarDay) || [];
   const assigned = items.reduce(
-    (count, shift) => count + shift.assignments.length,
+    (count, shift) => count + schxCoverage(shift).total,
     0,
   );
+  const coverageGaps = items.filter((shift) => {
+    const coverage = schxCoverage(shift);
+    return coverage.total < coverage.minimum;
+  }).length;
   return (
     '<div class="schx-day-overlay" role="presentation" onclick="if(event.target===this)schxCalendarCloseDay()"><section class="schx-day-view" role="dialog" aria-modal="true" aria-labelledby="schx-day-title"><header class="schx-day-head"><div><span class="modtitle">DAY VIEW</span><h2 id="schx-day-title">' +
     schxEsc(schxLabelDate(schxCalendarDay)) +
@@ -95,21 +99,39 @@ function schxCalendarDayView(groups) {
     (items.length === 1 ? "" : "s") +
     " · " +
     assigned +
-    ' assigned</p></div><button class="btn" onclick="schxCalendarCloseDay()">Close</button></header><nav class="schx-day-nav" aria-label="Day controls"><button class="btn" onclick="schxCalendarMoveDay(-1)">Previous day</button><button class="btn" onclick="schxCalendarOpenDay(schxDate(0))">Today</button><button class="btn" onclick="schxCalendarMoveDay(1)">Next day</button></nav><div class="schx-day-content">' +
+    " assigned" +
+    (coverageGaps ? " · " + coverageGaps + " below minimum" : "") +
+    '</p></div><button class="btn" onclick="schxCalendarCloseDay()">Close</button></header><nav class="schx-day-nav" aria-label="Day controls"><button class="btn" onclick="schxCalendarMoveDay(-1)">Previous day</button><button class="btn" onclick="schxCalendarOpenDay(schxDate(0))">Today</button><button class="btn" onclick="schxCalendarMoveDay(1)">Next day</button></nav><div class="schx-day-content">' +
     (items.length
       ? items
           .map((shift) => {
             const template = schxTemplate(shift.templateId);
             const color = schxColorHex(template?.color);
+            const coverage = schxCoverage(shift);
+            const belowMinimum = coverage.total < coverage.minimum;
             return (
-              '<article class="schx-day-shift" style="--shift-color:' +
+              '<article class="schx-day-shift ' +
+              (belowMinimum ? "below-minimum" : "") +
+              '" style="--shift-color:' +
               color +
               '"><header><div><span class="modtitle">SCHEDULE</span><h3>' +
               schxEsc(shift.name) +
-              "</h3></div><b>" +
+              '</h3></div><div class="schx-day-coverage"><b>' +
               schxEsc(template?.start || "Start not set") +
               (template?.end ? "–" + schxEsc(template.end) : "") +
-              '</b></header><div class="schx-day-roster">' +
+              "</b>" +
+              (belowMinimum
+                ? "<span>BELOW MINIMUM · " +
+                  coverage.total +
+                  "/" +
+                  coverage.minimum +
+                  "</span>"
+                : "<small>Minimum met · " +
+                  coverage.total +
+                  "/" +
+                  coverage.minimum +
+                  "</small>") +
+              '</div></header><div class="schx-day-roster">' +
               (shift.assignments.length
                 ? shift.assignments
                     .map((assignment) => {
@@ -119,12 +141,19 @@ function schxCalendarDayView(groups) {
                         member?.rank,
                         assignment.unit,
                       ].filter(Boolean);
+                      const eligible = schxAssignmentEligible(shift, assignment);
                       return (
-                        "<div><strong>" +
+                        '<div class="' +
+                        (eligible ? "" : "not-eligible") +
+                        '"><strong>' +
                         schxEsc(member?.name || "Roster member unavailable") +
                         "</strong><span>" +
                         schxEsc(details.join(" · ") || "Position not entered") +
-                        "</span></div>"
+                        "</span>" +
+                        (eligible
+                          ? ""
+                          : "<em>Does not count: date or role conflict</em>") +
+                        "</div>"
                       );
                     })
                     .join("")
@@ -181,6 +210,10 @@ function schxCalendar() {
         const shift = items[slide];
         const template = shift ? schxTemplate(shift.templateId) : null;
         const color = schxColorHex(template?.color);
+        const coverage = shift ? schxCoverage(shift) : null;
+        const belowMinimum = Boolean(
+          coverage && coverage.total < coverage.minimum,
+        );
         const names = shift
           ? shift.assignments
               .map((assignment) => rstMember(assignment.memberId)?.name)
@@ -189,7 +222,8 @@ function schxCalendar() {
         return (
           '<article class="' +
           (schxMonthKey(day) !== schxCalendarMonth ? "outside " : "") +
-          (date === today ? "today" : "") +
+          (date === today ? "today " : "") +
+          (belowMinimum ? "coverage-warning" : "") +
           '"><header><button class="schx-calendar-date" onclick="schxCalendarOpenDay(\'' +
           date +
           '\')" aria-label="Open day view for ' +
@@ -204,7 +238,9 @@ function schxCalendar() {
             : "") +
           "</header>" +
           (shift
-            ? '<button class="schx-calendar-slide" style="--shift-color:' +
+            ? '<button class="schx-calendar-slide ' +
+              (belowMinimum ? "below-minimum" : "") +
+              '" style="--shift-color:' +
               color +
               '" onclick="schxSelect(\'' +
               shift.id +
@@ -213,9 +249,15 @@ function schxCalendar() {
               "</b><small>" +
               schxEsc(template ? template.start : "Start not set") +
               (template?.end ? `–${schxEsc(template.end)}` : "") +
-              "</small><strong>" +
-              shift.assignments.length +
-              " assigned</strong><p>" +
+              "</small>" +
+              (belowMinimum
+                ? '<span class="schx-coverage-warning">BELOW MINIMUM · ' +
+                  coverage.total +
+                  "/" +
+                  coverage.minimum +
+                  "</span>"
+                : "<strong>" + coverage.total + " assigned</strong>") +
+              "<p>" +
               schxEsc(
                 names.slice(0, 3).join(" · ") || "No employees assigned",
               ) +
@@ -247,7 +289,7 @@ function schxCalendar() {
         );
       })
       .join("") +
-    '</div><p class="schx-calendar-note">Slides advance every 5 seconds when a day has more than one schedule. Select a date for its complete day view, or use the arrows and dots to change the calendar card immediately.</p>' +
+    '</div><p class="schx-calendar-note">Slides advance every 5 seconds when a day has more than one schedule. Select a date for its complete day view, or use the arrows and dots to change the calendar card immediately. Red coverage warnings use each shift template\'s saved minimum; only date- and role-qualified assignments count.</p>' +
     schxCalendarDayView(groups) +
     "</section>"
   );

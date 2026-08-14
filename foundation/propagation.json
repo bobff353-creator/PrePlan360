@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.46",
+  "release": "2026.08.13.47",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -69,11 +69,15 @@
         "app/d/[slug]/schedule-calendar.tsx",
         "app/d/[slug]/schedule-format.ts",
         "app/d/[slug]/stickney-workspace.tsx",
+        "app/owner/demo/foundation-editor.tsx",
         "app/schedule-foundation.css",
         "app/stickney-workspace.css",
         "app/api/departments/[id]/stickney-records/route.ts",
+        "app/api/owner/foundation/route.ts",
         "db/foundation.ts",
-        "db/stickney.ts"
+        "db/schema.ts",
+        "db/stickney.ts",
+        "drizzle/0017_schedule_minimum_staffing.sql"
       ]
     },
     "daily-log-and-duties": {
