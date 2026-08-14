@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { DepartmentModuleData, DepartmentModuleItem } from "@/db/access";
+import type { DepartmentAsset, DepartmentModuleData, DepartmentModuleItem } from "@/db/access";
 import { liveBoardPanels, liveBoardWidgets, type FoundationSettings, type LiveBoardWidth } from "@/db/foundation";
+import type { StickneyModuleData } from "@/db/stickney";
 import ModuleBuilder from "./module-builder";
 
 type WeatherPeriod = {
@@ -49,6 +50,9 @@ type RadarTakeover = {
   endsAt: number;
 };
 
+type BoardApparatus = { id: string; title: string; status: string; detail: string };
+type BoardRidingAssignment = { id: string; role: string; employee: string; shift: string };
+
 type Props = {
   departmentId: string;
   departmentSlug: string;
@@ -57,6 +61,8 @@ type Props = {
   vehicleCount: number;
   settings: FoundationSettings;
   data: DepartmentModuleData;
+  sourceData: StickneyModuleData | null;
+  assets: DepartmentAsset[];
   editable: boolean;
   supportSessionId: string;
 };
@@ -68,7 +74,7 @@ function militaryTime(date: Date | null) {
   return [date.getHours(), date.getMinutes(), date.getSeconds()].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-export default function LiveOpsBoard({ departmentId, departmentSlug, departmentName, weatherLocation, vehicleCount, settings, data, editable, supportSessionId }: Props) {
+export default function LiveOpsBoard({ departmentId, departmentSlug, departmentName, weatherLocation, vehicleCount, settings, data, sourceData, assets, editable, supportSessionId }: Props) {
   const router = useRouter();
   const definitions = useMemo(() => [
     ...liveBoardWidgets,
@@ -89,8 +95,18 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
   const lastPriorityAlert = useRef("");
   const activePanels = settings.live_board_panels.length ? settings.live_board_panels : ["equipment" as const];
   const activeIncident = data.items.find((item) => item.item_type === "incident" && item.operational_status === "active");
-  const apparatus = data.items.filter((item) => item.item_type === "apparatus");
-  const ridingAssignments = data.items.filter((item) => ["riding_assignment", "riding", "assignment"].includes(item.item_type));
+  const apparatus = useMemo<BoardApparatus[]>(() => {
+    const saved = data.items.filter((item) => item.item_type === "apparatus").map((item) => ({ id: item.id, title: item.title, status: item.operational_status, detail: item.summary || item.location }));
+    if (saved.length) return saved;
+    const imported = (sourceData?.apparatus || []).map((item) => ({ id: item.id, title: item.name, status: item.status, detail: [item.asset_type, item.year, item.manufacturer, item.model].filter(Boolean).join(" · ") }));
+    if (imported.length) return imported;
+    return assets.filter((asset) => /apparatus|vehicle|engine|truck|ambulance|medic|command/i.test(`${asset.asset_type} ${asset.category}`)).map((asset) => ({ id: asset.id, title: asset.unit_number || asset.name, status: asset.status, detail: [asset.manufacturer, asset.model].filter(Boolean).join(" · ") }));
+  }, [assets, data.items, sourceData?.apparatus]);
+  const ridingAssignments = useMemo<BoardRidingAssignment[]>(() => {
+    const saved = data.items.filter((item) => ["riding_assignment", "riding", "assignment"].includes(item.item_type)).map((item) => ({ id: item.id, role: item.title, employee: item.summary || item.contact || "Assignment saved", shift: item.location }));
+    if (saved.length) return saved;
+    return (sourceData?.schedule || []).map((item) => ({ id: item.id, role: item.role || item.rank || "Assignment", employee: item.employee_name, shift: item.shift_name }));
+  }, [data.items, sourceData?.schedule]);
 
   useEffect(() => {
     const update = () => setClock(new Date());
@@ -212,7 +228,7 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     <div className="live-ops-canvas">
       {visibleOrder.map((id) => <section key={id} className={`live-ops-widget width-${widths[id] || "half"}`} draggable={editable} onDragStart={() => setDragged(id)} onDragOver={(event: DragEvent<HTMLElement>) => event.preventDefault()} onDrop={() => drop(id)} onDragEnd={() => setDragged("")}>
         {editable ? <div className="live-widget-grip"><span>Move</span><b>≡</b></div> : null}
-        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
+        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items} ridingAssignments={ridingAssignments}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} sourceData={sourceData} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
       </section>)}
       {!visibleOrder.length ? <div className="live-board-empty"><b>No board cards are visible.</b><span>{editable ? "Open Customize board to restore a card." : "An authorized department editor can restore this display."}</span></div> : null}
     </div>
@@ -234,27 +250,33 @@ function WeatherHeader({ departmentName, weather, index, clock, rotationSeconds,
   return <header className="live-weather-head"><div className="live-weather-copy"><span>{eyebrow}</span><h2>{title}</h2><p>{detail}</p></div><div className="live-ops-head-actions">{editable ? <button type="button" onClick={onSettings}>{settingsOpen ? "Close settings" : "Customize board"}</button> : null}<div className="live-ops-clock"><b>{militaryTime(clock)}</b><span>{clock ? clock.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : ""}</span><small><i/> Rotates every {rotationSeconds}s</small></div></div></header>;
 }
 
-function SummaryWidget({ settings, activeIncident, items }: { settings: FoundationSettings; activeIncident?: DepartmentModuleItem; items: DepartmentModuleItem[] }) {
+function SummaryWidget({ settings, activeIncident, items, ridingAssignments }: { settings: FoundationSettings; activeIncident?: DepartmentModuleItem; items: DepartmentModuleItem[]; ridingAssignments: BoardRidingAssignment[] }) {
   const staffing = items.find((item) => item.item_type === "staffing");
   const officer = items.find((item) => ["officer", "oic", "officer_in_charge"].includes(item.item_type));
+  const scheduledOfficer = ridingAssignments.find((item) => /officer|chief|captain|lieutenant|command/i.test(`${item.role} ${item.employee}`));
   return <div className={`live-summary ${settings.live_board_show_next_shift ? "" : "without-next-shift"}`}>
-    <article className={staffing ? "" : "unconnected"}><span>Staffing</span><strong>{staffing?.title || "Not connected"}</strong><small>{staffing?.summary || "Connect scheduling to show coverage"}</small></article>
-    <article><span>Officer in charge</span><strong>{officer?.title || "Not assigned"}</strong><small>{officer?.summary || "No current command assignment"}</small></article>
+    <article className={staffing || ridingAssignments.length ? "" : "unconnected"}><span>Staffing</span><strong>{staffing?.title || (ridingAssignments.length ? `${ridingAssignments.length} scheduled` : "Not connected")}</strong><small>{staffing?.summary || (ridingAssignments.length ? ridingAssignments[0].shift || "Today’s saved schedule" : "Connect scheduling to show coverage")}</small></article>
+    <article><span>Officer in charge</span><strong>{officer?.title || scheduledOfficer?.employee || "Not assigned"}</strong><small>{officer?.summary || scheduledOfficer?.role || "No current command assignment"}</small></article>
     <article className={activeIncident ? "active" : ""}><span>Active call</span><strong>{activeIncident?.title || "None"}</strong><small>{activeIncident ? activeIncident.location || activeIncident.summary || "Department entry is active" : "No active department incident entry"}</small></article>
     {settings.live_board_show_next_shift ? <article className="next-shift"><span>Next shift change</span><strong>{settings.shift_start_time}</strong><small>{settings.shift_hours_on} on / {settings.shift_hours_off} off rule</small></article> : null}
   </div>;
 }
 
-function StationWidget({ panel, items, settings, weather, index, onSelect }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; index: number; onSelect: (index: number) => void }) {
-  return <div className="live-card"><h3>{panelLabels.get(panel) || "Station information"}</h3><div className="live-rotation-body"><PanelContent panel={panel} items={items} settings={settings} weather={weather}/></div><div className="live-rotation-dots">{settings.live_board_panels.map((key, panelIndex) => <button type="button" className={panelIndex === index % settings.live_board_panels.length ? "active" : ""} key={key} onClick={() => onSelect(panelIndex)} aria-label={`Show ${panelLabels.get(key)}`}/>)}<span>Rotates every {settings.board_rotation_seconds} seconds</span></div></div>;
+function StationWidget({ panel, items, settings, weather, sourceData, index, onSelect }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; sourceData: StickneyModuleData | null; index: number; onSelect: (index: number) => void }) {
+  return <div className="live-card"><h3>{panelLabels.get(panel) || "Station information"}</h3><div className="live-rotation-body"><PanelContent panel={panel} items={items} settings={settings} weather={weather} sourceData={sourceData}/></div><div className="live-rotation-dots">{settings.live_board_panels.map((key, panelIndex) => <button type="button" className={panelIndex === index % settings.live_board_panels.length ? "active" : ""} key={key} onClick={() => onSelect(panelIndex)} aria-label={`Show ${panelLabels.get(key)}`}/>)}<span>Rotates every {settings.board_rotation_seconds} seconds</span></div></div>;
 }
 
-function PanelContent({ panel, items, settings, weather }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null }) {
+function PanelContent({ panel, items, settings, weather, sourceData }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; sourceData: StickneyModuleData | null }) {
   const equipment = items.filter((item) => item.item_type === "apparatus" && ["attention", "offline"].includes(item.operational_status));
   const duty = items.filter((item) => ["station", "notice"].includes(item.item_type) && item.operational_status === "active");
   const training = items.filter((item) => item.item_type === "resource" && ["active", "ready"].includes(item.operational_status));
   if (panel === "equipment") return <ItemList items={equipment} empty="No equipment issues are recorded on this board."/>;
-  if (panel === "duty") return <ItemList items={duty} empty="No current daily duty is connected to this board."/>;
+  if (panel === "duty") {
+    if (duty.length) return <ItemList items={duty} empty="No current daily duty is connected to this board."/>;
+    const context = sourceData?.dutyContext;
+    const importedDuties = (sourceData?.duties || []).filter((item) => !context || item.day_of_week === context.dayOfWeek).slice(0, 5);
+    return importedDuties.length ? <div className="live-news-list">{importedDuties.map((item) => <article key={item.id}><b>{item.duty}</b><span>{item.detail || item.shift_key || "Saved daily duty"}</span></article>)}</div> : <EmptySource title="No current daily duty is connected to this board."/>;
+  }
   if (panel === "training") return <ItemList items={training} empty="No upcoming training entries are recorded on this board."/>;
   if (panel === "closecalls") return <EmptySource title="Close-call source not connected" text="Configure an authorized source before outside reports are shown."/>;
   if (panel === "lodd") return <EmptySource title="Official LODD source not connected" text="This board does not display an unverified live total."/>;
@@ -281,16 +303,16 @@ function LinkedSource({ title, url, detail }: { title: string; url: string; deta
   return <div className="live-linked-source"><b>{title} configured</b>{detail ? <span>{detail}</span> : null}<a href={url} target="_blank" rel="noreferrer">Open source</a></div>;
 }
 
-function ApparatusWidget({ apparatus, ridingAssignments, configuredCount, view }: { apparatus: DepartmentModuleItem[]; ridingAssignments: DepartmentModuleItem[]; configuredCount: number; view: number }) {
+function ApparatusWidget({ apparatus, ridingAssignments, configuredCount, view }: { apparatus: BoardApparatus[]; ridingAssignments: BoardRidingAssignment[]; configuredCount: number; view: number }) {
   const ridingView = view % 2 === 1;
   let content;
   if (ridingView) {
     content = ridingAssignments.length
-      ? <div className="live-riding-grid">{ridingAssignments.slice(0, 8).map((item) => <article key={item.id}><b>{item.title}</b><span>{item.summary || item.location || item.operational_status}</span></article>)}</div>
+      ? <div className="live-riding-grid">{ridingAssignments.slice(0, 8).map((item) => <article key={item.id}><b>{item.role}</b><span>{item.employee}{item.shift ? ` · ${item.shift}` : ""}</span></article>)}</div>
       : <EmptySource title="No riding assignments are connected" text="Add saved riding-assignment records or connect the department schedule."/>;
   } else {
     content = apparatus.length
-      ? <div className="live-apparatus-strip">{apparatus.map((item) => <article className={item.operational_status} key={item.id}><b>{item.title}</b><span>{item.operational_status}</span></article>)}</div>
+      ? <div className="live-apparatus-strip">{apparatus.map((item) => <article className={item.status.toLowerCase().replace(/[^a-z0-9]+/g, "-")} key={item.id}><b>{item.title}</b><span>{item.status.replaceAll("_", " ")}</span>{item.detail ? <small>{item.detail}</small> : null}</article>)}</div>
       : <EmptySource title="No apparatus status records" text={configuredCount ? `${configuredCount} vehicles are configured in the department profile, but their live status is not connected.` : "Add real apparatus entries or connect an authorized fleet source."}/>;
   }
   return <div className="live-card"><h3>{ridingView ? "Riding assignments" : "Apparatus status · Fleet + CAD"}</h3>{content}<p>{ridingView ? "Assignments use saved department records only." : "Units are never shown in a status without a saved department record."}</p></div>;

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import "../../live-ops-foundation.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
-import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
+import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
 import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
 import AssetManager from "./asset-manager";
@@ -14,7 +14,7 @@ import { getDepartmentFoundation, orderedVisibleModules } from "@/db/foundation"
 
 export const dynamic = "force-dynamic";
 
-const stickneyModules = new Set(["dashboard", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
+const stickneyModules = new Set(["dashboard", "live-ops", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -76,6 +76,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([listDepartmentPreplans(department.id), listSharedPreplans(department.id), listDepartmentHydrants(department.id), listSharedHydrants(department.id)]) : null;
   const configurableModule = active[0] === "live-ops" || active[0] === "respond" ? active[0] : null;
   const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
+  const liveOpsAssets = active[0] === "live-ops" ? await listDepartmentAssets(department.id) : [];
   // Every department slug uses this shared route, including foundation calendar upgrades.
   const isStickney = department.slug === "stickney";
   let stickneyData: StickneyModuleData | null = null;
@@ -87,11 +88,13 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       stickneyConnectionError = error instanceof Error ? error.message : "The Stickney data connection is unavailable.";
       stickneyData = {};
     }
-  } else if (active[0] === "staffing" || active[0] === "scheduling") {
+  } else if (active[0] === "live-ops" || active[0] === "staffing" || active[0] === "scheduling") {
     try {
       const employees = await loadDepartmentEmployeeOverlays(department.id);
       stickneyData =
-        active[0] === "staffing"
+        active[0] === "live-ops"
+          ? { employees, schedule: await loadDepartmentScheduleOverlays(department.id) }
+          : active[0] === "staffing"
           ? { employees }
           : {
               employees,
@@ -170,7 +173,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
-            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={stickneyData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : active[0] === "respond" && moduleData ? (
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (

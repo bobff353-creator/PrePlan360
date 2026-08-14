@@ -440,6 +440,32 @@ async function summary(): Promise<StickneySummary> {
 
 export async function loadStickneyModule(module: string, departmentId = ""): Promise<StickneyModuleData> {
   if (module === "dashboard") return { summary: await summary() };
+  if (module === "live-ops") {
+    const today = chicagoDate();
+    const [apparatus, schedule, duties] = await Promise.all([
+      fleetApparatus(),
+      read<StickneyScheduleAssignment>(`
+        select s.id,en.entry_date as work_date,t.name as shift_name,
+          coalesce(nullif(s.start_time,''),t.start_time) as start_time,
+          coalesce(nullif(s.end_time,''),t.end_time) as end_time,s.role,
+          e.id as employee_id,e.name as employee_name,p.label as rank
+        from station_shift_slots s
+        join station_schedule_entries en on en.id=s.entry_id
+        join station_shift_types t on t.id=en.shift_type_id
+        join employees e on e.id=s.employee_id
+        join pay_scales p on p.id=e.pay_scale_id
+        where s.status='filled' and en.entry_date='${today}'
+        order by coalesce(nullif(s.start_time,''),t.start_time),s.sort_order,e.name
+      `),
+      read<StickneyDuty>(`select id,day_of_week,shift_key,duty,updated_at from daily_duties order by day_of_week,shift_key`),
+    ]);
+    const [mergedApparatus, mergedSchedule, mergedDuties] = await Promise.all([
+      departmentId ? applyOverrides(departmentId, "apparatus", apparatus) : apparatus,
+      departmentId ? applyOverrides(departmentId, "schedule", schedule) : schedule,
+      departmentId ? applyOverrides(departmentId, "duty", duties) : duties,
+    ]);
+    return { apparatus: mergedApparatus, schedule: mergedSchedule, duties: mergedDuties, dutyContext: chicagoDutyContext() };
+  }
   if (module === "staffing") return { employees: await loadStickneyEmployees(departmentId) };
   if (module === "scheduling") {
     const start = chicagoDate(-7);
