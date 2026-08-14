@@ -355,7 +355,7 @@ function Preplans({ source, departmentId, departmentSlug, data, editable, suppor
           {preplans.map((plan) => {
             const footprint = stickneyFootprint(plan.footprint_json);
             return <details className="stickney-preplan-detail" key={plan.id} id={`stickney-preplan-${plan.id}`}>
-              <summary><div><span>{plan.status || "Preplan"}</span><h3>{plan.business_name}</h3><p>{plan.address || "Address not entered"}</p></div><b>Open full property workspace</b></summary>
+              <summary><span className="stickney-preplan-summary-copy"><span>{plan.status || "Preplan"}</span><strong>{plan.business_name}</strong><span className="stickney-preplan-summary-address">{plan.address || "Address not entered"}</span></span><b>Open full property workspace</b></summary>
               <div className="stickney-preplan-detail-body">
                 <PreplanDetail editable={editable} record={{ name: plan.business_name, address: plan.address, status: plan.status || "Preplan", sourceLabel: `${source.name} source record`, construction: plan.construction_type || plan.construction || "", floors: plan.floor_count ? String(plan.floor_count) : "", fireFlowGpm: Number(plan.suggested_fire_flow_gpm) > 0 ? Number(plan.suggested_fire_flow_gpm) : null, access: plan.access_info || "", alarm: plan.alarm_system || "", sprinkler: plan.sprinkler_system || "", fdc: plan.fdc || "", knox: plan.knox_box || "", riser: plan.riser || "", summary: "", contact: plan.contact_info || "", internalNotes: "", latitude: plan.latitude, longitude: plan.longitude, footprintCount: footprint.length, lastReviewed: "", visibility: "Department source record", updatedAt: plan.updated_at || "" }} hydrants={sourceNearbyHydrants(plan, hydrants)}/>
                 <EditableRecord
