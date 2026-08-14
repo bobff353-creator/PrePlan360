@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import "../../live-ops-foundation.css";
 import "../../inventory-browser.css";
+import "../../operations-foundation.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listDepartmentScheduleRequests, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
@@ -13,9 +14,11 @@ import StickneyWorkspace from "./stickney-workspace";
 import ModuleBuilder from "./module-builder";
 import LiveOpsBoard from "./live-ops-board";
 import { getDepartmentFoundation, orderedVisibleModules } from "@/db/foundation";
+import propagation from "@/foundation/propagation.json";
 import StationDisplayButton from "@/app/station-display-button";
 import StationIncidentMonitor from "@/app/station-incident-monitor";
 import DailyLogWorkspace from "./daily-log-workspace";
+import { ActiveIncidentWorkspace, CommandCenterWorkspace, PayrollWorkspace } from "./operations-workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -65,9 +68,12 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const permissionByModule = (
     {
       "live-ops": "live_ops",
+      "command-center": "live_ops",
       respond: "respond",
+      "active-incident": "respond",
       staffing: "staffing",
       scheduling: "scheduling",
+      payroll: "payroll",
       "daily-log": "duties",
       preplans: "preplans",
       fleet: "fleet",
@@ -77,13 +83,14 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       phones: "phones",
       hydrants: "hydrants",
     } as const
-  )[active[0] as "live-ops" | "respond" | "staffing" | "scheduling" | "daily-log" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
+  )[active[0] as "live-ops" | "command-center" | "respond" | "active-incident" | "staffing" | "scheduling" | "payroll" | "daily-log" | "preplans" | "fleet" | "inventory" | "duties" | "documents" | "phones" | "hydrants"];
   const editable = permissionByModule ? await canDepartmentPermission(user.userId, department.id, permissionByModule, ownerSupport ? supportSession?.id : "") : false;
   const supportQuery = ownerSupport ? `&support=${encodeURIComponent(supportSession.id)}` : "";
   const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([listDepartmentPreplans(department.id), listSharedPreplans(department.id), listDepartmentHydrants(department.id), listSharedHydrants(department.id)]) : null;
   const configurableModule = active[0] === "live-ops" || active[0] === "respond" ? active[0] : null;
-  const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
-  const liveOpsAssets = active[0] === "live-ops" ? await listDepartmentAssets(department.id) : [];
+  const liveOpsData = active[0] === "live-ops" || active[0] === "command-center" || active[0] === "active-incident" ? await getDepartmentModuleData(department.id, "live-ops") : null;
+  const moduleData = configurableModule ? configurableModule === "live-ops" ? liveOpsData : await getDepartmentModuleData(department.id, configurableModule) : null;
+  const liveOpsAssets = active[0] === "live-ops" || active[0] === "command-center" || active[0] === "active-incident" ? await listDepartmentAssets(department.id) : [];
   const dailyLogReference = active[0] === "daily-log" ? await Promise.all([getDepartmentModuleData(department.id, "daily-log"), listDepartmentPreplans(department.id), listDepartmentAssets(department.id)]) : null;
   // Every department slug uses this shared route. Source adapters add preserved legacy records without changing the shared shell.
   const source = getDepartmentSource(department.slug);
@@ -97,6 +104,29 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       sourceConnectionError = error instanceof Error ? error.message : "The department Daily Log reference data is unavailable.";
       sourceData = {};
     }
+  } else if (source && active[0] === "command-center") {
+    try {
+      const [dashboard, liveOps] = await Promise.all([loadDepartmentSourceModule(source, "dashboard", department.id), loadDepartmentSourceModule(source, "live-ops", department.id)]);
+      sourceData = { ...dashboard, ...liveOps };
+    } catch (error) {
+      sourceConnectionError = error instanceof Error ? error.message : "The department Command Center source is unavailable.";
+      sourceData = {};
+    }
+  } else if (source && active[0] === "active-incident") {
+    try {
+      const [liveOps, preplans] = await Promise.all([loadDepartmentSourceModule(source, "live-ops", department.id), loadDepartmentSourceModule(source, "preplans", department.id)]);
+      sourceData = { ...liveOps, ...preplans };
+    } catch (error) {
+      sourceConnectionError = error instanceof Error ? error.message : "The department incident references are unavailable.";
+      sourceData = {};
+    }
+  } else if (source && active[0] === "payroll") {
+    try {
+      sourceData = await loadDepartmentSourceModule(source, "payroll", department.id);
+    } catch (error) {
+      sourceConnectionError = error instanceof Error ? error.message : "The department payroll schedule source is unavailable.";
+      sourceData = {};
+    }
   } else if (source && sourceModules.has(active[0])) {
     try {
       sourceData = await loadDepartmentSourceModule(source, active[0], department.id);
@@ -104,12 +134,12 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       sourceConnectionError = error instanceof Error ? error.message : "The department source connection is unavailable.";
       sourceData = {};
     }
-  } else if (active[0] === "live-ops" || active[0] === "staffing" || active[0] === "scheduling") {
+  } else if (["live-ops", "command-center", "active-incident", "staffing", "scheduling", "payroll"].includes(active[0])) {
     try {
       const employees = await loadDepartmentEmployeeOverlays(department.id);
-      const schedule = active[0] === "live-ops" || active[0] === "scheduling" ? await loadDepartmentScheduleOverlays(department.id) : [];
+      const schedule = ["live-ops", "command-center", "active-incident", "scheduling", "payroll"].includes(active[0]) ? await loadDepartmentScheduleOverlays(department.id) : [];
       sourceData =
-        active[0] === "live-ops"
+        active[0] === "live-ops" || active[0] === "command-center" || active[0] === "active-incident"
           ? { employees, schedule, scheduleCalendar: schedule }
           : active[0] === "staffing"
           ? { employees }
@@ -144,7 +174,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const dailyLogDate = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
   return (
-    <main className={`department-app${stationDisplay ? " station-embedded" : ""}`} style={style} data-foundation-release="2026.08.14.72" data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
+    <main className={`department-app${stationDisplay ? " station-embedded" : ""}`} style={style} data-foundation-release={propagation.release} data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
       {stationDisplay ? <StationIncidentMonitor departmentId={department.id} departmentSlug={department.slug} currentModule={active[0]} responseSeconds={foundation.response_duration_seconds} supportSessionId={ownerSupport ? supportSession.id : ""}/> : null}
       <aside className="dept-app-sidebar">
         <input
@@ -222,17 +252,23 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
               <i /> App configured
             </div>
           </div>
-          {active[0] === "live-ops" || active[0] === "respond" || active[0] === "scheduling" ? (
+          {active[0] === "live-ops" || active[0] === "respond" || active[0] === "scheduling" || active[0] === "payroll" ? (
             <div className="dept-foundation-rulebar">
               <span>Foundation</span>
               <b>{foundation.is_override ? "Department override" : "Owner master"}</b>
-              <small>{active[0] === "scheduling" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · ${foundation.minimum_staffing > 0 ? `minimum ${foundation.minimum_staffing}` : "minimum not configured"} · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small>
+              <small>{active[0] === "scheduling" || active[0] === "payroll" ? `${foundation.shift_hours_on} on / ${foundation.shift_hours_off} off · ${foundation.shift_start_time} start · ${foundation.minimum_staffing > 0 ? `minimum ${foundation.minimum_staffing}` : "minimum not configured"} · OT ${foundation.overtime_threshold_hours} hours per ${foundation.overtime_period_days} days` : `${foundation.board_rotation_seconds}s rotation · ${foundation.response_duration_seconds}s response page`}</small>
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
             <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={sourceData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} saveStatus={query.boardSaved === "1" ? "saved" : query.boardSaved === "0" ? "failed" : ""} />
+          ) : active[0] === "command-center" && liveOpsData ? (
+            <CommandCenterWorkspace departmentId={department.id} departmentName={department.name} supportQuery={supportQuery} source={source} sourceData={sourceData} connectionError={sourceConnectionError || undefined} liveOpsData={liveOpsData} assets={liveOpsAssets} settings={foundation}/>
           ) : active[0] === "respond" && moduleData ? (
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+          ) : active[0] === "active-incident" && liveOpsData ? (
+            <><ActiveIncidentWorkspace departmentId={department.id} departmentName={department.name} supportQuery={supportQuery} source={source} sourceData={sourceData} connectionError={sourceConnectionError || undefined} liveOpsData={liveOpsData} assets={liveOpsAssets} editable={editable}/>{editable ? <details className="live-ops-records"><summary>Manage active incident record</summary><ModuleBuilder moduleKey="live-ops" moduleName="Live Operations" departmentId={department.id} data={liveOpsData} editable supportSessionId={ownerSupport ? supportSession.id : ""} recordManagerOnly/></details> : null}</>
+          ) : active[0] === "payroll" ? (
+            <PayrollWorkspace departmentId={department.id} departmentName={department.name} supportQuery={supportQuery} source={source} sourceData={sourceData} connectionError={sourceConnectionError || undefined} settings={foundation} editable={editable}/>
           ) : active[0] === "daily-log" && dailyLogReference ? (
             <DailyLogWorkspace departmentId={department.id} departmentName={department.name} initialDate={dailyLogDate} initialItems={dailyLogReference[0].items} preplans={dailyLogPreplans} units={dailyLogUnits} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/>
           ) : sourceData && source ? (

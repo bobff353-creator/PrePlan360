@@ -444,9 +444,9 @@ async function withOverrides<T extends { id: string }>(departmentId: string, rec
 export async function loadFermilabModule(module: string, departmentId = ""): Promise<StickneyModuleData> {
   if (module === "dashboard") return { summary: await summary() };
   if (module === "staffing") return { employees: await loadFermilabEmployees(departmentId) };
-  if (module === "live-ops" || module === "scheduling") {
-    const start = chicagoDate(module === "scheduling" ? -7 : 0);
-    const end = chicagoDate(35);
+  if (module === "live-ops" || module === "scheduling" || module === "payroll") {
+    const start = chicagoDate(module === "payroll" ? -35 : module === "scheduling" ? -7 : 0);
+    const end = chicagoDate(module === "payroll" ? 0 : 35);
     const [scheduleRows, employees, inventory, dutyRows] = await Promise.all([
       scheduleRaw(start, end),
       loadFermilabEmployees(departmentId),
@@ -458,7 +458,7 @@ export async function loadFermilabModule(module: string, departmentId = ""): Pro
       id: text(row.id), day_of_week: weekday(row), shift_key: shiftSegment(row), duty: text(row.title), detail: text(row.instructions),
       category: text(row.recurrence_kind) || text(row.recurrence), assigned_to: text(row.assigned_shift), updated_at: text(row.updated_at),
     }));
-    return module === "scheduling"
+    return module === "scheduling" || module === "payroll"
       ? { employees, schedule }
       : { ...inventory, employees, schedule: schedule.filter((row) => row.work_date === chicagoDate()), scheduleCalendar: schedule, duties: await withOverrides(departmentId, "duty", duties), dutyContext: dutyContext() };
   }

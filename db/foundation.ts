@@ -3,9 +3,12 @@ import { db, now } from "@/db/access";
 export const foundationModules = [
   { key: "dashboard", label: "Home" },
   { key: "live-ops", label: "Live Operations" },
+  { key: "command-center", label: "Command Center" },
   { key: "respond", label: "Respond" },
+  { key: "active-incident", label: "Active Incident" },
   { key: "staffing", label: "Roster & Staffing" },
   { key: "scheduling", label: "Scheduling" },
+  { key: "payroll", label: "Payroll" },
   { key: "daily-log", label: "Daily Log" },
   { key: "preplans", label: "Pre-Plans" },
   { key: "fleet", label: "Apparatus" },

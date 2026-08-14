@@ -484,9 +484,9 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
     };
   }
   if (module === "staffing") return { employees: await loadStickneyEmployees(departmentId) };
-  if (module === "scheduling") {
-    const start = chicagoDate(-7);
-    const end = chicagoDate(35);
+  if (module === "scheduling" || module === "payroll") {
+    const start = chicagoDate(module === "payroll" ? -35 : -7);
+    const end = chicagoDate(module === "payroll" ? 0 : 35);
     const schedule = await read<StickneyScheduleAssignment>(`
       select s.id,en.entry_date as work_date,t.name as shift_name,
         coalesce(nullif(s.start_time,''),t.start_time) as start_time,

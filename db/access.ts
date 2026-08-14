@@ -3,7 +3,7 @@ import type { ChatGPTUser } from "@/app/chatgpt-auth";
 
 export type Department = { id: string; name: string; slug: string; status: string; station_count: number; vehicle_count: number; weather_location: string; app_title: string; welcome_message: string; brand_primary: string; brand_secondary: string; brand_accent: string; brand_action: string; brand_alert: string; logo_key: string | null; logo_content_type: string | null; updated_at: string };
 export type AccessRequest = { id: string; user_id: string; email: string; display_name: string; department_name: string; requested_role: string; note: string; status: string; department_id: string | null; created_at: string };
-export const departmentPermissions = ["live_ops", "respond", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants", "settings", "members"] as const;
+export const departmentPermissions = ["live_ops", "respond", "staffing", "scheduling", "payroll", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants", "settings", "members"] as const;
 export type DepartmentPermission = typeof departmentPermissions[number];
 export type Membership = Department & { membership_role: string; permissions_json: string };
 export type DepartmentMember = { id: string; user_id: string; email: string; display_name: string; role: string; status: string; permissions_json: string; created_at: string; updated_at: string };
