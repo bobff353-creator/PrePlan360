@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import type { StickneyScheduleAssignment } from "@/db/stickney";
+import { scheduleDisplayName } from "./schedule-format";
 
 const SHIFT_COLORS = [
   "#8b1e24",
@@ -67,7 +68,7 @@ function groupRows(rows: StickneyScheduleAssignment[]) {
     groups.set(key, {
       id: key,
       date: row.work_date,
-      name: row.shift_name || "Unnamed shift",
+      name: scheduleDisplayName(row.shift_name, row.start_time, row.end_time),
       start: row.start_time,
       end: row.end_time,
       color: colorFor(row.shift_name, row.shift_color),
