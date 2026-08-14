@@ -7,11 +7,12 @@ const root = path.resolve(import.meta.dirname, "..");
 const read = (...parts) => readFile(path.join(root, ...parts), "utf8");
 
 test("owner demo provides a persistent 24/7 display with a 3 AM inner-app refresh", async () => {
-  const [page, shell, demo, station] = await Promise.all([
+  const [page, shell, demo, station, stationCss] = await Promise.all([
     read("app", "demo", "page.tsx"),
     read("app", "station-display-button.tsx"),
     read("public", "live-ops-custom.js"),
     read("public", "station-display.js"),
+    read("public", "station-display.css"),
   ]);
   assert.match(page, /StationDisplayButton/);
   assert.match(page, /station=1/);
@@ -22,14 +23,18 @@ test("owner demo provides a persistent 24/7 display with a 3 AM inner-app refres
   assert.match(demo, /responseSec: 90/);
   assert.match(station, /preplan360:station-incident/);
   assert.match(station, /current = "board"/);
+  assert.match(demo, /board-customize-control/);
+  assert.match(stationCss, /body\.station-display-mode \.board-customize-control\{display:none!important\}/);
 });
 
 test("every department uses the authenticated incident watcher and 90 second foundation default", async () => {
-  const [page, monitor, route, foundation] = await Promise.all([
+  const [page, monitor, route, foundation, board, stationCss] = await Promise.all([
     read("app", "d", "[slug]", "page.tsx"),
     read("app", "station-incident-monitor.tsx"),
     read("app", "api", "departments", "[id]", "active-incident", "route.ts"),
     read("db", "foundation.ts"),
+    read("app", "d", "[slug]", "live-ops-board.tsx"),
+    read("app", "station-display.css"),
   ]);
   assert.match(page, /StationIncidentMonitor/);
   assert.match(page, /station-embedded/);
@@ -40,4 +45,6 @@ test("every department uses the authenticated incident watcher and 90 second fou
   assert.match(route, /Cache-Control.*no-store/);
   assert.match(route, /item_type === "incident".*operational_status === "active"/s);
   assert.match(foundation, /response_duration_seconds: 90/);
+  assert.match(board, /className="board-customize-control"/);
+  assert.match(stationCss, /\.department-app\.station-embedded \.board-customize-control\{display:none!important\}/);
 });

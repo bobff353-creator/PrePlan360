@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.61",
-  "generatedAt": "2026-08-14T09:08:07.389Z",
+  "release": "2026.08.14.62",
+  "generatedAt": "2026-08-14T10:36:26.153Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -10,12 +10,12 @@
   "futureDepartments": "automatic-through-shared-route",
   "modules": {
     "application-shell": {
-      "demo": "e53d91a6c65897d83f3e1267dc118ddc93a6f68ebbcbb9414f62c279fb1b9f85",
-      "departments": "edef33d42765ac4dda36ae3288cd3900de1c867b00ebf32c40ce150d35df2188"
+      "demo": "d1abf390a805325b69481f5481e83d1aa381f5aee94e565b58109a6c2a4bf789",
+      "departments": "d1d931e4e4b932c2bc7aca3b4aeaa36ac8dc4f29414cbb347e6032c7400239dd"
     },
     "live-operations": {
-      "demo": "0c8b85ad329363191fee9bb07f7c0aa230321b57cb324c086f22adb48da2425b",
-      "departments": "7bbf820830ab2a62fd78f5a383888185a483c28cf9634dc9fd5aacceb43078ca"
+      "demo": "fb510ac0cc79589cbf5ea90cf42a7847970e9031a6b62bb7d68d7571315db13d",
+      "departments": "67d20956184148a0885ef681a1e8269cf3577d2b78fc28e5b165f8880038e173"
     },
     "roster-and-staffing": {
       "demo": "214165da0815b49f5bcc99e80ad7e8fbef05cd4b8d853001fe6672a0fa90fb97",
@@ -27,7 +27,7 @@
     },
     "daily-log-and-duties": {
       "demo": "8cf23fc5b9253e176ef8a21c2fc4fc8cbe4a1c9e8d3f7e2f0f87a6c2fb3f4054",
-      "departments": "de41678240d6df4f22e5fdaa8b3ddcf4fc28de1a743f60584dd72b7762e3eb97"
+      "departments": "f356d412af432b0694af5fa0310b29d6435f45e2ab08c4a64f237a0560bf3bcd"
     },
     "owner-foundation": {
       "demo": "c878dfdabdf07104456af86f2f5f3553d649c713aaf38dcb270bc78dfc1956a2",

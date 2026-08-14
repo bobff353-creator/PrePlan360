@@ -1,5 +1,6 @@
 body.station-display-mode .app{grid-template-columns:1fr;grid-template-rows:56px 1fr;grid-template-areas:"top" "main"}
 body.station-display-mode .brand,body.station-display-mode nav{display:none!important}
+body.station-display-mode .board-customize-control{display:none!important}
 body.station-display-mode main{padding:14px 18px 34px}
 body.station-display-mode .top{padding:0 14px}
 @media(max-width:760px){body.station-display-mode .top .chip:nth-of-type(n+2){display:none}body.station-display-mode main{padding:10px}}

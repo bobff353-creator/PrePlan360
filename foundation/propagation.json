@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.61",
+  "release": "2026.08.14.62",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
