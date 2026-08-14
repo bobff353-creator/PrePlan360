@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.45",
-  "generatedAt": "2026-08-14T06:11:12.659Z",
+  "release": "2026.08.13.46",
+  "generatedAt": "2026-08-14T06:20:00.927Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -22,8 +22,8 @@
       "departments": "92aa892e7e4fb651d2ae63496cefaf61a26e417c7b9d6bc7d8789097b901c832"
     },
     "scheduling": {
-      "demo": "79d1137a7263685bfbf1346fbb94628c11a0d31576228811d052ff3b1b37dab8",
-      "departments": "08da5750106da03d91801c3d1ffa4db0d6e3a246cdf0825f444ceffa918190bf"
+      "demo": "acb8fa55b17135bcd5528613c52cd73eeb9d5ced44c863dc6afc31195be92b2a",
+      "departments": "b830c9cc6dc50f1b5905f664081c6b5afa801547d0ed2c043436e44acb9c3326"
     },
     "daily-log-and-duties": {
       "demo": "44e506eaca0640af3fadc8210dd405f3f6d7cf745a9a530c97c301d01432b9d3",

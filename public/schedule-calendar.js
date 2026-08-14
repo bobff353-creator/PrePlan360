@@ -1,5 +1,6 @@
 let schxCalendarMonth = "";
 let schxCalendarSlides = {};
+let schxCalendarDay = "";
 
 function schxMonthDate(value) {
   const parts = value.split("-").map(Number);
@@ -54,6 +55,91 @@ function schxCalendarStep(date, delta) {
   render();
 }
 
+function schxCalendarOpenDay(date) {
+  schxCalendarDay = date;
+  render();
+}
+
+function schxCalendarCloseDay() {
+  schxCalendarDay = "";
+  render();
+}
+
+function schxCalendarMoveDay(delta) {
+  if (!schxCalendarDay) return;
+  const next = new Date(schxCalendarDay + "T12:00:00");
+  next.setDate(next.getDate() + delta);
+  schxCalendarDay = schxDayKey(next);
+  schxCalendarMonth = schxCalendarDay.slice(0, 7);
+  render();
+}
+
+function schxCalendarOpenShift(id) {
+  schxCalendarDay = "";
+  schxSelect(id);
+}
+
+function schxCalendarDayView(groups) {
+  if (!schxCalendarDay) return "";
+  const items = groups.get(schxCalendarDay) || [];
+  const assigned = items.reduce(
+    (count, shift) => count + shift.assignments.length,
+    0,
+  );
+  return (
+    '<div class="schx-day-overlay" role="presentation" onclick="if(event.target===this)schxCalendarCloseDay()"><section class="schx-day-view" role="dialog" aria-modal="true" aria-labelledby="schx-day-title"><header class="schx-day-head"><div><span class="modtitle">DAY VIEW</span><h2 id="schx-day-title">' +
+    schxEsc(schxLabelDate(schxCalendarDay)) +
+    "</h2><p>" +
+    items.length +
+    " schedule" +
+    (items.length === 1 ? "" : "s") +
+    " · " +
+    assigned +
+    ' assigned</p></div><button class="btn" onclick="schxCalendarCloseDay()">Close</button></header><nav class="schx-day-nav" aria-label="Day controls"><button class="btn" onclick="schxCalendarMoveDay(-1)">Previous day</button><button class="btn" onclick="schxCalendarOpenDay(schxDate(0))">Today</button><button class="btn" onclick="schxCalendarMoveDay(1)">Next day</button></nav><div class="schx-day-content">' +
+    (items.length
+      ? items
+          .map((shift) => {
+            const template = schxTemplate(shift.templateId);
+            const color = schxColorHex(template?.color);
+            return (
+              '<article class="schx-day-shift" style="--shift-color:' +
+              color +
+              '"><header><div><span class="modtitle">SCHEDULE</span><h3>' +
+              schxEsc(shift.name) +
+              "</h3></div><b>" +
+              schxEsc(template?.start || "Start not set") +
+              (template?.end ? "–" + schxEsc(template.end) : "") +
+              '</b></header><div class="schx-day-roster">' +
+              (shift.assignments.length
+                ? shift.assignments
+                    .map((assignment) => {
+                      const member = rstMember(assignment.memberId);
+                      const details = [
+                        assignment.role,
+                        member?.rank,
+                        assignment.unit,
+                      ].filter(Boolean);
+                      return (
+                        "<div><strong>" +
+                        schxEsc(member?.name || "Roster member unavailable") +
+                        "</strong><span>" +
+                        schxEsc(details.join(" · ") || "Position not entered") +
+                        "</span></div>"
+                      );
+                    })
+                    .join("")
+                : "<p>No employees assigned.</p>") +
+              '</div><footer><button class="btn" onclick="schxCalendarOpenShift(\'' +
+              shift.id +
+              "')\">Open schedule</button></footer></article>"
+            );
+          })
+          .join("")
+      : '<div class="schx-day-empty"><strong>No schedules for this date.</strong><p>This day has no saved schedule or staffing assignments.</p></div>') +
+    "</div></section></div>"
+  );
+}
+
 function schxCalendar() {
   const groups = schxCalendarGroups();
   const today = schxDate(0);
@@ -104,11 +190,15 @@ function schxCalendar() {
           '<article class="' +
           (schxMonthKey(day) !== schxCalendarMonth ? "outside " : "") +
           (date === today ? "today" : "") +
-          '"><header><time datetime="' +
+          '"><header><button class="schx-calendar-date" onclick="schxCalendarOpenDay(\'' +
+          date +
+          '\')" aria-label="Open day view for ' +
+          schxEsc(schxLabelDate(date)) +
+          '"><time datetime="' +
           date +
           '">' +
           day.getDate() +
-          "</time>" +
+          "</time></button>" +
           (items.length > 1
             ? `<span>${slide + 1}/${items.length}</span>`
             : "") +
@@ -157,7 +247,9 @@ function schxCalendar() {
         );
       })
       .join("") +
-    '</div><p class="schx-calendar-note">Slides advance every 5 seconds when a day has more than one schedule. Use the arrows or dots to change it immediately.</p></section>'
+    '</div><p class="schx-calendar-note">Slides advance every 5 seconds when a day has more than one schedule. Select a date for its complete day view, or use the arrows and dots to change the calendar card immediately.</p>' +
+    schxCalendarDayView(groups) +
+    "</section>"
   );
 }
 
@@ -232,3 +324,7 @@ viewSched = function () {
 schxTab = "calendar";
 if (typeof window !== "undefined")
   window.setInterval(schxCalendarAutoTick, 5000);
+if (typeof window !== "undefined")
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && schxCalendarDay) schxCalendarCloseDay();
+  });

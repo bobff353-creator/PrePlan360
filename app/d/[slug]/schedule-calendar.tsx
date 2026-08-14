@@ -49,6 +49,20 @@ function monthDate(value: string) {
   return new Date(year, month - 1, 1, 12);
 }
 
+function calendarDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+}
+
+function dayLabel(value: string) {
+  return calendarDate(value).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function groupRows(rows: StickneyScheduleAssignment[]) {
   const groups = new Map<string, ScheduleGroup>();
   for (const row of rows) {
@@ -98,6 +112,7 @@ export default function ScheduleCalendar({
     : groups[0]?.date.slice(0, 7) || today.slice(0, 7);
   const [month, setMonth] = useState(initialMonth);
   const [slides, setSlides] = useState<Record<string, number>>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const byDate = useMemo(
     () => Map.groupBy(groups, (group) => group.date),
@@ -130,6 +145,15 @@ export default function ScheduleCalendar({
     return () => window.clearInterval(timer);
   }, [byDate]);
 
+  useEffect(() => {
+    if (!selectedDate) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setSelectedDate(null);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedDate]);
+
   function moveMonth(delta: number) {
     const next = monthDate(month);
     next.setMonth(next.getMonth() + delta);
@@ -141,6 +165,15 @@ export default function ScheduleCalendar({
       ...current,
       [date]: ((current[date] || 0) + delta + count) % count,
     }));
+  }
+
+  function moveSelectedDay(delta: number) {
+    if (!selectedDate) return;
+    const next = calendarDate(selectedDate);
+    next.setDate(next.getDate() + delta);
+    const nextDate = dateKey(next);
+    setSelectedDate(nextDate);
+    setMonth(nextDate.slice(0, 7));
   }
 
   const label = monthDate(month).toLocaleDateString("en-US", {
@@ -203,7 +236,14 @@ export default function ScheduleCalendar({
               key={date}
             >
               <header>
-                <time dateTime={date}>{day.getDate()}</time>
+                <button
+                  type="button"
+                  className="schedule-calendar-date"
+                  onClick={() => setSelectedDate(date)}
+                  aria-label={`Open day view for ${dayLabel(date)}`}
+                >
+                  <time dateTime={date}>{day.getDate()}</time>
+                </button>
                 {schedules.length > 1 ? (
                   <span>
                     {activeIndex + 1}/{schedules.length}
@@ -271,8 +311,109 @@ export default function ScheduleCalendar({
       </div>
       <p className="schedule-calendar-note">
         Slides advance every 5 seconds when a day has more than one schedule.
-        Use the arrows or dots to change it immediately.
+        Select a date for its complete day view, or use the arrows and dots to
+        change the calendar card immediately.
       </p>
+      {selectedDate ? (
+        <div
+          className="schedule-day-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedDate(null);
+          }}
+        >
+          <section
+            className="schedule-day-view"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-day-title"
+          >
+            <header className="schedule-day-head">
+              <div>
+                <span>DAY VIEW</span>
+                <h2 id="schedule-day-title">{dayLabel(selectedDate)}</h2>
+                <p>
+                  {(byDate.get(selectedDate) || []).length} schedule
+                  {(byDate.get(selectedDate) || []).length === 1 ? "" : "s"}
+                  {" · "}
+                  {(byDate.get(selectedDate) || []).reduce(
+                    (count, schedule) => count + schedule.assignments.length,
+                    0,
+                  )}{" "}
+                  assigned
+                </p>
+              </div>
+              <button type="button" onClick={() => setSelectedDate(null)}>
+                Close
+              </button>
+            </header>
+            <nav className="schedule-day-nav" aria-label="Day controls">
+              <button type="button" onClick={() => moveSelectedDay(-1)}>
+                Previous day
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate(today);
+                  setMonth(today.slice(0, 7));
+                }}
+              >
+                Today
+              </button>
+              <button type="button" onClick={() => moveSelectedDay(1)}>
+                Next day
+              </button>
+            </nav>
+            <div className="schedule-day-content">
+              {(byDate.get(selectedDate) || []).length ? (
+                (byDate.get(selectedDate) || []).map((schedule) => (
+                  <article
+                    className="schedule-day-shift"
+                    style={
+                      { "--shift-color": schedule.color } as CSSProperties
+                    }
+                    key={schedule.id}
+                  >
+                    <header>
+                      <div>
+                        <span>SCHEDULE</span>
+                        <h3>{schedule.name}</h3>
+                      </div>
+                      <b>
+                        {schedule.start || "Start not set"}
+                        {schedule.end ? `–${schedule.end}` : ""}
+                      </b>
+                    </header>
+                    <div className="schedule-day-roster">
+                      {schedule.assignments.length ? (
+                        schedule.assignments.map((assignment) => (
+                          <div key={assignment.id}>
+                            <strong>{assignment.employee_name}</strong>
+                            <span>
+                              {[assignment.role, assignment.rank]
+                                .filter(Boolean)
+                                .join(" · ") || "Position not entered"}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No employees assigned.</p>
+                      )}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="schedule-day-empty">
+                  <strong>No schedules for this date.</strong>
+                  <p>
+                    This day has no saved schedule or staffing assignments.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

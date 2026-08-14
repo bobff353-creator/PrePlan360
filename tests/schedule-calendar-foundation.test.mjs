@@ -17,6 +17,9 @@ test("demo calendar uses saved shift colors and rotates crowded days", async () 
   assert.match(source, /schxTemplate\(shift\.templateId\)/);
   assert.match(source, /schxCalendarAutoTick/);
   assert.match(source, /Multiple schedules rotate/);
+  assert.match(source, /function schxCalendarOpenDay/);
+  assert.match(source, /class=\"schx-day-view\"/);
+  assert.match(source, /Open schedule/);
 });
 
 test("shared department calendar groups schedule rows and offers slide controls", async () => {
@@ -44,6 +47,9 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(calendar, /Map\.groupBy\(groups/);
   assert.match(calendar, /window\.setInterval/);
   assert.match(calendar, /Shift colors follow the saved shift setup/);
+  assert.match(calendar, /setSelectedDate\(date\)/);
+  assert.match(calendar, /className=\"schedule-day-view\"/);
+  assert.match(calendar, /assignment\.role, assignment\.rank/);
   assert.match(workspace, /name="shift_color"/);
   assert.match(route, /data\.shift_color/);
   assert.match(propagation, /schedule-calendar\.tsx/);
