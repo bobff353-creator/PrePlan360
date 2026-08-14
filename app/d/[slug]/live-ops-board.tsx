@@ -85,6 +85,7 @@ type Props = {
   assets: DepartmentAsset[];
   editable: boolean;
   supportSessionId: string;
+  saveStatus: "" | "saved" | "failed";
 };
 
 const panelLabels = new Map(liveBoardPanels.map((panel) => [panel.key, panel.label]));
@@ -94,7 +95,7 @@ function militaryTime(date: Date | null) {
   return [date.getHours(), date.getMinutes(), date.getSeconds()].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-export default function LiveOpsBoard({ departmentId, departmentSlug, departmentName, weatherLocation, vehicleCount, settings, data, sourceData, assets, editable, supportSessionId }: Props) {
+export default function LiveOpsBoard({ departmentId, departmentSlug, departmentName, weatherLocation, vehicleCount, settings, data, sourceData, assets, editable, supportSessionId, saveStatus }: Props) {
   const router = useRouter();
   const definitions = useMemo(() => [
     ...liveBoardWidgets,
@@ -271,6 +272,7 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
   }
 
   return <section className="live-ops-foundation">
+    {saveStatus ? <div className={`live-board-save-status ${saveStatus}`} role={saveStatus === "saved" ? "status" : "alert"}>{saveStatus === "saved" ? "Board settings saved and applied to this department." : "Board settings could not be saved. Your previous department settings remain active."}</div> : null}
     <WeatherHeader departmentName={departmentName} weather={weather} index={weatherIndex} clock={clock} rotationSeconds={settings.board_rotation_seconds} editable={editable} settingsOpen={settingsOpen} onSettings={() => setSettingsOpen((open) => !open)}/>
 
     {settingsOpen && editable ? <BoardSettings action={`/api/departments/${departmentId}/live-ops-board`} settings={settings} definitions={definitions} order={order} hidden={hidden} widths={widths} weatherLocation={weatherLocation} supportSessionId={supportSessionId} onMove={move} onHidden={setHidden} onWidth={(id, width) => setWidths((current) => ({ ...current, [id]: width }))} onPreview={previewRadar}/> : null}
@@ -404,7 +406,7 @@ function ExternalWidget({ link }: { link?: FoundationSettings["live_board_extern
 
 function RadarOverlay({ takeover, radarUrl, refreshKey, clock, onClose }: { takeover: RadarTakeover; radarUrl: string; refreshKey: number; clock: Date | null; onClose: () => void }) {
   const remaining = Math.max(0, Math.ceil((takeover.endsAt - (clock?.getTime() ?? takeover.endsAt)) / 1000));
-  return <div className={`live-radar-takeover ${takeover.kind === "severe" ? "severe" : ""}`} data-incident-priority="respond" role="alert" aria-live="assertive"><header><div><span>{takeover.kind === "severe" ? "WEATHER WARNING · PRIORITY DISPLAY" : "WEATHER RADAR"}</span><h2>{takeover.title}</h2><p>{takeover.detail}</p></div><div><b>{remaining}s</b><button type="button" onClick={onClose}>Return to board</button></div></header><div className="live-radar-frame">{radarUrl ? <iframe key={refreshKey} title={`${takeover.title} radar`} src={refreshedUrl(radarUrl, refreshKey)} referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/> : <div className="live-radar-missing"><b>Radar source not configured</b><span>The warning remains visible, but the department must save a selected-area HTTPS radar link. Respond always overrides this display.</span></div>}</div></div>;
+  return <div className={`live-radar-takeover ${takeover.kind === "severe" ? "severe" : ""}`} data-incident-priority="respond" role="alert" aria-live="assertive"><header><div><span>{takeover.kind === "severe" ? "WEATHER WARNING · PRIORITY DISPLAY" : "WEATHER RADAR"}</span><h2>{takeover.title}</h2><p>{takeover.detail}</p></div><div><b>{remaining}s</b>{radarUrl ? <a href={radarUrl} target="_blank" rel="noreferrer">Open radar source</a> : null}<button type="button" onClick={onClose}>Return to board</button></div></header><div className="live-radar-frame">{radarUrl ? <iframe key={refreshKey} title={`${takeover.title} radar`} src={refreshedUrl(radarUrl, refreshKey)} referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/> : <div className="live-radar-missing"><b>Radar source not configured</b><span>The warning remains visible, but the department must save a selected-area HTTPS radar link. Respond always overrides this display.</span></div>}</div></div>;
 }
 
 function BoardSettings({ action, settings, definitions, order, hidden, widths, weatherLocation, supportSessionId, onMove, onHidden, onWidth, onPreview }: {

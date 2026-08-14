@@ -9,6 +9,7 @@ function bounded(form: FormData, name: string, minimum: number, maximum: number,
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   if (!isSameOriginRequest(request)) return new Response("Invalid request origin", { status: 403 });
   const { id: departmentId } = await params;
   const user = await getChatGPTUser();
@@ -28,8 +29,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     response_duration_seconds: bounded(form, "response_duration_seconds", 5, 600, current.response_duration_seconds),
     is_override: true,
   };
-  await saveFoundation(settings, user.userId);
-  await audit(user.userId, departmentId, "live_ops_board_saved", `${department.name} Live Operations Board layout and display settings were saved.`);
-  const support = supportId ? `&support=${encodeURIComponent(supportId)}` : "";
-  return Response.redirect(new URL(`/d/${department.slug}?module=live-ops${support}`, request.url), 303);
+  try {
+    await saveFoundation(settings, user.userId);
+    await audit(user.userId, departmentId, "live_ops_board_saved", `${department.name} Live Operations Board layout and display settings were saved.`);
+    console.info(JSON.stringify({ level: "info", message: "Live Ops board saved", route: "/api/departments/[id]/live-ops-board", departmentId, durationMs: Date.now() - startedAt }));
+    const support = supportId ? `&support=${encodeURIComponent(supportId)}` : "";
+    return Response.redirect(new URL(`/d/${department.slug}?module=live-ops&boardSaved=1${support}`, request.url), 303);
+  } catch (error) {
+    console.error(JSON.stringify({ level: "error", message: "Live Ops board save failed", route: "/api/departments/[id]/live-ops-board", departmentId, error: error instanceof Error ? error.message : String(error), durationMs: Date.now() - startedAt }));
+    const support = supportId ? `&support=${encodeURIComponent(supportId)}` : "";
+    return Response.redirect(new URL(`/d/${department.slug}?module=live-ops&boardSaved=0${support}`, request.url), 303);
+  }
 }

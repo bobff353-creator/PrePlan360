@@ -1,5 +1,6 @@
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, getDepartment } from "@/db/access";
+import { getDepartmentFoundation } from "@/db/foundation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,26 @@ function text(value: unknown, limit = 500) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
 }
 
-function coordinates(value: string) {
-  const match = value.trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
-  if (!match) return null;
-  const latitude = Number(match[1]);
-  const longitude = Number(match[2]);
+function coordinatePair(latitudeValue: unknown, longitudeValue: unknown) {
+  if (latitudeValue === null || longitudeValue === null || String(latitudeValue).trim() === "" || String(longitudeValue).trim() === "") return null;
+  const latitude = Number(latitudeValue);
+  const longitude = Number(longitudeValue);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
   return { latitude, longitude };
+}
+
+function coordinates(value: string) {
+  const direct = value.trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+  if (direct) return coordinatePair(direct[1], direct[2]);
+  try {
+    const url = new URL(value);
+    return coordinatePair(
+      url.searchParams.get("lat") || url.searchParams.get("latitude"),
+      url.searchParams.get("lon") || url.searchParams.get("lng") || url.searchParams.get("longitude"),
+    );
+  } catch {
+    return null;
+  }
 }
 
 function period(raw: NwsPeriod | undefined) {
@@ -60,15 +74,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Sign in required" }, { status: 401 });
   if (!(await canAccessDepartment(user.userId, departmentId))) return Response.json({ error: "Department access required" }, { status: 403 });
-  const department = await getDepartment(departmentId);
+  const [department, foundation] = await Promise.all([
+    getDepartment(departmentId),
+    getDepartmentFoundation(departmentId),
+  ]);
   if (!department) return Response.json({ error: "Department not found" }, { status: 404 });
 
-  const point = coordinates(department.weather_location);
+  const point = coordinates(department.weather_location)
+    || coordinates(foundation.live_board_alerts_url)
+    || coordinates(foundation.live_board_weather_url)
+    || coordinates(foundation.live_board_radar_url);
   if (!point) {
     return Response.json({
       configured: false,
       location: department.weather_location,
-      reason: "Save the department weather location as verified latitude, longitude coordinates.",
+      reason: "Save verified latitude, longitude coordinates or a weather source link containing lat and lon.",
     });
   }
 

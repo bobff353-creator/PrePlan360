@@ -37,7 +37,7 @@ test("the owner demo uses compact military-time weather and radar priority", asy
 });
 
 test("every department inherits weather, radar, real records, visibility, and Respond priority", async () => {
-  const [board, page, stickney, foundation, schema, migration, sourceMigration, css] = await Promise.all([
+  const [board, page, stickney, foundation, schema, migration, sourceMigration, css, weatherRoute, boardRoute] = await Promise.all([
     read("app/d/[slug]/live-ops-board.tsx"),
     read("app/d/[slug]/page.tsx"),
     read("db/stickney.ts"),
@@ -46,6 +46,8 @@ test("every department inherits weather, radar, real records, visibility, and Re
     read("drizzle/0014_live_ops_weather_priority.sql"),
     read("drizzle/0015_live_ops_panel_sources.sql"),
     read("app/live-ops-foundation.css"),
+    read("app/api/departments/[id]/weather/route.ts"),
+    read("app/api/departments/[id]/live-ops-board/route.ts"),
   ]);
   assert.match(page, /departmentSlug=\{department\.slug\}/);
   assert.match(page, /weatherLocation=\{department\.weather_location\}/);
@@ -69,6 +71,8 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(board, /sourceData\?\.schedule/);
   assert.match(board, /sourceData\?\.scheduleCalendar/);
   assert.match(board, /calendarShiftDateLabel/);
+  assert.match(board, /Board settings saved and applied to this department/);
+  assert.match(board, /Open radar source/);
   assert.match(board, /assets\.filter/);
   assert.match(board, /ridingAssignments\.length \? `\$\{ridingAssignments\.length\} scheduled`/);
   assert.match(stickney, /if \(module === "live-ops"\)/);
@@ -85,6 +89,14 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(sourceMigration, /live_board_source_refresh_minutes integer NOT NULL DEFAULT 5/);
   assert.match(sourceMigration, /live_board_closecalls_url/);
   assert.match(css, /\.live-radar-takeover\.severe/);
+  assert.match(css, /\.live-board-save-status/);
+  assert.match(weatherRoute, /getDepartmentFoundation/);
+  assert.match(weatherRoute, /foundation\.live_board_alerts_url/);
+  assert.match(weatherRoute, /searchParams\.get\("lat"\)/);
+  assert.match(weatherRoute, /searchParams\.get\("lon"\)/);
+  assert.match(boardRoute, /Live Ops board saved/);
+  assert.match(boardRoute, /boardSaved=1/);
+  assert.match(page, /query\.boardSaved === "1"/);
 });
 
 test("official USFA LODD records provide the current-year total and latest five without fabrication", async () => {
@@ -103,7 +115,7 @@ test("department weather is authenticated and sourced from the National Weather 
   assert.match(route, /https:\/\/api\.weather\.gov\/points/);
   assert.match(route, /https:\/\/api\.weather\.gov\/alerts\/active\?point=/);
   assert.match(route, /User-Agent/);
-  assert.match(route, /Save the department weather location as verified latitude, longitude coordinates/);
+  assert.match(route, /Save verified latitude, longitude coordinates or a weather source link containing lat and lon/);
   assert.match(route, /Weather source temporarily unavailable/);
   assert.doesNotMatch(route, /Math\.random|fictional|demo forecast/i);
 });

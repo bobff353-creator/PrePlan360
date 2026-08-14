@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string }> }) {
+export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string; boardSaved?: string }> }) {
   const { slug } = await params;
   const department = await getDepartmentBySlug(slug);
   if (!department)
@@ -203,7 +203,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
-            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={stickneyData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
+            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={stickneyData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} saveStatus={query.boardSaved === "1" ? "saved" : query.boardSaved === "0" ? "failed" : ""} />
           ) : active[0] === "respond" && moduleData ? (
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (
