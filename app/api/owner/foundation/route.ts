@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     overtime_assignment_rule: String(form.get("overtime_assignment_rule") || "").trim().slice(0, 240) || current.overtime_assignment_rule,
     scheduling_notes: String(form.get("scheduling_notes") || "").trim().slice(0, 4000),
     overtime_notes: String(form.get("overtime_notes") || "").trim().slice(0, 4000),
+    daily_log_equipment_accountability: form.has("daily_log_equipment_accountability"),
     is_override: true,
   };
   await saveFoundation(settings, user.userId);

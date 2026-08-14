@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.18",
-  "generatedAt": "2026-08-14T00:37:50.858Z",
+  "release": "2026.08.13.19",
+  "generatedAt": "2026-08-14T00:57:49.752Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -10,32 +10,32 @@
   "futureDepartments": "automatic-through-shared-route",
   "modules": {
     "application-shell": {
-      "demo": "4db6bdf2e3f978d8af249537779066cf6866bc2d1bbb3d44a5338894eff88d10",
-      "departments": "992670cf083217cb33e6d3e395e51f718b6287fc72db11375487d555f2fa7d66"
+      "demo": "12b1e93071c19a56b09111bf37666112887f384945afd61c8006591d1abe9796",
+      "departments": "0fdc84746e67c8bb5bd861a46f608cf29b6ba726f56acb4c6f6f6f7ff75c49f3"
     },
     "live-operations": {
       "demo": "e9f8de0b61dc0f8847e96f7964b86cfd5ec1cfa47ccea6cb0052f7b7f1f009ca",
-      "departments": "cb8db598069217e58ed245c30d55ceb2f06cde677890fe69e6d8a1cfb963a732"
+      "departments": "eb9d54c13216cf7592f48adade8febdbc6098c4a6494b60422944bcf8bc8a693"
     },
     "roster-and-staffing": {
       "demo": "7ebd54099d2e2b730b7312f8da7f54084500f5b9269ec7f8503f67592531a490",
-      "departments": "b928a994a28078c63bd6a7596e8fbf6138c55958ef15e3c734dcca390d9f0ff4"
+      "departments": "e6094f0b8947d0596d4148139b85a69d88b3ea16592572c34a8ec730fd458dfe"
     },
     "scheduling": {
       "demo": "4b49d942480593d4d434e202cea1642697116c6d86cdd923877e2ff640b93fa8",
-      "departments": "c399aadb6199af1bd48f56397c10fa5a6aaff149d762129792f5b161cda2c333"
+      "departments": "e6c26f9978037e7fbb016496be298dbd34270fc30d1b8cc52f630b414c82da80"
     },
     "daily-log-and-duties": {
-      "demo": "1b119d8300875fcdcd2afebfae4502c3f5091f37912ca8a7fa88cdbe33d0a02c",
-      "departments": "e16356fe5430335870426d31f23c6c6b5be7af3ef3c842cd57d0afb1849b6bc7"
+      "demo": "70c48a09bf6618e9591c35e3e6300bcc4db0c19d460db808b689610afaea8ff5",
+      "departments": "fdea538a15212b5a8779f132655b9e5adc98ed4503469c8572498034bef49cf9"
     },
     "owner-foundation": {
-      "demo": "8cc8db95b984557fdbef6f599ecc42474722fb7791b707e81ff607eca6c113b5",
-      "departments": "501b5829d70cbb0aaae59eddcd128b95a589c8ce816e6763d3a43de342e446d2"
+      "demo": "c878dfdabdf07104456af86f2f5f3553d649c713aaf38dcb270bc78dfc1956a2",
+      "departments": "c9648b60238f5625ce039901701688ae2e434daf7465c4b04ef57532a1335bae"
     },
     "preplans": {
       "demo": "d969fb56fbdcfd72fc47baaa4ab98c59ee2e42e69530e14ebd64913bab622841",
-      "departments": "b4b39436249a4ae9ec4e59f6a7690272c91dfc414f99c8fcbe2e58028e9442c9"
+      "departments": "5a56a67e52948250bdbb29c77b2b361a460427742b6f80223ca6a8d5501373b6"
     },
     "respond": {
       "demo": "31dc21b7ef3063f025b9a27a496ccdf32ff57c23e0a3d7284e91852e7dce3a9b",

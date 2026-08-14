@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.18",
+  "release": "2026.08.13.19",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -69,13 +69,19 @@
     "daily-log-and-duties": {
       "demo": [
         "public/daily-log-demo.css",
-        "public/daily-log-demo.js"
+        "public/daily-log-demo.js",
+        "public/owner-upgrade.js"
       ],
       "departments": [
         "app/d/[slug]/daily-duties-workspace.tsx",
         "app/duties-foundation.css",
         "app/d/[slug]/page.tsx",
-        "db/stickney.ts"
+        "app/owner/demo/foundation-editor.tsx",
+        "app/api/owner/foundation/route.ts",
+        "db/foundation.ts",
+        "db/schema.ts",
+        "db/stickney.ts",
+        "drizzle/0013_daily_log_display.sql"
       ]
     },
     "owner-foundation": {
@@ -87,7 +93,9 @@
         "app/owner/demo/page.tsx",
         "app/owner/demo/foundation-editor.tsx",
         "app/api/owner/foundation/route.ts",
-        "db/foundation.ts"
+        "db/foundation.ts",
+        "db/schema.ts",
+        "drizzle/0013_daily_log_display.sql"
       ]
     },
     "preplans": {

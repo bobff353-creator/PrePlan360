@@ -65,6 +65,7 @@ export type FoundationSettings = {
   overtime_assignment_rule: string;
   scheduling_notes: string;
   overtime_notes: string;
+  daily_log_equipment_accountability: boolean;
   updated_at: string;
   is_override: boolean;
 };
@@ -99,6 +100,7 @@ type FoundationRow = {
   overtime_assignment_rule: string;
   scheduling_notes: string;
   overtime_notes: string;
+  daily_log_equipment_accountability: number | boolean;
   updated_at: string;
 };
 
@@ -126,6 +128,7 @@ const defaultSettings: Omit<FoundationSettings, "scope" | "department_id" | "is_
   overtime_assignment_rule: "Department-defined rotation",
   scheduling_notes: "Department policy and labor agreement control scheduling.",
   overtime_notes: "Department policy and labor agreement control overtime eligibility and assignment.",
+  daily_log_equipment_accountability: true,
   updated_at: "",
 };
 
@@ -215,11 +218,12 @@ function normalize(row: FoundationRow | null, scope: "master" | "department", de
     department_id: departmentId,
     module_order: [...savedOrder, ...remainder],
     hidden_modules: hidden,
+    daily_log_equipment_accountability: row ? Boolean(row.daily_log_equipment_accountability) : defaultSettings.daily_log_equipment_accountability,
     is_override: isOverride,
   };
 }
 
-const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,updated_at";
+const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,daily_log_equipment_accountability,updated_at";
 
 export async function getMasterFoundation(): Promise<FoundationSettings> {
   const row = await db().prepare(`SELECT ${settingsColumns} FROM platform_foundation_settings WHERE id='master'`).first<FoundationRow>();
@@ -276,14 +280,14 @@ export async function saveFoundation(settings: FoundationSettings, actorUserId: 
     "live_board_order_json", "live_board_hidden_json", "live_board_widths_json", "live_board_panels_json", "live_board_forecast_detail",
     "live_board_weather_url", "live_board_alerts_url", "live_board_radar_url", "live_board_radar_refresh_minutes", "live_board_external_links_json",
     "shift_hours_on", "shift_hours_off", "shift_start_time", "overtime_period_days", "overtime_threshold_hours", "overtime_assignment_rule",
-    "scheduling_notes", "overtime_notes", "updated_by", "updated_at",
+    "scheduling_notes", "overtime_notes", "daily_log_equipment_accountability", "updated_by", "updated_at",
   ];
   const values = [
     JSON.stringify(settings.module_order), JSON.stringify(settings.hidden_modules), settings.board_rotation_seconds, settings.response_duration_seconds, settings.live_board_title,
     JSON.stringify(settings.live_board_order), JSON.stringify(settings.live_board_hidden), JSON.stringify(settings.live_board_widths), JSON.stringify(settings.live_board_panels), settings.live_board_forecast_detail,
     settings.live_board_weather_url, settings.live_board_alerts_url, settings.live_board_radar_url, settings.live_board_radar_refresh_minutes, JSON.stringify(settings.live_board_external_links),
     settings.shift_hours_on, settings.shift_hours_off, settings.shift_start_time, settings.overtime_period_days, settings.overtime_threshold_hours,
-    settings.overtime_assignment_rule, settings.scheduling_notes, settings.overtime_notes, actorUserId, now(),
+    settings.overtime_assignment_rule, settings.scheduling_notes, settings.overtime_notes, settings.daily_log_equipment_accountability ? 1 : 0, actorUserId, now(),
   ];
   const assignments = columns.map((column) => `${column}=excluded.${column}`).join(",");
   if (settings.scope === "master") {

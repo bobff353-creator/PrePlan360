@@ -111,7 +111,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   } as CSSProperties;
 
   return (
-    <main className="department-app" style={style}>
+    <main className="department-app" style={style} data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
       <aside className="dept-app-sidebar">
         <div className="dept-app-brand">
           <DepartmentLogo department={department} />

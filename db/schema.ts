@@ -261,6 +261,7 @@ export const platformFoundationSettings = sqliteTable("platform_foundation_setti
   overtimeAssignmentRule: text("overtime_assignment_rule").notNull().default("Department-defined rotation"),
   schedulingNotes: text("scheduling_notes").notNull().default(""),
   overtimeNotes: text("overtime_notes").notNull().default(""),
+  dailyLogEquipmentAccountability: integer("daily_log_equipment_accountability").notNull().default(1),
   updatedBy: text("updated_by").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -290,6 +291,7 @@ export const departmentFoundationSettings = sqliteTable("department_foundation_s
   overtimeAssignmentRule: text("overtime_assignment_rule").notNull().default("Department-defined rotation"),
   schedulingNotes: text("scheduling_notes").notNull().default(""),
   overtimeNotes: text("overtime_notes").notNull().default(""),
+  dailyLogEquipmentAccountability: integer("daily_log_equipment_accountability").notNull().default(1),
   updatedBy: text("updated_by").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
