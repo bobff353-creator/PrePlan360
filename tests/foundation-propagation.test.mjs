@@ -21,8 +21,8 @@ test("all department builds share the dynamic department route", async () => {
   assert.match(page, /className="dept-sidebar-copy dept-nav-label"/);
   assert.match(styles, /grid-template-columns:76px minmax\(0,1fr\)/);
   assert.match(styles, /:has\(\.dept-sidebar-toggle:checked\)\{grid-template-columns:240px/);
-  assert.equal((page.match(/department\.slug === "stickney"/g) || []).length, 1, "Only the legacy-data adapter may specialize Stickney; the application shell and foundation stay shared.");
-  assert.doesNotMatch(page, /department\.slug === "fermilab"/);
+  assert.match(page, /getDepartmentSource\(department\.slug\)/);
+  assert.doesNotMatch(page, /department\.slug === "(?:stickney|fermilab)"/, "Department source specialization belongs in the adapter registry, not the shared application shell.");
 });
 
 test("the foundation propagation lock covers every mapped demo and department implementation", async () => {

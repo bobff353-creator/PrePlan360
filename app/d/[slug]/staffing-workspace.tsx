@@ -7,6 +7,9 @@ import type { StickneyEmployee } from "@/db/stickney";
 type Props = {
   departmentId: string;
   employees: StickneyEmployee[];
+  sourceName: string;
+  sourceSystem: string;
+  employeePhotoRoute: string;
   editable: boolean;
   supportSessionId: string;
 };
@@ -41,7 +44,7 @@ const rolesFor = (employee: StickneyEmployee | null) => {
   return roles.length ? [...new Set(roles)] : ["Firefighter"];
 };
 
-export default function StaffingWorkspace({ departmentId, employees, editable, supportSessionId }: Props) {
+export default function StaffingWorkspace({ departmentId, employees, sourceName, sourceSystem, employeePhotoRoute, editable, supportSessionId }: Props) {
   const [tab, setTab] = useState<Tab>("employees");
   const [search, setSearch] = useState("");
   const [shift, setShift] = useState("all");
@@ -61,7 +64,7 @@ export default function StaffingWorkspace({ departmentId, employees, editable, s
         <div>
           <i />
           <span>
-            <b>Live Stickney personnel workspace</b>
+            <b>{sourceName} personnel workspace</b>
             <small>Real department records with audited edits saved only in this build</small>
           </span>
         </div>
@@ -140,7 +143,7 @@ export default function StaffingWorkspace({ departmentId, employees, editable, s
                     <tr key={employee.id}>
                       <td>
                         <div className="staffing-name">
-                          {employee.photo_updated_at ? <Image unoptimized width={36} height={36} src={`/api/departments/${departmentId}/stickney-photo/${employee.id}?v=${encodeURIComponent(employee.photo_updated_at)}`} alt={`${employee.name} profile`} /> : <span>{initials(employee.name)}</span>}
+                          {employee.photo_updated_at && employeePhotoRoute ? <Image unoptimized width={36} height={36} src={`/api/departments/${departmentId}/${employeePhotoRoute}/${employee.id}?v=${encodeURIComponent(employee.photo_updated_at)}`} alt={`${employee.name} profile`} /> : <span>{initials(employee.name)}</span>}
                           <div>
                             <b>{employee.name}</b>
                             <small>{present(employee.employee_number, "Employee ID not entered")}</small>
@@ -307,7 +310,7 @@ export default function StaffingWorkspace({ departmentId, employees, editable, s
           </aside>
         </div>
       ) : null}
-      <p className="staffing-footer">The original Stickney Firehouse Manager records are never deleted or overwritten here. Last-day and role changes are audited PrePlan 360 overlays. Ended employees leave future staffing and new payroll selection while historical records remain intact.</p>
+      <p className="staffing-footer">The original records in {sourceSystem} are never deleted or overwritten here. Last-day and role changes are audited PrePlan 360 overlays. Ended employees leave future staffing and new payroll selection while historical records remain intact.</p>
     </section>
   );
 }

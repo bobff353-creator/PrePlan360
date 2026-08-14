@@ -7,6 +7,8 @@ type Props = {
   departmentId: string;
   boxCards: StickneyBoxCard[];
   policies: StickneyPolicy[];
+  sourceName: string;
+  sourceSystem: string;
   editable: boolean;
   supportSessionId: string;
 };
@@ -181,7 +183,7 @@ function BoxCardEditor({ departmentId, card, editable, supportSessionId, groups,
   );
 }
 
-export default function DocumentsWorkspace({ departmentId, boxCards, policies, editable, supportSessionId }: Props) {
+export default function DocumentsWorkspace({ departmentId, boxCards, policies, sourceName, sourceSystem, editable, supportSessionId }: Props) {
   const groups = useMemo(() => Array.from(new Set(boxCards.map((card) => card.department || "Unassigned"))).sort((a, b) => a.localeCompare(b)), [boxCards]);
   const [view, setView] = useState<"box-cards" | "policies">("box-cards");
   const [activeGroup, setActiveGroup] = useState(groups[0] || "Unassigned");
@@ -209,7 +211,7 @@ export default function DocumentsWorkspace({ departmentId, boxCards, policies, e
 
   return (
     <section className="stickney-panel department-documents" data-grouped-box-cards="active">
-      <div className="stickney-source-notice"><b>Live Stickney source - protected overlays</b><span>The original Firehouse Manager records and source documents remain in place. Authorized edits save as department overlays and never delete or rewrite the source.</span></div>
+      <div className="stickney-source-notice"><b>{sourceName} source - protected overlays</b><span>The original records and source documents in {sourceSystem} remain in place. Authorized edits save as department overlays and never delete or rewrite the source.</span></div>
       <div className="stickney-section-head"><div><span>DOCUMENTS</span><h2>Policies and grouped Box Cards</h2></div><b>{boxCards.length + policies.length}</b></div>
       <div className="document-view-tabs" role="tablist" aria-label="Document libraries"><button type="button" role="tab" aria-selected={view === "box-cards"} className={view === "box-cards" ? "active" : ""} onClick={() => setView("box-cards")}>Box Cards <b>{boxCards.length}</b></button><button type="button" role="tab" aria-selected={view === "policies"} className={view === "policies" ? "active" : ""} onClick={() => setView("policies")}>Policies <b>{policies.length}</b></button></div>
 

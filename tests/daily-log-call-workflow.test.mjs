@@ -88,7 +88,7 @@ test("all department apps inherit the server-backed Daily Log call workflow", as
   assert.match(foundation, /key: "daily-log", label: "Daily Log"/);
   assert.match(foundation, /insertMissingModules/);
   assert.match(page, /<DailyLogWorkspace/);
-  assert.match(page, /loadStickneyModule\("fleet", department\.id\)/);
+  assert.match(page, /loadDepartmentSourceModule\(source, "fleet", department\.id\)/);
   assert.match(page, /listDepartmentPreplans/);
   assert.match(workspace, /Type to search saved preplans and prior addresses/);
   assert.match(workspace, /Responding units/);

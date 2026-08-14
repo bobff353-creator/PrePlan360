@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.62",
+  "release": "2026.08.14.63",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -24,7 +24,8 @@
         "app/station-display.css",
         "app/station-incident-monitor.tsx",
         "app/api/departments/[id]/active-incident/route.ts",
-        "db/foundation.ts"
+        "db/foundation.ts",
+        "db/department-source.ts"
       ]
     },
     "live-operations": {
@@ -49,6 +50,8 @@
         "app/owner/demo/foundation-editor.tsx",
         "db/foundation.ts",
         "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts",
         "db/schema.ts",
         "drizzle/0014_live_ops_weather_priority.sql",
         "drizzle/0015_live_ops_panel_sources.sql"
@@ -65,7 +68,9 @@
         "app/staffing-foundation.css",
         "app/d/[slug]/page.tsx",
         "app/api/departments/[id]/stickney-records/route.ts",
-        "db/stickney.ts"
+        "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts"
       ]
     },
     "scheduling": {
@@ -94,6 +99,8 @@
         "db/access.ts",
         "db/schema.ts",
         "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts",
         "drizzle/0017_schedule_minimum_staffing.sql",
         "drizzle/0018_department_schedule_requests.sql"
       ]
@@ -120,6 +127,8 @@
         "db/foundation.ts",
         "db/schema.ts",
         "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts",
         "drizzle/0013_daily_log_display.sql"
       ]
     },
@@ -175,6 +184,8 @@
         "app/api/departments/[id]/stickney-records/route.ts",
         "db/stickney-box-card-layouts.ts",
         "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts",
         "db/foundation.ts"
       ]
     },
@@ -198,6 +209,8 @@
         "db/access.ts",
         "db/schema.ts",
         "db/stickney.ts",
+        "db/department-source.ts",
+        "db/fermilab.ts",
         "drizzle/0012_preplan_map_geometry.sql"
       ]
     },

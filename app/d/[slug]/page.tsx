@@ -4,7 +4,8 @@ import "../../live-ops-foundation.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listDepartmentScheduleRequests, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
-import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
+import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, type StickneyModuleData } from "@/db/stickney";
+import { getDepartmentSource, loadDepartmentSourceModule } from "@/db/department-source";
 import AssetManager from "./asset-manager";
 import ReferenceLibrary from "./reference-library";
 import StickneyWorkspace from "./stickney-workspace";
@@ -17,7 +18,7 @@ import DailyLogWorkspace from "./daily-log-workspace";
 
 export const dynamic = "force-dynamic";
 
-const stickneyModules = new Set(["dashboard", "live-ops", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
+const sourceModules = new Set(["dashboard", "live-ops", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -83,30 +84,30 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
   const liveOpsAssets = active[0] === "live-ops" ? await listDepartmentAssets(department.id) : [];
   const dailyLogReference = active[0] === "daily-log" ? await Promise.all([getDepartmentModuleData(department.id, "daily-log"), listDepartmentPreplans(department.id), listDepartmentAssets(department.id)]) : null;
-  // Every department slug uses this shared route, including foundation calendar upgrades.
-  const isStickney = department.slug === "stickney";
-  let stickneyData: StickneyModuleData | null = null;
-  let stickneyConnectionError = "";
-  if (isStickney && active[0] === "daily-log") {
+  // Every department slug uses this shared route. Source adapters add preserved legacy records without changing the shared shell.
+  const source = getDepartmentSource(department.slug);
+  let sourceData: StickneyModuleData | null = null;
+  let sourceConnectionError = "";
+  if (source && active[0] === "daily-log") {
     try {
-      const [fleet, preplans] = await Promise.all([loadStickneyModule("fleet", department.id), loadStickneyModule("preplans", department.id)]);
-      stickneyData = { ...fleet, ...preplans };
+      const [fleet, preplans] = await Promise.all([loadDepartmentSourceModule(source, "fleet", department.id), loadDepartmentSourceModule(source, "preplans", department.id)]);
+      sourceData = { ...fleet, ...preplans };
     } catch (error) {
-      stickneyConnectionError = error instanceof Error ? error.message : "The Stickney Daily Log reference data is unavailable.";
-      stickneyData = {};
+      sourceConnectionError = error instanceof Error ? error.message : "The department Daily Log reference data is unavailable.";
+      sourceData = {};
     }
-  } else if (isStickney && stickneyModules.has(active[0])) {
+  } else if (source && sourceModules.has(active[0])) {
     try {
-      stickneyData = await loadStickneyModule(active[0], department.id);
+      sourceData = await loadDepartmentSourceModule(source, active[0], department.id);
     } catch (error) {
-      stickneyConnectionError = error instanceof Error ? error.message : "The Stickney data connection is unavailable.";
-      stickneyData = {};
+      sourceConnectionError = error instanceof Error ? error.message : "The department source connection is unavailable.";
+      sourceData = {};
     }
   } else if (active[0] === "live-ops" || active[0] === "staffing" || active[0] === "scheduling") {
     try {
       const employees = await loadDepartmentEmployeeOverlays(department.id);
       const schedule = active[0] === "live-ops" || active[0] === "scheduling" ? await loadDepartmentScheduleOverlays(department.id) : [];
-      stickneyData =
+      sourceData =
         active[0] === "live-ops"
           ? { employees, schedule, scheduleCalendar: schedule }
           : active[0] === "staffing"
@@ -116,13 +117,13 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
               schedule,
             };
     } catch (error) {
-      stickneyConnectionError = error instanceof Error ? error.message : "The department personnel workspace is unavailable.";
-      stickneyData = {};
+      sourceConnectionError = error instanceof Error ? error.message : "The department personnel workspace is unavailable.";
+      sourceData = {};
     }
   }
   const scheduleRequests = active[0] === "scheduling" ? await listDepartmentScheduleRequests(department.id) : [];
   const selfEmployeeId = active[0] === "scheduling"
-    ? (stickneyData?.employees ?? []).find((employee) => employee.email.trim().toLowerCase() === user.email.trim().toLowerCase())?.id ?? ""
+    ? (sourceData?.employees ?? []).find((employee) => employee.email.trim().toLowerCase() === user.email.trim().toLowerCase())?.id ?? ""
     : "";
   const style = {
     "--dept-primary": department.brand_primary,
@@ -132,11 +133,11 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
     "--dept-alert": department.brand_alert,
   } as CSSProperties;
   const dailyLogPreplans = dailyLogReference ? [
-    ...(stickneyData?.preplans || []).map((preplan) => ({ id: preplan.id, name: preplan.business_name, address: preplan.address })),
+    ...(sourceData?.preplans || []).map((preplan) => ({ id: preplan.id, name: preplan.business_name, address: preplan.address })),
     ...dailyLogReference[1].map((preplan) => ({ id: preplan.id, name: preplan.property_name, address: preplan.address })),
   ].filter((preplan, index, all) => preplan.address && all.findIndex((candidate) => candidate.address.toLowerCase() === preplan.address.toLowerCase()) === index) : [];
   const dailyLogUnits = dailyLogReference ? [
-    ...(stickneyData?.apparatus || []).map((apparatus) => ({ id: apparatus.name, label: `${apparatus.asset_type}${apparatus.status ? ` · ${apparatus.status}` : ""}` })),
+    ...(sourceData?.apparatus || []).map((apparatus) => ({ id: apparatus.name, label: `${apparatus.asset_type}${apparatus.status ? ` · ${apparatus.status}` : ""}` })),
     ...dailyLogReference[2].map((asset) => ({ id: asset.unit_number || asset.name, label: `${asset.asset_type || asset.category || "Apparatus"}${asset.status ? ` · ${asset.status}` : ""}` })),
   ].filter((unit, index, all) => unit.id && all.findIndex((candidate) => candidate.id.toLowerCase() === unit.id.toLowerCase()) === index) : [];
   const dailyLogDate = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
@@ -228,14 +229,14 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             </div>
           ) : null}
           {active[0] === "live-ops" && moduleData ? (
-            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={stickneyData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} saveStatus={query.boardSaved === "1" ? "saved" : query.boardSaved === "0" ? "failed" : ""} />
+            <LiveOpsBoard departmentId={department.id} departmentSlug={department.slug} departmentName={department.name} weatherLocation={department.weather_location} vehicleCount={department.vehicle_count} settings={foundation} data={moduleData} sourceData={sourceData} assets={liveOpsAssets} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} saveStatus={query.boardSaved === "1" ? "saved" : query.boardSaved === "0" ? "failed" : ""} />
           ) : active[0] === "respond" && moduleData ? (
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : active[0] === "daily-log" && dailyLogReference ? (
             <DailyLogWorkspace departmentId={department.id} departmentName={department.name} initialDate={dailyLogDate} initialItems={dailyLogReference[0].items} preplans={dailyLogPreplans} units={dailyLogUnits} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/>
-          ) : stickneyData ? (
+          ) : sourceData && source ? (
             <>
-              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} minimumStaffing={foundation.minimum_staffing} scheduleRequests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
+              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} source={source} data={sourceData} minimumStaffing={foundation.minimum_staffing} scheduleRequests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={sourceConnectionError || undefined} />
               {active[0] === "fleet" ? (
                 <details id="native-assets" className="stickney-archive">
                   <summary>VIN, barcode, QR, and odometer capture</summary>

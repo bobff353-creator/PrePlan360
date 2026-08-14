@@ -346,7 +346,7 @@ async function fleetApparatus(): Promise<StickneyApparatus[]> {
   }
 }
 
-async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
+export async function applyOverrides<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, rows: T[]): Promise<T[]> {
   const result = await import("@/db/access").then(({ db }) => db().prepare("SELECT source_record_id,data_json,status FROM stickney_record_overrides WHERE department_id=? AND record_type=?").bind(departmentId, recordType).all<{ source_record_id: string; data_json: string; status: string }>());
   const overrides = new Map(result.results.map((row) => [row.source_record_id, row]));
   const merged = rows.flatMap((row) => {

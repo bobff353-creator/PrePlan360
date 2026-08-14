@@ -53,7 +53,7 @@ test("every department inherits weather, radar, real records, visibility, and Re
   ]);
   assert.match(page, /departmentSlug=\{department\.slug\}/);
   assert.match(page, /weatherLocation=\{department\.weather_location\}/);
-  assert.match(page, /sourceData=\{stickneyData\}/);
+  assert.match(page, /sourceData=\{sourceData\}/);
   assert.match(page, /assets=\{liveOpsAssets\}/);
   assert.match(page, /"dashboard", "live-ops", "staffing"/);
   assert.match(page, /<StationIncidentMonitor/);
