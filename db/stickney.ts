@@ -57,6 +57,22 @@ export type StickneyScheduleAssignment = {
   rank: string;
 };
 
+export type StickneyScheduleRequest = {
+  id: string;
+  request_type: string;
+  employee_id: string;
+  employee_name: string;
+  target_employee_name: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  role: string;
+  status: string;
+  target_status: string;
+  notes: string;
+};
+
 export type StickneyPreplan = {
   id: string;
   business_name: string;
@@ -252,6 +268,7 @@ export type StickneyModuleData = {
   summary?: StickneySummary;
   employees?: StickneyEmployee[];
   schedule?: StickneyScheduleAssignment[];
+  scheduleRequests?: StickneyScheduleRequest[];
   preplans?: StickneyPreplan[];
   preplanImports?: StickneyPreplanImport[];
   hydrants?: StickneyHydrant[];
@@ -275,6 +292,10 @@ export type StickneyModuleData = {
 };
 
 export type StickneyEditableRecordType = "employee" | "schedule" | "preplan" | "hydrant" | "apparatus" | "inventory" | "duty" | "box_card" | "policy" | "phone";
+
+export async function applyDepartmentSourceOverlays<T extends { id: string }>(departmentId: string, recordType: StickneyEditableRecordType, sourceRows: T[]) {
+  return applyOverrides(departmentId, recordType, sourceRows);
+}
 
 export const STICKNEY_WORK_ROLES = ["Officer", "Driver / Engineer", "Medic", "Firefighter", "Command", "Other"] as const;
 

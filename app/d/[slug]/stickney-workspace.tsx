@@ -11,17 +11,19 @@ type Props = {
   module: string;
   departmentId: string;
   departmentSlug: string;
+  sourceName: string;
+  sourceKey: string;
   data: StickneyModuleData;
   editable: boolean;
   supportSessionId?: string;
   connectionError?: string;
 };
 
-function SourceNotice({ inherited = false }: { inherited?: boolean }) {
+function SourceNotice({ sourceName, inherited = false }: { sourceName: string; inherited?: boolean }) {
   return (
     <div className="stickney-source-notice">
-      <b>{inherited ? "Department foundation records" : "Live Stickney records"}</b>
-      <span>{inherited ? "Audited personnel and schedule records saved inside this department build." : "Read-only connection to Stickney Firehouse Manager. The source records remain in place and are not deleted or rewritten."}</span>
+      <b>{inherited ? "Department foundation records" : `Copied ${sourceName} records`}</b>
+      <span>{inherited ? "Audited personnel and schedule records saved inside this department build." : `Copy-only connection to ${sourceName}. The original records remain in place and are never deleted or rewritten.`}</span>
     </div>
   );
 }
@@ -111,34 +113,34 @@ function EditableRecord({
   );
 }
 
-export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, editable, supportSessionId = "", connectionError }: Props) {
+export default function StickneyWorkspace({ module, departmentId, departmentSlug, sourceName, sourceKey, data, editable, supportSessionId = "", connectionError }: Props) {
   if (connectionError) {
     return (
       <section className="stickney-panel">
-        <SourceNotice />
-        <Empty title="Stickney connection unavailable" text={connectionError} />
+        <SourceNotice sourceName={sourceName} />
+        <Empty title={`${sourceName} connection unavailable`} text={connectionError} />
       </section>
     );
   }
-  if (module === "dashboard" && data.summary) return <StickneyDashboard data={data} />;
-  if (module === "staffing") return <Staffing departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "preplans") return <Preplans departmentId={departmentId} departmentSlug={departmentSlug} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "hydrants") return <Hydrants departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "fleet") return <Fleet departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "inventory") return <Inventory departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "duties") return <Duties departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "documents") return <Documents departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "phones") return <Phones departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "dashboard" && data.summary) return <StickneyDashboard data={data} sourceName={sourceName} />;
+  if (module === "staffing") return <Staffing departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "scheduling") return <Schedule departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "preplans") return <Preplans departmentId={departmentId} departmentSlug={departmentSlug} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "hydrants") return <Hydrants departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "fleet") return <Fleet departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "inventory") return <Inventory departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "duties") return <Duties departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "documents") return <Documents departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "phones") return <Phones departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
   return (
     <section className="stickney-panel">
-      <SourceNotice />
-      <Empty title="No Stickney reader for this module" text="This module remains in its existing PrePlan 360 state." />
+      <SourceNotice sourceName={sourceName} />
+      <Empty title={`No ${sourceName} reader for this module`} text="This module remains in its existing PrePlan 360 state." />
     </section>
   );
 }
 
-function StickneyDashboard({ data }: { data: StickneyModuleData }) {
+function StickneyDashboard({ data, sourceName }: { data: StickneyModuleData; sourceName: string }) {
   const summary = data.summary!;
   const cards = [
     ["Personnel", summary.employees, "Active employees", "staffing"],
@@ -152,7 +154,7 @@ function StickneyDashboard({ data }: { data: StickneyModuleData }) {
   ] as const;
   return (
     <section className="stickney-panel">
-      <SourceNotice />
+      <SourceNotice sourceName={sourceName} />
       <div className="stickney-metric-grid">
         {cards.map(([label, count, detail, link]) => (
           <a href={`?module=${link}`} key={label}>
@@ -164,15 +166,15 @@ function StickneyDashboard({ data }: { data: StickneyModuleData }) {
       </div>
       <div className="stickney-integrity">
         <b>Source preserved</b>
-        <p>This build reads only the Stickney department bridge. No records were removed from Stickney Firehouse Manager, and other PrePlan 360 departments cannot load this data.</p>
+        <p>This department reads only its isolated {sourceName} copy. No source records were removed, and other PrePlan 360 departments cannot load this data.</p>
       </div>
     </section>
   );
 }
 
-function Staffing({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Staffing({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const employees = data.employees ?? [];
-  return <StaffingWorkspace departmentId={departmentId} employees={employees} editable={editable} supportSessionId={supportSessionId} />;
+  return <StaffingWorkspace departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} employees={employees} editable={editable} supportSessionId={supportSessionId} />;
 }
 
 function ScheduleForm({ departmentId, supportSessionId, employees, assignment }: { departmentId: string; supportSessionId: string; employees: StickneyEmployee[]; assignment?: StickneyScheduleAssignment }) {
@@ -236,8 +238,9 @@ function ScheduleForm({ departmentId, supportSessionId, employees, assignment }:
   );
 }
 
-function Schedule({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Schedule({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const rows = data.schedule ?? [];
+  const requests = data.scheduleRequests ?? [];
   const employees = new Map((data.employees ?? []).map((employee) => [employee.id, employee]));
   const grouped = Map.groupBy(rows, (row) => row.work_date);
   const eligible = (row: (typeof rows)[number]) => {
@@ -246,7 +249,7 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
   };
   return (
     <section className="stickney-panel">
-      <SourceNotice inherited={!rows.length} />
+      <SourceNotice sourceName={sourceName} inherited={!rows.length && !requests.length} />
       <div className="stickney-section-head">
         <div>
           <span>SCHEDULE</span>
@@ -257,6 +260,24 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
       </div>
       {editable && (data.employees ?? []).length ? <ScheduleForm departmentId={departmentId} supportSessionId={supportSessionId} employees={data.employees ?? []} /> : null}
       <ScheduleCalendar rows={rows} today={chicagoDate()} />
+      {requests.length ? (
+        <details className="stickney-archive schedule-request-records" open>
+          <summary>Time off, trades, overtime, and open-shift requests <b>{requests.length}</b></summary>
+          <div className="stickney-table">
+            <table>
+              <thead><tr><th>Request</th><th>Employee</th><th>Date / time</th><th>Trade / role</th><th>Status</th><th>Notes</th></tr></thead>
+              <tbody>{requests.map((request) => <tr key={request.id}>
+                <td><b>{request.request_type.replaceAll("_", " ") || "Schedule request"}</b></td>
+                <td>{request.employee_name}</td>
+                <td>{[request.start_date, request.end_date && request.end_date !== request.start_date ? `through ${request.end_date}` : "", request.start_time, request.end_time ? `to ${request.end_time}` : ""].filter(Boolean).join(" ") || "Not entered"}</td>
+                <td>{[request.target_employee_name, request.role].filter(Boolean).join(" · ") || "Not entered"}</td>
+                <td><b>{[request.status, request.target_status].filter(Boolean).join(" · ") || "Pending"}</b></td>
+                <td>{request.notes || "No note entered"}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
       {rows.length ? (
         <details className="stickney-archive schedule-assignment-records">
           <summary>Assignment records</summary>
@@ -306,18 +327,18 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
   );
 }
 
-function Preplans({ departmentId, departmentSlug, data, editable, supportSessionId }: { departmentId: string; departmentSlug: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Preplans({ departmentId, departmentSlug, sourceName, data, editable, supportSessionId }: { departmentId: string; departmentSlug: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const preplans = data.preplans ?? [];
   const imports = data.preplanImports ?? [];
   const hydrants = data.hydrants ?? [];
   const support = supportSessionId ? `&support=${encodeURIComponent(supportSessionId)}` : "";
   return (
     <section className="stickney-panel">
-      <SourceNotice />
+      <SourceNotice sourceName={sourceName} />
       <div className="stickney-section-head">
         <div>
           <span>FIELD PREPLANS</span>
-          <h2>Stickney building records</h2>
+          <h2>{sourceName} building records</h2>
           <p>Source records plus audited changes made in this build.</p>
         </div>
         <b>{preplans.length + imports.length}</b>
@@ -435,15 +456,15 @@ function Preplans({ departmentId, departmentSlug, data, editable, supportSession
   );
 }
 
-function Hydrants({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Hydrants({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const hydrants = data.hydrants ?? [];
   return (
     <section className="stickney-panel">
-      <SourceNotice />
+      <SourceNotice sourceName={sourceName} />
       <div className="stickney-section-head">
         <div>
           <span>HYDRANTS</span>
-          <h2>Stickney hydrant records</h2>
+          <h2>{sourceName} hydrant records</h2>
         </div>
         <b>{hydrants.length}</b>
       </div>
@@ -493,17 +514,17 @@ function Hydrants({ departmentId, data, editable, supportSessionId }: { departme
           ))}
         </div>
       ) : (
-        <Empty title="No Stickney hydrants are stored" text="The source currently has zero field-hydrant records. Nothing was deleted during this connection." />
+        <Empty title={`No ${sourceName} hydrants are stored`} text="The source currently has zero field-hydrant records. Nothing was deleted during this connection." />
       )}
     </section>
   );
 }
 
-function Fleet({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
-  return <FleetWorkspace departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+function Fleet({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+  return <FleetWorkspace departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
 }
 
-function Inventory({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Inventory({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const apparatus = data.apparatus ?? [];
   const compartments = data.compartments ?? [];
   const items = data.inventory ?? [];
@@ -512,12 +533,12 @@ function Inventory({ departmentId, data, editable, supportSessionId }: { departm
   const compartmentName = new Map(compartments.map((item) => [item.id, item.label]));
   return (
     <section className="stickney-panel">
-      <SourceNotice />
+      <SourceNotice sourceName={sourceName} />
       <div className="stickney-section-head">
         <div>
           <span>INVENTORY</span>
           <h2>Apparatus equipment</h2>
-          <p>All active records from the Stickney operational inventory bridge.</p>
+          <p>All active records from the {sourceName} operational inventory copy.</p>
         </div>
         <b>{items.length.toLocaleString()}</b>
       </div>
@@ -525,7 +546,7 @@ function Inventory({ departmentId, data, editable, supportSessionId }: { departm
         <div className="stickney-photo-gallery">
           {photos.map((photo) => (
             <figure key={photo.id}>
-              <img src={`/api/departments/${departmentId}/stickney-inventory-photo/${photo.id}`} alt={`${unitName.get(photo.apparatus_id) || "Apparatus"} ${photo.view_level} inventory view`} />
+              <img src={`/api/departments/${departmentId}/${sourceKey}-inventory-photo/${photo.id}`} alt={`${unitName.get(photo.apparatus_id) || "Apparatus"} ${photo.view_level} inventory view`} />
               <figcaption>
                 <b>{unitName.get(photo.apparatus_id) || "Apparatus"}</b>
                 <span>{[photo.view_level, photo.door_state].filter(Boolean).join(" · ")}</span>
@@ -609,27 +630,27 @@ function Inventory({ departmentId, data, editable, supportSessionId }: { departm
           </table>
         </div>
       ) : (
-        <Empty title="No active inventory" text="The Stickney operational inventory returned no active equipment records." />
+        <Empty title="No active inventory" text={`The ${sourceName} operational inventory returned no active equipment records.`} />
       )}
     </section>
   );
 }
 
-function Duties({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
-  return <DailyDutiesWorkspace departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+function Duties({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+  return <DailyDutiesWorkspace departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
 }
 
-function Documents({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Documents({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const boxCards = data.boxCards ?? [];
   const policies = data.policies ?? [];
-  return <DocumentsWorkspace departmentId={departmentId} boxCards={boxCards} policies={policies} editable={editable} supportSessionId={supportSessionId} />;
+  return <DocumentsWorkspace departmentId={departmentId} sourceName={sourceName} boxCards={boxCards} policies={policies} editable={editable} supportSessionId={supportSessionId} />;
 }
 
-function Phones({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Phones({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const rows = data.phoneNumbers ?? [];
   return (
     <section className="stickney-panel">
-      <SourceNotice />
+      <SourceNotice sourceName={sourceName} />
       <div className="stickney-section-head">
         <div>
           <span>IMPORTANT NUMBERS</span>

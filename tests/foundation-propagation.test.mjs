@@ -10,8 +10,8 @@ test("all department builds share the dynamic department route", async () => {
   assert.match(page, /getDepartmentFoundation\(department\.id\)/);
   assert.match(page, /orderedVisibleModules\(foundation\)/);
   assert.match(page, /<LiveOpsBoard/);
-  assert.equal((page.match(/department\.slug === "stickney"/g) || []).length, 1, "Only the legacy-data adapter may specialize Stickney; the application shell and foundation stay shared.");
-  assert.doesNotMatch(page, /department\.slug === "fermilab"/);
+  assert.equal((page.match(/department\.slug === "stickney"/g) || []).length, 1, "Only the Stickney record adapter may specialize Stickney; the application shell and foundation stay shared.");
+  assert.equal((page.match(/department\.slug === "fermilab"/g) || []).length, 1, "Only the Fermilab copied-record adapter may specialize Fermilab; the application shell and foundation stay shared.");
 });
 
 test("the foundation propagation lock covers every mapped demo and department implementation", async () => {

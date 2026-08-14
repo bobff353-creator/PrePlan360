@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { audit, canDepartmentPermission, db, getDepartment, id, now, type DepartmentPermission } from "@/db/access";
 import { loadDepartmentEmployeeOverlays, loadStickneyEmployees, stickneyEmployeeActiveOn, stickneyEmployeeRoles, type StickneyEditableRecordType } from "@/db/stickney";
+import { loadFermilabModule } from "@/db/fermilab";
 
 const definitions: Record<
   StickneyEditableRecordType,
@@ -178,7 +179,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!definition || !recordId) return new Response("Invalid record", { status: 400 });
   const department = await getDepartment(departmentId);
   if (!department) return new Response("Department not found", { status: 404 });
-  if (department.slug !== "stickney" && !["employee", "schedule"].includes(recordType)) return new Response("This source record type is not available for the department", { status: 404 });
+  if (!new Set(["stickney", "fermilab"]).has(department.slug) && !["employee", "schedule"].includes(recordType)) return new Response("This source record type is not available for the department", { status: 404 });
   if (!(await canDepartmentPermission(user.userId, departmentId, definition.permission, supportId))) return new Response("This account cannot edit this area", { status: 403 });
   if (recordType === "employee" && recordId === "new") recordId = id("employee");
   if (recordType === "schedule" && recordId === "new") recordId = id("schedule");
@@ -209,7 +210,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (recordType === "schedule") {
     const workDate = String(data.work_date || "");
     const employeeId = String(data.employee_id || "");
-    const employees = department.slug === "stickney" ? await loadStickneyEmployees(departmentId) : await loadDepartmentEmployeeOverlays(departmentId);
+    const employees = department.slug === "stickney"
+      ? await loadStickneyEmployees(departmentId)
+      : department.slug === "fermilab"
+        ? (await loadFermilabModule("staffing", departmentId)).employees ?? []
+        : await loadDepartmentEmployeeOverlays(departmentId);
     const employee = employees.find((item) => item.id === employeeId);
     if (!workDate || !employee)
       return new Response("Work date and employee are required", {

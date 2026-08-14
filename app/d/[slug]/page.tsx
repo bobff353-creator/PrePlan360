@@ -5,6 +5,7 @@ import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
 import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
+import { loadFermilabModule } from "@/db/fermilab";
 import AssetManager from "./asset-manager";
 import ReferenceLibrary from "./reference-library";
 import StickneyWorkspace from "./stickney-workspace";
@@ -14,7 +15,7 @@ import { getDepartmentFoundation, orderedVisibleModules } from "@/db/foundation"
 
 export const dynamic = "force-dynamic";
 
-const stickneyModules = new Set(["dashboard", "live-ops", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
+const connectedRecordModules = new Set(["dashboard", "live-ops", "staffing", "scheduling", "preplans", "fleet", "inventory", "duties", "documents", "phones", "hydrants"]);
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -79,13 +80,23 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const liveOpsAssets = active[0] === "live-ops" ? await listDepartmentAssets(department.id) : [];
   // Every department slug uses this shared route, including foundation calendar upgrades.
   const isStickney = department.slug === "stickney";
+  const isFermilab = department.slug === "fermilab";
+  const connectedSourceName = isFermilab ? "Fermilab Fire Department" : isStickney ? "Stickney Firehouse Manager" : department.name;
+  const connectedSourceKey = isFermilab ? "fermilab" : isStickney ? "stickney" : department.slug;
   let stickneyData: StickneyModuleData | null = null;
   let stickneyConnectionError = "";
-  if (isStickney && stickneyModules.has(active[0])) {
+  if (isStickney && connectedRecordModules.has(active[0])) {
     try {
       stickneyData = await loadStickneyModule(active[0], department.id);
     } catch (error) {
       stickneyConnectionError = error instanceof Error ? error.message : "The Stickney data connection is unavailable.";
+      stickneyData = {};
+    }
+  } else if (isFermilab && connectedRecordModules.has(active[0])) {
+    try {
+      stickneyData = await loadFermilabModule(active[0], department.id);
+    } catch (error) {
+      stickneyConnectionError = error instanceof Error ? error.message : "The Fermilab copied-record connection is unavailable.";
       stickneyData = {};
     }
   } else if (active[0] === "live-ops" || active[0] === "staffing" || active[0] === "scheduling") {
@@ -178,7 +189,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (
             <>
-              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
+              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} sourceName={connectedSourceName} sourceKey={connectedSourceKey} data={stickneyData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
               {active[0] === "fleet" ? (
                 <details id="native-assets" className="stickney-archive">
                   <summary>VIN, barcode, QR, and odometer capture</summary>

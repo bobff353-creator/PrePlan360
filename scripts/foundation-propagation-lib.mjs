@@ -16,7 +16,9 @@ export async function hashFiles(files) {
     const absolutePath = path.join(projectRoot, relativePath);
     hash.update(relativePath.replaceAll("\\", "/"));
     hash.update("\0");
-    hash.update(await readFile(absolutePath));
+    // Git stores these mapped source files with LF. Normalize Windows worktree
+    // line endings so the propagation lock is stable locally and on Vercel.
+    hash.update((await readFile(absolutePath, "utf8")).replaceAll("\r\n", "\n"));
     hash.update("\0");
   }
   return hash.digest("hex");
