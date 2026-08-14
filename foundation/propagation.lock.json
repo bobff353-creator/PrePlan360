@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.42",
-  "generatedAt": "2026-08-14T05:55:38.829Z",
+  "release": "2026.08.13.43",
+  "generatedAt": "2026-08-14T05:59:25.038Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -11,7 +11,7 @@
   "modules": {
     "application-shell": {
       "demo": "151dfd0ada83f9add728cdacb3b30e90b3ac357b14e4d9faa9a5c73683979a52",
-      "departments": "64ef650c71c4ddbd66f2383c1bf5911a2d3bbc31aff46b44c2756bf605d05a52"
+      "departments": "bc031044b065415bf42c2ad60087e11f040e4857c0296e2f6490daf331ace098"
     },
     "live-operations": {
       "demo": "48dfc0cd7381a612e55720665e301d1f1c744e9db9180a5a89e7b2f704baac51",

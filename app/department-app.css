@@ -29,7 +29,7 @@
   .dept-signout-mark{display:inline!important;color:var(--dept-accent);font-size:16px}
   .department-app:has(.dept-sidebar-toggle:checked) .dept-app-brand{justify-content:flex-start;padding:16px}
   .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar .dept-sidebar-copy{display:inline}
-  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-brand-copy{display:grid}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar .dept-app-brand-copy{display:grid}
   .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar nav{padding:14px 9px}
   .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar nav a{justify-content:flex-start;padding:11px 12px}
   .department-app:has(.dept-sidebar-toggle:checked) .dept-sidebar-foot{justify-items:stretch;padding:16px}
