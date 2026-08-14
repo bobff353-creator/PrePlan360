@@ -5,6 +5,7 @@ import FleetWorkspace from "./fleet-workspace";
 import DailyDutiesWorkspace from "./daily-duties-workspace";
 import PreplanMap from "./preplan-map";
 import ScheduleCalendar from "./schedule-calendar";
+import DocumentsWorkspace from "./documents-workspace";
 
 type Props = {
   module: string;
@@ -59,16 +60,6 @@ function chicagoDate() {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
-}
-
-function documentHref(value: string) {
-  if (value.startsWith("/box-cards/")) return value;
-  try {
-    const url = new URL(value);
-    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
-  } catch {
-    return "";
-  }
 }
 
 function stickneyFootprint(value?: string) {
@@ -631,123 +622,7 @@ function Duties({ departmentId, data, editable, supportSessionId }: { department
 function Documents({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const boxCards = data.boxCards ?? [];
   const policies = data.policies ?? [];
-  return (
-    <section className="stickney-panel">
-      <SourceNotice />
-      <div className="stickney-section-head">
-        <div>
-          <span>DOCUMENTS</span>
-          <h2>Policies and box cards</h2>
-        </div>
-        <b>{boxCards.length + policies.length}</b>
-      </div>
-      <div className="stickney-document-columns">
-        <section>
-          <header>
-            <h3>Box cards</h3>
-            <b>{boxCards.length}</b>
-          </header>
-          {boxCards.map((card) => {
-            const href = documentHref(card.document_url);
-            return (
-              <article key={card.id}>
-                <span>
-                  {card.department || "Stickney"}
-                  {card.box_number ? ` · Box ${card.box_number}` : ""}
-                </span>
-                <h4>{card.title}</h4>
-                <p>{card.address}</p>
-                {card.access_notes ? <small>{card.access_notes}</small> : null}
-                {href ? (
-                  <a href={href} target="_blank" rel="noreferrer">
-                    Open document
-                    {card.document_page ? ` · page ${card.document_page}` : ""}
-                  </a>
-                ) : (
-                  <em>Document file not linked</em>
-                )}
-                <EditableRecord
-                  departmentId={departmentId}
-                  recordType="box_card"
-                  recordId={card.id}
-                  editable={editable}
-                  supportSessionId={supportSessionId}
-                  fields={[
-                    { name: "title", label: "Title", value: card.title },
-                    { name: "address", label: "Address", value: card.address },
-                    {
-                      name: "box_number",
-                      label: "Box number",
-                      value: card.box_number,
-                    },
-                    {
-                      name: "access_notes",
-                      label: "Access notes",
-                      value: card.access_notes,
-                      multiline: true,
-                    },
-                    {
-                      name: "details",
-                      label: "Details",
-                      value: card.details,
-                      multiline: true,
-                    },
-                  ]}
-                />
-              </article>
-            );
-          })}
-        </section>
-        <section>
-          <header>
-            <h3>Policies</h3>
-            <b>{policies.length}</b>
-          </header>
-          {policies.map((policy) => (
-            <details key={policy.id}>
-              <summary>
-                <span>{[policy.policy_number, policy.category].filter(Boolean).join(" · ")}</span>
-                <b>{policy.title}</b>
-              </summary>
-              <p>{policy.body || "No policy body was imported."}</p>
-              <small>{policy.effective_date ? `Effective ${formatDate(policy.effective_date)}` : "Effective date not entered"}</small>
-              <EditableRecord
-                departmentId={departmentId}
-                recordType="policy"
-                recordId={policy.id}
-                editable={editable}
-                supportSessionId={supportSessionId}
-                fields={[
-                  { name: "title", label: "Title", value: policy.title },
-                  {
-                    name: "policy_number",
-                    label: "Policy number",
-                    value: policy.policy_number,
-                  },
-                  {
-                    name: "category",
-                    label: "Category",
-                    value: policy.category,
-                  },
-                  {
-                    name: "effective_date",
-                    label: "Effective date",
-                    value: policy.effective_date,
-                  },
-                  {
-                    name: "body",
-                    label: "Policy body",
-                    value: policy.body,
-                    multiline: true,
-                  },
-                ]}
-              />
-            </details>
-          ))}
-        </section>
-      </div>
-    </section>
-  );
+  return <DocumentsWorkspace departmentId={departmentId} boxCards={boxCards} policies={policies} editable={editable} supportSessionId={supportSessionId} />;
 }
 
 function Phones({ departmentId, data, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {

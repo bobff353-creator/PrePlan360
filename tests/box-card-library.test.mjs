@@ -55,4 +55,26 @@ test("only owner demo edits while public and department builds stay protected", 
   assert.match(departmentPage, /Only the signed-in, verified platform owner can build drafts/);
   assert.match(propagation, /"box-cards-and-documents"/);
   assert.match(propagation, /public\/box-cards-upgrade\.js/);
+  assert.match(propagation, /app\/d\/\[slug\]\/documents-workspace\.tsx/);
+});
+
+test("department Box Cards use real town groups, protected edits, and downloads", async () => {
+  const [workspace, stickneyWorkspace, styles] = await Promise.all([
+    read("app/d/[slug]/documents-workspace.tsx"),
+    read("app/d/[slug]/stickney-workspace.tsx"),
+    read("app/stickney-workspace.css"),
+  ]);
+
+  assert.match(stickneyWorkspace, /<DocumentsWorkspace/);
+  assert.match(workspace, /new Set\(boxCards\.map/);
+  assert.match(workspace, /Box Card groups by town/);
+  assert.match(workspace, /role="tab"/);
+  assert.match(workspace, /data-grouped-box-cards="active"/);
+  assert.match(workspace, /if \(!editable\) return null/);
+  assert.match(workspace, /Download original/);
+  assert.match(workspace, /Download editable/);
+  assert.match(workspace, /Print \/ Save PDF/);
+  assert.match(workspace, /never delete or rewrite the source/);
+  assert.match(styles, /\.box-group-tabs/);
+  assert.match(styles, /\.department-box-grid/);
 });

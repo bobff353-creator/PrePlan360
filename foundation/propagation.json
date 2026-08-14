@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.27",
+  "release": "2026.08.13.28",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -125,7 +125,12 @@
       ],
       "departments": [
         "app/d/[slug]/page.tsx",
+        "app/d/[slug]/documents-workspace.tsx",
+        "app/d/[slug]/stickney-workspace.tsx",
         "app/owner/demo/page.tsx",
+        "app/stickney-workspace.css",
+        "app/api/departments/[id]/stickney-records/route.ts",
+        "db/stickney.ts",
         "db/foundation.ts"
       ]
     },
