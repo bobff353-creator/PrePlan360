@@ -59,12 +59,13 @@ test("only owner demo edits while public and department builds stay protected", 
 });
 
 test("department Box Cards use real town groups, protected edits, and downloads", async () => {
-  const [workspace, stickneyWorkspace, styles, route, layouts, propagation] = await Promise.all([
+  const [workspace, stickneyWorkspace, styles, route, layouts, stickneyDb, propagation] = await Promise.all([
     read("app/d/[slug]/documents-workspace.tsx"),
     read("app/d/[slug]/stickney-workspace.tsx"),
     read("app/stickney-workspace.css"),
     read("app/api/departments/[id]/stickney-records/route.ts"),
     read("db/stickney-box-card-layouts.ts"),
+    read("db/stickney.ts"),
     read("foundation/propagation.json"),
   ]);
 
@@ -92,5 +93,6 @@ test("department Box Cards use real town groups, protected edits, and downloads"
   assert.match(layouts, /"300-E"/);
   assert.match(layouts, /stickney-1\.jpg/);
   assert.match(layouts, /hydrateStickneyBoxCardLayout/);
+  assert.match(stickneyDb, /mergedBoxCards\.map\(hydrateStickneyBoxCardLayout\)/);
   assert.match(propagation, /db\/stickney-box-card-layouts\.ts/);
 });

@@ -544,8 +544,9 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
   if (module === "documents") {
     const [boxCards, policies] = await Promise.all([read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`), read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`)]);
     const hydratedBoxCards = boxCards.map(hydrateStickneyBoxCardLayout);
+    const mergedBoxCards = departmentId ? await applyOverrides(departmentId, "box_card", hydratedBoxCards) : hydratedBoxCards;
     return {
-      boxCards: departmentId ? await applyOverrides(departmentId, "box_card", hydratedBoxCards) : hydratedBoxCards,
+      boxCards: mergedBoxCards.map(hydrateStickneyBoxCardLayout),
       policies: departmentId ? await applyOverrides(departmentId, "policy", policies) : policies,
     };
   }
