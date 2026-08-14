@@ -47,8 +47,9 @@ function Empty({ children }: { children: ReactNode }) {
 
 function formatDate(value: string) {
   if (!value) return "Not recorded";
-  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const calendarDate = /^\d{4}-\d{2}-\d{2}/.test(value) ? `${value.slice(0, 10)}T12:00:00Z` : value;
+  const date = new Date(calendarDate);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { timeZone: "UTC", year: "numeric", month: "short", day: "numeric" });
 }
 
 function readiness(record: PreplanDetailRecord, hydrants: PreplanDetailHydrant[]) {
