@@ -2,6 +2,11 @@ import type { StickneyBoxCard, StickneyBoxCardAlarmRow } from "@/db/stickney";
 
 const columnCount = 8;
 
+function preservedSourceUrl(value: unknown) {
+  const source = String(value || "").trim();
+  return source.startsWith("/box-cards/") || /^https?:\/\//i.test(source) ? source : "";
+}
+
 function alarm(alarmLevel: string, cells: string[]): StickneyBoxCardAlarmRow {
   return {
     alarm: alarmLevel,
@@ -129,12 +134,13 @@ export function hydrateStickneyBoxCardLayout(card: StickneyBoxCard): StickneyBox
   }
 
   const layout = layouts[card.box_number?.trim().toUpperCase()];
+  const originalSource = preservedSourceUrl(card.document_url);
   return {
     ...card,
     division: card.division || "11",
     alarm_rows: Array.isArray(card.alarm_rows) && card.alarm_rows.length ? card.alarm_rows : layout?.rows || [],
     interdivisional: card.interdivisional || layout?.interdivisional || "",
-    document_url: card.document_url || layout?.sourceUrl || "",
+    document_url: originalSource || layout?.sourceUrl || "",
     document_page: card.document_page || (layout ? 1 : 0),
   };
 }

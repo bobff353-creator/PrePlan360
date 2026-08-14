@@ -92,6 +92,8 @@ test("department Box Cards use real town groups, protected edits, and downloads"
   assert.match(route, /rows\.length < 1 \|\| rows\.length > 20/);
   assert.match(layouts, /"300-E"/);
   assert.match(layouts, /stickney-1\.jpg/);
+  assert.match(layouts, /preservedSourceUrl/);
+  assert.match(layouts, /originalSource \|\| layout\?\.sourceUrl/);
   assert.match(layouts, /hydrateStickneyBoxCardLayout/);
   assert.match(stickneyDb, /mergedBoxCards\.map\(hydrateStickneyBoxCardLayout\)/);
   assert.match(propagation, /db\/stickney-box-card-layouts\.ts/);
