@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import "../../live-ops-foundation.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
-import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listSharedHydrants, listSharedPreplans } from "@/db/access";
+import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listDepartmentScheduleRequests, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
 import { loadDepartmentEmployeeOverlays, loadDepartmentScheduleOverlays, loadStickneyModule, type StickneyModuleData } from "@/db/stickney";
 import AssetManager from "./asset-manager";
@@ -106,6 +106,10 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
       stickneyData = {};
     }
   }
+  const scheduleRequests = active[0] === "scheduling" ? await listDepartmentScheduleRequests(department.id) : [];
+  const selfEmployeeId = active[0] === "scheduling"
+    ? (stickneyData?.employees ?? []).find((employee) => employee.email.trim().toLowerCase() === user.email.trim().toLowerCase())?.id ?? ""
+    : "";
   const style = {
     "--dept-primary": department.brand_primary,
     "--dept-bg": department.brand_secondary,
@@ -204,7 +208,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <ModuleBuilder moduleKey="respond" moduleName={active[1]} departmentId={department.id} data={moduleData} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} />
           ) : stickneyData ? (
             <>
-              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} minimumStaffing={foundation.minimum_staffing} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
+              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} data={stickneyData} minimumStaffing={foundation.minimum_staffing} scheduleRequests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={stickneyConnectionError || undefined} />
               {active[0] === "fleet" ? (
                 <details id="native-assets" className="stickney-archive">
                   <summary>VIN, barcode, QR, and odometer capture</summary>

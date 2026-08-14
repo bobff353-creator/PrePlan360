@@ -1,0 +1,107 @@
+.schrq-kpi-action {
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.schrq-kpi-action:hover,
+.schrq-kpi-action:focus-visible {
+  border-color: var(--disp);
+  outline: 2px solid color-mix(in srgb, var(--disp) 45%, transparent);
+  outline-offset: 2px;
+}
+.schrq-kpi-action span {
+  color: var(--disp);
+  font-size: 9px;
+  font-weight: 800;
+}
+.schx-record-head .btn {
+  margin-left: 10px;
+}
+.schrq-incoming {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid rgba(42, 139, 232, .38);
+  border-radius: 9px;
+  background: rgba(42, 139, 232, .07);
+}
+.schrq-incoming article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+}
+.schrq-incoming b,
+.schrq-incoming small {
+  display: block;
+}
+.schrq-incoming small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.schrq-upcoming-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.schrq-upcoming-head h2,
+.schrq-upcoming-head p {
+  margin: 0;
+}
+.schrq-upcoming-head h2 {
+  margin-top: 4px;
+}
+.schrq-upcoming-head p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.schrq-upcoming-list {
+  display: grid;
+  gap: 8px;
+}
+.schrq-upcoming-list article {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--ready);
+  border-radius: 10px;
+  background: var(--card);
+}
+.schrq-upcoming-list article.gap {
+  border-color: rgba(255, 75, 70, .55);
+  border-left-color: var(--fire);
+  background: linear-gradient(145deg, rgba(92, 21, 29, .52), var(--card));
+}
+.schrq-upcoming-list time {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+.schrq-upcoming-list h3,
+.schrq-upcoming-list p {
+  margin: 0;
+}
+.schrq-upcoming-list p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+@media (max-width: 760px) {
+  .schrq-upcoming-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .schrq-upcoming-list article,
+  .schrq-incoming article {
+    grid-template-columns: 1fr;
+  }
+}

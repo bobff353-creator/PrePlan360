@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="/roster-upgrade.css?v=20260813-employment-roles">
   <link rel="stylesheet" href="/schedule-upgrade.css?v=20260813-dynamic-calendar">
   <link rel="stylesheet" href="/schedule-calendar.css?v=20260813-dynamic-calendar">
+  <link rel="stylesheet" href="/schedule-requests.css?v=20260814-employee-actions">
   <link rel="stylesheet" href="/daily-log-demo.css?v=20260813-daily-log">
   <link rel="stylesheet" href="/inspections-owner.css?v=20260813-owner-workbench">
   <link rel="stylesheet" href="/box-cards-upgrade.css?v=20260813-grouped-editor">
@@ -982,14 +983,14 @@ function schBody(){
   const toType={Vacation:'p-disp',Sick:'p-fire',Floating:'p-warn',Recovery:'p-ready'};
   return `<div class="card"><h3>◈ Time-Off Requests — vacation · sick · floating · recovery</h3>
     <table><thead><tr><th>Member</th><th>Type</th><th>Dates</th><th>Hours</th><th>Balance</th><th>Status</th><th>Review</th></tr></thead><tbody>
-    ${TIMEOFF.map((t,i)=>`<tr><td><b>${t.emp}</b></td><td><span class="pill ${toType[t.type]}">${t.type}</span></td><td class="mono">${t.from}${t.to!==t.from?' – '+t.to:''}</td><td class="mono">${t.hrs}h</td><td class="mono muted">${t.bal}h left</td><td>${pill(t.status==='approved'?'ready':t.status==='denied'?'oos':'warn')}${t.status==='pending'?'':''}</td><td>${t.status==='pending'?`<button class="btn" style="padding:4px 9px;border-color:var(--ready);color:var(--ready)" onclick="toReview(${i},'approved')">Approve</button> <button class="btn" style="padding:4px 9px;border-color:var(--fire);color:#ff6b62" onclick="toReview(${i},'denied')">Deny</button>`:'<span class="muted" style="font-size:11px">reviewed</span>'}</td></tr>`).join("")}
+    ${TIMEOFF.map((t,i)=>`<tr><td><b>${t.emp}</b></td><td><span class="pill ${toType[t.type]||'p-muted'}">${t.type}</span></td><td class="mono">${t.from}${t.to!==t.from?' - '+t.to:''}</td><td class="mono">${t.hrs}h</td><td class="mono muted">${Number.isFinite(Number(t.bal))?t.bal+'h left':'Not connected'}</td><td>${pill(t.status==='approved'?'ready':t.status==='denied'?'oos':'warn')}${t.status==='pending'?'':''}</td><td>${t.status==='pending'?`<button class="btn" style="padding:4px 9px;border-color:var(--ready);color:var(--ready)" onclick="toReview(${i},'approved')">Approve</button> <button class="btn" style="padding:4px 9px;border-color:var(--fire);color:#ff6b62" onclick="toReview(${i},'denied')">Deny</button>`:'<span class="muted" style="font-size:11px">reviewed</span>'}</td></tr>`).join("")}
     </tbody></table>
     <div class="muted" style="font-size:12px;margin-top:10px">Vacation is awarded by seniority when multiple members bid the same day (contractual pick order). Balances decrement on approval and feed the payroll accrual ledger. Denying re-opens the day for other bidders.</div>
   </div>`;
  }
  if(schTab==="trades"){
   return `<div class="card"><h3>◈ Shift Trades — member-initiated, admin-approved</h3>
-    ${TRADES.map((t,i)=>`<div class="callrow"><b>${t.from} → ${t.to}</b><span class="mono">${t.date}</span><span class="muted">${t.role}</span><span style="flex:1;font-size:12px">${t.note}</span>${pill(t.status==='approved'?'ready':t.status==='denied'?'oos':t.status==='awaiting_acceptance'?'warn':'disp')}${["pending","awaiting_acceptance"].includes(t.status)?` <button class="btn" style="padding:4px 9px;border-color:var(--ready);color:var(--ready)" onclick="trReview(${i},'approved')">Approve</button><button class="btn" style="padding:4px 9px;border-color:var(--fire);color:#ff6b62" onclick="trReview(${i},'denied')">Deny</button>`:''}</div>`).join("")}
+    ${TRADES.map((t,i)=>`<div class="callrow"><b>${t.from} → ${t.to}</b><span class="mono">${t.date}</span><span class="muted">${t.role}</span><span style="flex:1;font-size:12px">${t.note}</span>${pill(t.status==='approved'?'ready':t.status==='denied'||t.status==='declined'?'oos':t.status==='awaiting_acceptance'||t.status==='open'?'warn':'disp')}${t.status==='pending'?` <button class="btn" style="padding:4px 9px;border-color:var(--ready);color:var(--ready)" onclick="trReview(${i},'approved')">Approve</button><button class="btn" style="padding:4px 9px;border-color:var(--fire);color:#ff6b62" onclick="trReview(${i},'denied')">Deny</button>`:''}</div>`).join("")}
     <div class="muted" style="font-size:12px;margin-top:12px">A trade needs the receiving member to accept, then admin approval. Approved trades reassign the slot and are FLSA-neutral (hour-for-hour payback), so neither member's OT clock moves.</div>
   </div>`;
  }
@@ -1815,6 +1816,7 @@ buildNav();render();
 <script src="/roster-upgrade.js?v=20260813-employment-roles"></script>
 <script src="/schedule-upgrade.js?v=20260813-dynamic-calendar"></script>
 <script src="/schedule-calendar.js?v=20260813-dynamic-calendar"></script>
+<script src="/schedule-requests.js?v=20260814-employee-actions"></script>
 <script src="/daily-log-demo.js?v=20260813-daily-log"></script>
 <script src="/inspections-owner.js?v=20260813-owner-workbench"></script>
 <script src="/box-cards-upgrade.js?v=20260813-grouped-editor"></script>

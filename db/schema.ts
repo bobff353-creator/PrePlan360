@@ -202,6 +202,33 @@ export const stickneyRecordOverrides = sqliteTable("stickney_record_overrides", 
   index("idx_stickney_overrides_department_type").on(table.departmentId, table.recordType, table.status),
 ]);
 
+export const departmentScheduleRequests = sqliteTable("department_schedule_requests", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull(),
+  requestKind: text("request_kind").notNull(),
+  requesterEmployeeId: text("requester_employee_id").notNull(),
+  requesterName: text("requester_name").notNull(),
+  assignmentId: text("assignment_id").notNull().default(""),
+  targetScope: text("target_scope").notNull().default("employee"),
+  targetEmployeeId: text("target_employee_id").notNull().default(""),
+  targetName: text("target_name").notNull().default(""),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  hours: integer("hours").notNull().default(0),
+  leaveType: text("leave_type").notNull().default(""),
+  role: text("role").notNull().default(""),
+  note: text("note").notNull().default(""),
+  status: text("status").notNull().default("pending"),
+  createdBy: text("created_by").notNull(),
+  acceptedBy: text("accepted_by"),
+  reviewedBy: text("reviewed_by"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_department_schedule_requests_status").on(table.departmentId, table.requestKind, table.status, table.createdAt),
+  index("idx_department_schedule_requests_target").on(table.departmentId, table.targetEmployeeId, table.status),
+]);
+
 export const departmentModuleConfigs = sqliteTable("department_module_configs", {
   id: text("id").primaryKey(),
   departmentId: text("department_id").notNull(),

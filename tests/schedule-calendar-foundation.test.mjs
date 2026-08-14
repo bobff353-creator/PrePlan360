@@ -26,7 +26,7 @@ test("demo calendar uses saved shift colors and rotates crowded days", async () 
 });
 
 test("shared department calendar groups schedule rows and offers slide controls", async () => {
-  const [calendar, workspace, route, propagation, foundation, editor, migration] = await Promise.all([
+  const [calendar, workspace, route, propagation, foundation, editor, migration, requestUi, requestApi, requestMigration] = await Promise.all([
     readFile(
       new URL("../app/d/[slug]/schedule-calendar.tsx", import.meta.url),
       "utf8",
@@ -49,6 +49,9 @@ test("shared department calendar groups schedule rows and offers slide controls"
     readFile(new URL("../db/foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/owner/demo/foundation-editor.tsx", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0017_schedule_minimum_staffing.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/d/[slug]/schedule-requests-workspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/departments/[id]/schedule-requests/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0018_department_schedule_requests.sql", import.meta.url), "utf8"),
   ]);
   assert.match(calendar, /Map\.groupBy\(groups/);
   assert.match(calendar, /window\.setInterval/);
@@ -59,6 +62,9 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(calendar, /minimumStaffing > 0/);
   assert.match(calendar, /BELOW MINIMUM/);
   assert.match(calendar, /eligibleAssignmentIds/);
+  assert.match(calendar, /UPCOMING SHIFTS/);
+  assert.match(calendar, /Calendar view/);
+  assert.match(calendar, /List view/);
   assert.match(workspace, /name="shift_color"/);
   assert.match(workspace, /rows\.filter\(eligible\)/);
   assert.match(route, /data\.shift_color/);
@@ -66,6 +72,29 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(foundation, /minimum_staffing/);
   assert.match(editor, /name="minimum_staffing"/);
   assert.match(migration, /ADD `minimum_staffing`/);
+  assert.match(requestUi, /Request time off/);
+  assert.match(requestUi, /Request a shift trade/);
+  assert.match(requestUi, /Accept trade/);
+  assert.match(requestApi, /Only the receiving employee may accept this trade/);
+  assert.match(requestApi, /status='pending_approval'/);
+  assert.match(requestApi, /source assignment was preserved/);
+  assert.match(requestMigration, /CREATE TABLE department_schedule_requests/);
+});
+
+test("demo employee scheduling supports request, acceptance, and upcoming list actions", async () => {
+  const [requests, html] = await Promise.all([
+    readFile(new URL("../public/schedule-requests.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/fireflow-360-demo.html", import.meta.url), "utf8"),
+  ]);
+  assert.match(requests, /function schrqSaveTimeOff/);
+  assert.match(requests, /function schrqSaveTrade/);
+  assert.match(requests, /function schrqAcceptTrade/);
+  assert.match(requests, /The receiving employee must accept before scheduling approval/);
+  assert.match(requests, /Calendar or list view/);
+  assert.match(requests, /SCHX\.timeOff/);
+  assert.match(requests, /SCHX\.trades/);
+  assert.match(html, /schedule-requests\.js/);
+  assert.match(html, /\$\{t\.status==='pending'\?` <button class="btn"/);
 });
 
 test("Stickney imported shift names decode cleanly without repeating their saved times", () => {

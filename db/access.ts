@@ -21,6 +21,29 @@ export type SharedHydrant = Omit<DepartmentHydrant, "internal_notes"> & { depart
 export type DepartmentModuleConfig = { id: string; department_id: string; module_key: string; heading: string; description: string; instructions: string; updated_at: string };
 export type DepartmentModuleItem = { id: string; department_id: string; module_key: string; item_type: string; title: string; operational_status: string; summary: string; location: string; contact: string; link_url: string; sort_order: number; updated_at: string };
 export type DepartmentModuleData = { config: DepartmentModuleConfig | null; items: DepartmentModuleItem[] };
+export type DepartmentScheduleRequest = {
+  id: string;
+  department_id: string;
+  request_kind: "time_off" | "trade";
+  requester_employee_id: string;
+  requester_name: string;
+  assignment_id: string;
+  target_scope: "employee" | "department";
+  target_employee_id: string;
+  target_name: string;
+  start_date: string;
+  end_date: string;
+  hours: number;
+  leave_type: string;
+  role: string;
+  note: string;
+  status: string;
+  created_by: string;
+  accepted_by: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export function db() { return database(); }
 export function id(prefix: string) { return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`; }
@@ -57,6 +80,8 @@ export async function listAssetEvents(departmentId: string, assetId: string): Pr
 export async function listPendingRequests(): Promise<AccessRequest[]> { const result = await db().prepare("SELECT id,user_id,email,display_name,department_name,requested_role,note,status,department_id,created_at FROM access_requests WHERE status='pending' ORDER BY created_at").all<AccessRequest>(); return result.results; }
 export async function getSupportSession(sessionId: string): Promise<SupportSession | null> { return db().prepare("SELECT id,owner_user_id,department_id,reason,status,started_at,ended_at FROM support_sessions WHERE id=?").bind(sessionId).first<SupportSession>(); }
 export async function listAudit(departmentId: string): Promise<AuditEvent[]> { const result = await db().prepare("SELECT id,event_type,detail,created_at,actor_user_id FROM audit_events WHERE department_id=? ORDER BY created_at DESC LIMIT 20").bind(departmentId).all<AuditEvent>(); return result.results; }
+export async function listDepartmentScheduleRequests(departmentId: string): Promise<DepartmentScheduleRequest[]> { const result = await db().prepare("SELECT id,department_id,request_kind,requester_employee_id,requester_name,assignment_id,target_scope,target_employee_id,target_name,start_date,end_date,hours,leave_type,role,note,status,created_by,accepted_by,reviewed_by,created_at,updated_at FROM department_schedule_requests WHERE department_id=? ORDER BY created_at DESC LIMIT 500").bind(departmentId).all<DepartmentScheduleRequest>(); return result.results; }
+export async function getDepartmentScheduleRequest(departmentId: string, requestId: string): Promise<DepartmentScheduleRequest | null> { return db().prepare("SELECT id,department_id,request_kind,requester_employee_id,requester_name,assignment_id,target_scope,target_employee_id,target_name,start_date,end_date,hours,leave_type,role,note,status,created_by,accepted_by,reviewed_by,created_at,updated_at FROM department_schedule_requests WHERE department_id=? AND id=?").bind(departmentId, requestId).first<DepartmentScheduleRequest>(); }
 export async function audit(actorUserId: string, departmentId: string | null, eventType: string, detail: string) { await db().prepare("INSERT INTO audit_events (id,actor_user_id,department_id,event_type,detail,created_at) VALUES (?,?,?,?,?,?)").bind(id("audit"),actorUserId,departmentId,eventType,detail,now()).run(); }
 export async function listDepartmentPreplans(departmentId: string): Promise<DepartmentPreplan[]> { const result = await db().prepare("SELECT id,department_id,property_name,address,latitude,longitude,footprint_json,operational_summary,internal_notes,last_reviewed,status,visibility,updated_at FROM department_preplans WHERE department_id=? ORDER BY property_name").bind(departmentId).all<DepartmentPreplan>(); return result.results; }
 export async function listSharedPreplans(viewerDepartmentId: string): Promise<SharedPreplan[]> { const result = await db().prepare("SELECT p.id,p.department_id,p.property_name,p.address,p.latitude,p.longitude,p.footprint_json,p.operational_summary,p.last_reviewed,p.status,p.visibility,p.updated_at,d.name AS department_name FROM department_preplans p JOIN departments d ON d.id=p.department_id WHERE p.department_id<>? AND p.visibility='mutual_aid' AND p.status='active' AND d.status IN ('configured','active') ORDER BY d.name,p.property_name").bind(viewerDepartmentId).all<SharedPreplan>(); return result.results; }

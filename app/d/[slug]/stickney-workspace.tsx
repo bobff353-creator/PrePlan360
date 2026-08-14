@@ -1,11 +1,13 @@
 /* eslint-disable @next/next/no-img-element -- protected operational images are streamed by authenticated API routes */
 import { STICKNEY_WORK_ROLES, stickneyEmployeeActiveOn, stickneyEmployeeRoles, type StickneyEmployee, type StickneyModuleData, type StickneyScheduleAssignment } from "@/db/stickney";
+import type { DepartmentScheduleRequest } from "@/db/access";
 import StaffingWorkspace from "./staffing-workspace";
 import FleetWorkspace from "./fleet-workspace";
 import DailyDutiesWorkspace from "./daily-duties-workspace";
 import PreplanMap from "./preplan-map";
 import ScheduleCalendar from "./schedule-calendar";
 import DocumentsWorkspace from "./documents-workspace";
+import ScheduleRequestsWorkspace from "./schedule-requests-workspace";
 
 type Props = {
   module: string;
@@ -13,6 +15,8 @@ type Props = {
   departmentSlug: string;
   data: StickneyModuleData;
   minimumStaffing: number;
+  scheduleRequests: DepartmentScheduleRequest[];
+  selfEmployeeId: string;
   editable: boolean;
   supportSessionId?: string;
   connectionError?: string;
@@ -112,7 +116,7 @@ function EditableRecord({
   );
 }
 
-export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, minimumStaffing, editable, supportSessionId = "", connectionError }: Props) {
+export default function StickneyWorkspace({ module, departmentId, departmentSlug, data, minimumStaffing, scheduleRequests, selfEmployeeId, editable, supportSessionId = "", connectionError }: Props) {
   if (connectionError) {
     return (
       <section className="stickney-panel">
@@ -123,7 +127,7 @@ export default function StickneyWorkspace({ module, departmentId, departmentSlug
   }
   if (module === "dashboard" && data.summary) return <StickneyDashboard data={data} />;
   if (module === "staffing") return <Staffing departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} minimumStaffing={minimumStaffing} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "scheduling") return <Schedule departmentId={departmentId} data={data} minimumStaffing={minimumStaffing} requests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "preplans") return <Preplans departmentId={departmentId} departmentSlug={departmentSlug} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "hydrants") return <Hydrants departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "fleet") return <Fleet departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
@@ -237,7 +241,7 @@ function ScheduleForm({ departmentId, supportSessionId, employees, assignment }:
   );
 }
 
-function Schedule({ departmentId, data, minimumStaffing, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; minimumStaffing: number; editable: boolean; supportSessionId: string }) {
+function Schedule({ departmentId, data, minimumStaffing, requests, selfEmployeeId, editable, supportSessionId }: { departmentId: string; data: StickneyModuleData; minimumStaffing: number; requests: DepartmentScheduleRequest[]; selfEmployeeId: string; editable: boolean; supportSessionId: string }) {
   const rows = data.schedule ?? [];
   const employees = new Map((data.employees ?? []).map((employee) => [employee.id, employee]));
   const grouped = Map.groupBy(rows, (row) => row.work_date);
@@ -263,6 +267,7 @@ function Schedule({ departmentId, data, minimumStaffing, editable, supportSessio
         minimumStaffing={minimumStaffing}
         eligibleAssignmentIds={rows.filter(eligible).map((row) => row.id)}
       />
+      <ScheduleRequestsWorkspace departmentId={departmentId} employees={data.employees ?? []} assignments={rows} requests={requests} selfEmployeeId={selfEmployeeId} canManage={editable} supportSessionId={supportSessionId} today={chicagoDate()} />
       {rows.length ? (
         <details className="stickney-archive schedule-assignment-records">
           <summary>Assignment records</summary>

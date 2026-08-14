@@ -130,6 +130,11 @@ export default function ScheduleCalendar({
   const [month, setMonth] = useState(initialMonth);
   const [slides, setSlides] = useState<Record<string, number>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [view, setView] = useState<"calendar" | "list">("calendar");
+  const upcoming = useMemo(
+    () => groups.filter((group) => group.date >= today),
+    [groups, today],
+  );
 
   const byDate = useMemo(
     () => Map.groupBy(groups, (group) => group.date),
@@ -203,6 +208,18 @@ export default function ScheduleCalendar({
       className="schedule-calendar"
       aria-label={`${label} schedule calendar`}
     >
+      <div className="schedule-view-controls">
+        <button type="button" className="schedule-upcoming-kpi" onClick={() => setView("list")}>
+          <span>UPCOMING SHIFTS</span>
+          <strong>{upcoming.length}</strong>
+          <small>Open list view</small>
+        </button>
+        <nav aria-label="Schedule view">
+          <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => setView("calendar")}>Calendar view</button>
+          <button type="button" className={view === "list" ? "active" : ""} onClick={() => setView("list")}>List view</button>
+        </nav>
+      </div>
+      {view === "calendar" ? <>
       <header className="schedule-calendar-head">
         <div>
           <span>CALENDAR VIEW</span>
@@ -345,6 +362,27 @@ export default function ScheduleCalendar({
           ? ` Red coverage warnings use the saved minimum of ${minimumStaffing}; only date- and role-valid assignments count.`
           : " Set a minimum staffing rule in the department foundation to enable coverage warnings."}
       </p>
+      </> : (
+        <div className="schedule-upcoming-list" aria-label="Upcoming shift list">
+          <header>
+            <div><span>LIST VIEW</span><h2>Upcoming shifts</h2><p>Open any shift date for its complete staffing and qualification view.</p></div>
+            <b>{upcoming.length}</b>
+          </header>
+          <div>
+            {upcoming.length ? upcoming.map((schedule) => {
+              const belowMinimum = minimumStaffing > 0 && schedule.staffingCount < minimumStaffing;
+              return (
+                <article className={belowMinimum ? "below-minimum" : ""} key={schedule.id} style={{ "--shift-color": schedule.color } as CSSProperties}>
+                  <time dateTime={schedule.date}>{dayLabel(schedule.date)}</time>
+                  <div><h3>{schedule.name}</h3><p>{schedule.start || "Start not set"}{schedule.end ? `-${schedule.end}` : ""} - {schedule.assignments.map((assignment) => assignment.employee_name).join(" - ") || "No employees assigned"}</p></div>
+                  {belowMinimum ? <span>BELOW MINIMUM - {schedule.staffingCount}/{minimumStaffing}</span> : <strong>{schedule.staffingCount} assigned</strong>}
+                  <button type="button" onClick={() => { setSelectedDate(schedule.date); setMonth(schedule.date.slice(0, 7)); }}>Open day</button>
+                </article>
+              );
+            }) : <p className="schedule-list-empty">No upcoming schedules are saved.</p>}
+          </div>
+        </div>
+      )}
       {selectedDate ? (
         <div
           className="schedule-day-overlay"
