@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  normalizeImportedScheduleText,
+  scheduleDisplayName,
+} from "../app/d/[slug]/schedule-format.ts";
 
 test("demo calendar uses saved shift colors and rotates crowded days", async () => {
   const source = await readFile(
@@ -41,4 +45,16 @@ test("shared department calendar groups schedule rows and offers slide controls"
   assert.match(workspace, /name="shift_color"/);
   assert.match(route, /data\.shift_color/);
   assert.match(propagation, /schedule-calendar\.tsx/);
+});
+
+test("Stickney imported shift names decode cleanly without repeating their saved times", () => {
+  assert.equal(
+    normalizeImportedScheduleText("Imported 18:00\u00e2\u20ac\u201c06:00"),
+    "Imported 18:00–06:00",
+  );
+  assert.equal(
+    scheduleDisplayName("Imported 18:00\u00e2\u20ac\u201c06:00", "18:00", "06:00"),
+    "Imported shift",
+  );
+  assert.equal(scheduleDisplayName("Red 1", "18:00", "06:00"), "Red 1");
 });
