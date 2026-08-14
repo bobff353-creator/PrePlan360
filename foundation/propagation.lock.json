@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.40",
-  "generatedAt": "2026-08-14T05:15:53.909Z",
+  "release": "2026.08.13.41",
+  "generatedAt": "2026-08-14T05:44:14.915Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -14,8 +14,8 @@
       "departments": "3299c17d1a1b0f1180bf6e60a06a70bfd351f76c13cb251db95b120c197be474"
     },
     "live-operations": {
-      "demo": "6f182c74a5c77a8f130316dfe20f884020f27280f03983bef949abf1c2547676",
-      "departments": "4a2e827c8a44163495170da77b4f9ec57e8ed665bd71056323c44633ae218c4b"
+      "demo": "48dfc0cd7381a612e55720665e301d1f1c744e9db9180a5a89e7b2f704baac51",
+      "departments": "41dcad38687514c4dbbd6719989d8ca72e861e9e85e7d6dea23a7f4c3dd9e901"
     },
     "roster-and-staffing": {
       "demo": "6484f976685c460cb3e598c2fbeb4b4acc81d36de2cd2960e4a55c0eb452a98e",
@@ -26,8 +26,8 @@
       "departments": "ee954790c533527c6fa3d3981cdffd587d58eba5a8106326fca6c04c824f4570"
     },
     "daily-log-and-duties": {
-      "demo": "70c48a09bf6618e9591c35e3e6300bcc4db0c19d460db808b689610afaea8ff5",
-      "departments": "907d645a59bb87abc80d05357f8e1b5dfbdd4041a640cfe30be148716a0adff3"
+      "demo": "44e506eaca0640af3fadc8210dd405f3f6d7cf745a9a530c97c301d01432b9d3",
+      "departments": "7e32d705053844aa6b48a246116785c499dd1328775fc5b5896e746efe0a9cee"
     },
     "owner-foundation": {
       "demo": "c878dfdabdf07104456af86f2f5f3553d649c713aaf38dcb270bc78dfc1956a2",

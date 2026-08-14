@@ -156,10 +156,18 @@ async function loadDemoLodd() {
 }
 function widgetShell(id, body) { const width = boardCfg.widths[id] || "half"; return '<section class="board-widget w-' + safeText(width) + '" draggable="true" data-widget="' + safeText(id) + '" ondragstart="boardDragStart(event,\'' + safeText(id) + '\')" ondragover="boardDragOver(event)" ondragleave="boardDragLeave(event)" ondrop="boardDrop(event,\'' + safeText(id) + '\')" ondragend="boardDragEnd(event)"><div class="widget-grip" title="Drag to move"><span>Move</span><b>::</b></div>' + body + '</section>'; }
 
+function boardRidingSummary() {
+  return typeof dlRidingSummary === "function" ? dlRidingSummary() : { assignments: [], count: 0, minimum: 0, officer: null, scheduleName: "" };
+}
 function renderBoardSummary() {
+  const staffing = boardRidingSummary();
+  const staffingValue = staffing.minimum ? staffing.count + " / " + staffing.minimum : String(staffing.count);
+  const staffingDetail = staffing.count ? (staffing.minimum && staffing.count >= staffing.minimum ? "Complete · minimum met" : staffing.scheduleName || "Approved schedule") : "No approved staffing for today";
+  const officerName = staffing.officer ? staffing.officer.name : "Not assigned";
+  const officerDetail = staffing.officer ? staffing.officer.position + (staffing.officer.unit ? " · " + staffing.officer.unit : "") : "Set an officer on the approved schedule or Daily Log";
   const tiles = [
-    '<div class="btile"><span>Staffing</span><strong>7 / 7</strong><small>Complete · minimum met</small></div>',
-    '<div class="btile"><span>Officer in Charge</span><strong>Chief A. Morgan</strong><small>Current shift command · B</small></div>',
+    '<div class="btile"><span>Staffing</span><strong>' + safeText(staffingValue) + '</strong><small>' + safeText(staffingDetail) + '</small></div>',
+    '<div class="btile"><span>Officer in Charge</span><strong>' + safeText(officerName) + '</strong><small>' + safeText(officerDetail) + '</small></div>',
     '<div class="btile"><span>Active Call</span><strong>None</strong><small>Respond takes over automatically</small></div>',
   ];
   if (boardCfg.showNextShift) tiles.push('<div class="btile warn"><span>Next Shift Change</span><strong>Shift A · 0700</strong><small>In 14h 12m</small></div>');
@@ -167,7 +175,17 @@ function renderBoardSummary() {
 }
 function renderStationWidget() { return '<div class="card rotpanel"><h3 id="rotTitle">Station Information</h3><div id="rotBody"></div><div class="rotdots" id="rotDots"></div></div>'; }
 function apparatusStatusMarkup() { return '<div class="appstrip">' + APPARATUS.map(function (apparatus) { const statusClass = apparatus.status === "Out of Service" ? "oos" : ""; return '<div class="appchip ' + statusClass + '"><b>' + safeText(apparatus.u) + '</b><span>' + safeText(apparatus.status) + '</span></div>'; }).join("") + '</div><p class="muted apparatus-note">Demo fleet status is simulated and is not connected to live CAD.</p>'; }
-function ridingAssignmentMarkup() { return '<div class="riding-grid">' + DEMO_RIDING.map(function (assignment) { return '<article><b>' + safeText(assignment.unit) + '</b><span>' + safeText(assignment.crew) + '</span></article>'; }).join("") + '</div><p class="muted apparatus-note">Fictional riding assignments · departments use saved schedule records.</p>'; }
+function ridingAssignmentMarkup() {
+  const assignments = boardRidingSummary().assignments;
+  if (!assignments.length) return '<div class="board-empty"><b>No approved riding assignments for today</b><div style="margin-top:6px">Approve a dated schedule to prefill both Daily Log and this board.</div></div>';
+  const units = new Map();
+  assignments.forEach(function (assignment) {
+    const unit = assignment.unit || "Unassigned";
+    if (!units.has(unit)) units.set(unit, []);
+    units.get(unit).push((assignment.position || assignment.rank || "Assignment") + " · " + assignment.name);
+  });
+  return '<div class="riding-grid">' + Array.from(units.entries()).map(function (entry) { return '<article><b>' + safeText(entry[0]) + '</b><span>' + entry[1].map(safeText).join("<br>") + '</span></article>'; }).join("") + '</div><p class="muted apparatus-note">Approved schedule roles · Daily Log name and unit adjustments appear here.</p>';
+}
 function apparatusRotationMarkup() { const riding = apparatusRotationIndex % 2 === 1; return '<div class="apparatus-rotation-head"><h3>' + (riding ? "Riding Assignments" : "Apparatus Status · Fleet + CAD") + '</h3><span>' + (riding ? "CREWS" : "FLEET") + ' · rotates every ' + boardCfg.rotationSec + 's</span></div>' + (riding ? ridingAssignmentMarkup() : apparatusStatusMarkup()); }
 function paintApparatusRotation() { const target = document.getElementById("apparatusRotation"); if (target) target.innerHTML = apparatusRotationMarkup(); }
 function renderApparatusWidget() { return '<div class="card apparatus-card"><div id="apparatusRotation">' + apparatusRotationMarkup() + '</div><div class="apparatus-actions"><button class="btn pri" onclick="toggleTone()">Simulate Dispatch</button><button class="btn" onclick="advanceApparatusRotation()">Advance</button></div></div>'; }
@@ -310,6 +328,10 @@ toggleTone = function () {
   buildNav();
   render();
 };
+
+window.addEventListener("storage", function (event) {
+  if (current === "board" && ["fireflow360.dailyLog.demo.v1", "fireflow360.scheduleBuilder.v2"].includes(event.key)) render();
+});
 
 setInterval(function () {
   const now = Date.now();

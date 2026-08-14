@@ -14,7 +14,7 @@ test("the owner demo can hide equipment accountability without deleting its valu
   assert.match(owner, /dailyLogEquipmentAccountability:true/);
   assert.match(owner, /Show Equipment Accountability/);
   assert.match(dailyLog, /dlSetEquipmentAccountability/);
-  assert.match(dailyLog, /const equipmentPanel=showEquipment\?/);
+  assert.match(dailyLog, /const equipmentPanel = showEquipment\s*\?/);
   assert.match(dailyLog, /hiding changes the layout, not saved checklist values/);
   assert.match(styles, /\.dl-lower\.equipment-hidden\{grid-template-columns:1fr\}/);
 });

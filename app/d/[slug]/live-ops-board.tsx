@@ -70,7 +70,7 @@ type RadarTakeover = {
 };
 
 type BoardApparatus = { id: string; title: string; status: string; detail: string };
-type BoardRidingAssignment = { id: string; role: string; employee: string; shift: string };
+type BoardRidingAssignment = { id: string; role: string; employee: string; rank: string; shift: string };
 
 type Props = {
   departmentId: string;
@@ -125,9 +125,9 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     return assets.filter((asset) => /apparatus|vehicle|engine|truck|ambulance|medic|command/i.test(`${asset.asset_type} ${asset.category}`)).map((asset) => ({ id: asset.id, title: asset.unit_number || asset.name, status: asset.status, detail: [asset.manufacturer, asset.model].filter(Boolean).join(" · ") }));
   }, [assets, data.items, sourceData?.apparatus]);
   const ridingAssignments = useMemo<BoardRidingAssignment[]>(() => {
-    const saved = data.items.filter((item) => ["riding_assignment", "riding", "assignment"].includes(item.item_type)).map((item) => ({ id: item.id, role: item.title, employee: item.summary || item.contact || "Assignment saved", shift: item.location }));
+    const saved = data.items.filter((item) => ["riding_assignment", "riding", "assignment"].includes(item.item_type)).map((item) => ({ id: item.id, role: item.title, employee: item.summary || item.contact || "Assignment saved", rank: "", shift: item.location }));
     if (saved.length) return saved;
-    return (sourceData?.schedule || []).map((item) => ({ id: item.id, role: item.role || item.rank || "Assignment", employee: item.employee_name, shift: item.shift_name }));
+    return (sourceData?.schedule || []).map((item) => ({ id: item.id, role: item.role || "Assignment", employee: item.employee_name, rank: item.rank, shift: item.shift_name }));
   }, [data.items, sourceData?.schedule]);
 
   useEffect(() => {
@@ -297,7 +297,7 @@ function WeatherHeader({ departmentName, weather, index, clock, rotationSeconds,
 function SummaryWidget({ settings, activeIncident, items, ridingAssignments }: { settings: FoundationSettings; activeIncident?: DepartmentModuleItem; items: DepartmentModuleItem[]; ridingAssignments: BoardRidingAssignment[] }) {
   const staffing = items.find((item) => item.item_type === "staffing");
   const officer = items.find((item) => ["officer", "oic", "officer_in_charge"].includes(item.item_type));
-  const scheduledOfficer = ridingAssignments.find((item) => /officer|chief|captain|lieutenant|command/i.test(`${item.role} ${item.employee}`));
+  const scheduledOfficer = ridingAssignments.find((item) => /officer|chief|captain|lieutenant|command/i.test(`${item.role} ${item.rank} ${item.employee}`));
   return <div className={`live-summary ${settings.live_board_show_next_shift ? "" : "without-next-shift"}`}>
     <article className={staffing || ridingAssignments.length ? "" : "unconnected"}><span>Staffing</span><strong>{staffing?.title || (ridingAssignments.length ? `${ridingAssignments.length} scheduled` : "Not connected")}</strong><small>{staffing?.summary || (ridingAssignments.length ? ridingAssignments[0].shift || "Today’s saved schedule" : "Connect scheduling to show coverage")}</small></article>
     <article><span>Officer in charge</span><strong>{officer?.title || scheduledOfficer?.employee || "Not assigned"}</strong><small>{officer?.summary || scheduledOfficer?.role || "No current command assignment"}</small></article>
@@ -382,7 +382,7 @@ function ApparatusWidget({ apparatus, ridingAssignments, configuredCount, view }
   let content;
   if (ridingView) {
     content = ridingAssignments.length
-      ? <div className="live-riding-grid">{ridingAssignments.slice(0, 8).map((item) => <article key={item.id}><b>{item.role}</b><span>{item.employee}{item.shift ? ` · ${item.shift}` : ""}</span></article>)}</div>
+      ? <div className="live-riding-grid">{ridingAssignments.slice(0, 8).map((item) => <article key={item.id}><b>{item.role}</b><span>{item.employee}{item.rank ? ` · ${item.rank}` : ""}{item.shift ? ` · ${item.shift}` : ""}</span></article>)}</div>
       : <EmptySource title="No riding assignments are connected" text="Add saved riding-assignment records or connect the department schedule."/>;
   } else {
     content = apparatus.length
