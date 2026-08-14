@@ -20,10 +20,11 @@ type Props = {
 };
 
 function SourceNotice({ sourceName, inherited = false }: { sourceName: string; inherited?: boolean }) {
+  const copied = sourceName === "Fermilab";
   return (
     <div className="stickney-source-notice">
-      <b>{inherited ? "Department foundation records" : `Copied ${sourceName} records`}</b>
-      <span>{inherited ? "Audited personnel and schedule records saved inside this department build." : `Copy-only connection to ${sourceName}. The original records remain in place and are never deleted or rewritten.`}</span>
+      <b>{inherited ? "Department foundation records" : copied ? "Copied Fermilab records" : `Live ${sourceName} records`}</b>
+      <span>{inherited ? "Audited personnel and schedule records saved inside this department build." : copied ? "Copy-only connection to Fermilab Fire Department. The original records remain in place and are never deleted or rewritten." : `Read-only connection to ${sourceName} Firehouse Manager. The source records remain in place and are not deleted or rewritten.`}</span>
     </div>
   );
 }
@@ -129,8 +130,8 @@ export default function StickneyWorkspace({ module, departmentId, departmentSlug
   if (module === "hydrants") return <Hydrants departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "fleet") return <Fleet departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "inventory") return <Inventory departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "duties") return <Duties departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "documents") return <Documents departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "duties") return <Duties departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "documents") return <Documents departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "phones") return <Phones departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
   return (
     <section className="stickney-panel">
@@ -636,14 +637,14 @@ function Inventory({ departmentId, sourceName, sourceKey, data, editable, suppor
   );
 }
 
-function Duties({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
-  return <DailyDutiesWorkspace departmentId={departmentId} sourceName={sourceName} data={data} editable={editable} supportSessionId={supportSessionId} />;
+function Duties({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+  return <DailyDutiesWorkspace departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} data={data} editable={editable} supportSessionId={supportSessionId} />;
 }
 
-function Documents({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Documents({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
   const boxCards = data.boxCards ?? [];
   const policies = data.policies ?? [];
-  return <DocumentsWorkspace departmentId={departmentId} sourceName={sourceName} boxCards={boxCards} policies={policies} editable={editable} supportSessionId={supportSessionId} />;
+  return <DocumentsWorkspace departmentId={departmentId} sourceName={sourceName} sourceKey={sourceKey} boxCards={boxCards} policies={policies} editable={editable} supportSessionId={supportSessionId} />;
 }
 
 function Phones({ departmentId, sourceName, data, editable, supportSessionId }: { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {

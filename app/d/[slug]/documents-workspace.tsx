@@ -6,6 +6,7 @@ import type { StickneyBoxCard, StickneyPolicy } from "@/db/stickney";
 type Props = {
   departmentId: string;
   sourceName: string;
+  sourceKey: string;
   boxCards: StickneyBoxCard[];
   policies: StickneyPolicy[];
   editable: boolean;
@@ -97,7 +98,7 @@ function EditableRecord({ departmentId, recordType, recordId, fields, editable, 
   );
 }
 
-export default function DocumentsWorkspace({ departmentId, sourceName, boxCards, policies, editable, supportSessionId }: Props) {
+export default function DocumentsWorkspace({ departmentId, sourceName, sourceKey, boxCards, policies, editable, supportSessionId }: Props) {
   const groups = useMemo(() => Array.from(new Set(boxCards.map((card) => card.department || "Unassigned"))).sort((a, b) => a.localeCompare(b)), [boxCards]);
   const [view, setView] = useState<"box-cards" | "policies">("box-cards");
   const [activeGroup, setActiveGroup] = useState(groups[0] || "Unassigned");
@@ -124,7 +125,7 @@ export default function DocumentsWorkspace({ departmentId, sourceName, boxCards,
   return (
     <section className="stickney-panel department-documents" data-grouped-box-cards="active">
       <div className="stickney-source-notice">
-        <b>Copied {sourceName} source · protected overlays</b>
+        <b>{sourceKey === "fermilab" ? "Copied" : "Live"} {sourceName} source · protected overlays</b>
         <span>The original records and source documents remain in place. Authorized edits save as department overlays and never delete or rewrite the source.</span>
       </div>
       <div className="stickney-section-head">

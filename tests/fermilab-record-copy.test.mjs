@@ -45,7 +45,7 @@ test("shared workspaces label and route each connected source dynamically", asyn
   assert.match(workspace, /scheduleRequests/);
   assert.match(staffing, /sourceKey}-photo/);
   assert.match(fleet, /sourceKey}-inventory-photo/);
-  assert.match(documents, /Copied \{sourceName\} source/);
+  assert.match(documents, /sourceKey === "fermilab" \? "Copied" : "Live"/);
 });
 
 test("authorized Fermilab edits save as tenant overlays without changing the source copy", async () => {

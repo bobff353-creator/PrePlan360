@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { StickneyDuty, StickneyModuleData } from "@/db/stickney";
 
-type Props = { departmentId: string; sourceName: string; data: StickneyModuleData; editable: boolean; supportSessionId: string };
+type Props = { departmentId: string; sourceName: string; sourceKey: string; data: StickneyModuleData; editable: boolean; supportSessionId: string };
 type View = "today" | "weekly" | "chores";
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const shortDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -11,7 +11,7 @@ const segments = ["morning", "afternoon", "night"];
 const segmentLabels: Record<string, string> = { morning: "Morning · 6a–Noon", afternoon: "Afternoon · Noon–6p", night: "Night · 6p–6a" };
 const titleCase = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-export default function DailyDutiesWorkspace({ departmentId, sourceName, data, editable, supportSessionId }: Props) {
+export default function DailyDutiesWorkspace({ departmentId, sourceName, sourceKey, data, editable, supportSessionId }: Props) {
   const [view, setView] = useState<View>("today");
   const duties = data.duties ?? [];
   const context = data.dutyContext ?? { date: "", dayOfWeek: 0, segment: "morning" };
@@ -22,7 +22,7 @@ export default function DailyDutiesWorkspace({ departmentId, sourceName, data, e
   const formattedDate = context.date ? new Date(`${context.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today";
 
   return <section className="duties-foundation">
-    <div className="duties-source"><div><i/><span><b>Copied {sourceName} Daily Duties</b><small>Real weekly station rotation with audited department overlays</small></span></div><strong>Source preserved</strong></div>
+    <div className="duties-source"><div><i/><span><b>{sourceKey === "fermilab" ? "Copied" : "Live"} {sourceName} Daily Duties</b><small>Real weekly station rotation with audited department overlays</small></span></div><strong>Source preserved</strong></div>
     <div className="duties-kpis"><article><span>Today complete</span><b>{completed.length}/{today.length}</b><small>{today.length - completed.length} open</small></article><article><span>Current segment</span><b>{titleCase(context.segment)}</b><small>Chicago local time</small></article><article><span>{dayNames[context.dayOfWeek]}</span><b className="duty-name">{current?.duty || "No duty entered"}</b><small>Now due</small></article><article><span>Chore assignments</span><b>{assigned}</b><small>{assigned ? `${today.length - assigned} unassigned` : "No assignees recorded"}</small></article></div>
     <div className="duties-tabs" role="tablist" aria-label="Daily duty views">{[["today","Today's Roster"],["weekly","Weekly Schedule"],["chores","Station Chores"]].map(([key, text]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key as View)}>{text}</button>)}</div>
     {view === "today" ? <TodayView departmentId={departmentId} duties={today} context={context} formattedDate={formattedDate} editable={editable} supportSessionId={supportSessionId}/> : null}

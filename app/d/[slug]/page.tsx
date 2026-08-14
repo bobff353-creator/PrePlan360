@@ -81,7 +81,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   // Every department slug uses this shared route, including foundation calendar upgrades.
   const isStickney = department.slug === "stickney";
   const isFermilab = department.slug === "fermilab";
-  const connectedSourceName = isFermilab ? "Fermilab Fire Department" : isStickney ? "Stickney Firehouse Manager" : department.name;
+  const connectedSourceName = department.name;
   const connectedSourceKey = isFermilab ? "fermilab" : isStickney ? "stickney" : department.slug;
   let stickneyData: StickneyModuleData | null = null;
   let stickneyConnectionError = "";

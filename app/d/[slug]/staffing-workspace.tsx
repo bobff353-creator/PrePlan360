@@ -63,7 +63,7 @@ export default function StaffingWorkspace({ departmentId, sourceName, sourceKey,
         <div>
           <i />
           <span>
-            <b>Copied {sourceName} personnel workspace</b>
+            <b>{sourceKey === "fermilab" ? "Copied" : "Live"} {sourceName} personnel workspace</b>
             <small>Real department records with audited edits saved only in this build</small>
           </span>
         </div>
