@@ -191,7 +191,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
           ) : referenceData ? (
             <ReferenceLibrary kind={active[0] as "preplans" | "hydrants"} department={department} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} ownPreplans={referenceData[0]} sharedPreplans={referenceData[1]} ownHydrants={referenceData[2]} sharedHydrants={referenceData[3]} />
           ) : active[0] === "inspections" ? (
-            <ComingSoon />
+            <ComingSoon owner={owner} />
           ) : (
             <ModuleEmpty moduleName={active[1]} />
           )}
@@ -257,14 +257,14 @@ function Dashboard({ department, stations, vehicles, weather, supportQuery, modu
   );
 }
 
-function ComingSoon() {
+function ComingSoon({ owner }: { owner: boolean }) {
   return (
-    <section className="dept-module-empty coming-soon">
+    <section className="dept-module-empty coming-soon" data-inspection-release="owner-preview">
       <div className="dept-empty-mark">LOCKED</div>
       <span className="dept-section-label">INSPECTIONS</span>
-      <h2>Coming soon.</h2>
-      <p>The inspections workspace is hidden from department use while it is under owner development. No inspection names, occupancies, schedules, or compliance figures are exposed here.</p>
-      <a href="/portal">Return to department portal</a>
+      <h2>Owner workbench active. Department publishing locked.</h2>
+      <p>The shared Inspection 360 foundation is available in the owner demo, but inspection names, occupancies, schedules, findings, and compliance figures remain protected from every department until the owner publishes a verified tenant-safe release.</p>
+      <a aria-label={owner ? "Open owner Inspection development workbench" : "Return to department portal"} href={owner ? "/demo?owner=1&module=inspections" : "/portal"}>{owner ? "Open owner Inspection workbench" : "Return to department portal"}</a>
     </section>
   );
 }

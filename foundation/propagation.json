@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.19",
+  "release": "2026.08.13.22",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -96,6 +96,21 @@
         "db/foundation.ts",
         "db/schema.ts",
         "drizzle/0013_daily_log_display.sql"
+      ]
+    },
+    "inspections": {
+      "demo": [
+        "app/demo/page.tsx",
+        "public/fireflow-360-demo.html",
+        "public/inspections-owner.css",
+        "public/inspections-owner.js",
+        "public/view-only-demo.css",
+        "public/view-only-demo.js"
+      ],
+      "departments": [
+        "app/d/[slug]/page.tsx",
+        "app/owner/demo/page.tsx",
+        "db/foundation.ts"
       ]
     },
     "preplans": {
