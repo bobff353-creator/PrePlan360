@@ -76,6 +76,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const referenceData = active[0] === "preplans" || active[0] === "hydrants" ? await Promise.all([listDepartmentPreplans(department.id), listSharedPreplans(department.id), listDepartmentHydrants(department.id), listSharedHydrants(department.id)]) : null;
   const configurableModule = active[0] === "live-ops" || active[0] === "respond" ? active[0] : null;
   const moduleData = configurableModule ? await getDepartmentModuleData(department.id, configurableModule) : null;
+  // Every department slug uses this shared route, including foundation calendar upgrades.
   const isStickney = department.slug === "stickney";
   let stickneyData: StickneyModuleData | null = null;
   let stickneyConnectionError = "";

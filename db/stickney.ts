@@ -48,6 +48,7 @@ export type StickneyScheduleAssignment = {
   id: string;
   work_date: string;
   shift_name: string;
+  shift_color?: string;
   start_time: string;
   end_time: string;
   role: string;

@@ -41,6 +41,7 @@ const definitions: Record<
     fields: {
       work_date: 20,
       shift_name: 120,
+      shift_color: 20,
       start_time: 20,
       end_time: 20,
       role: 120,
@@ -221,6 +222,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
     data.employee_name = employee.name;
     data.rank = employee.rank;
+    const scheduleColors = new Set(["#8b1e24", "#111318", "#c89b2c", "#2569bd", "#d96b22"]);
+    data.shift_color = scheduleColors.has(String(data.shift_color || "").toLowerCase()) ? String(data.shift_color).toLowerCase() : "#8b1e24";
   }
   if (recordType === "apparatus" && !data.name) return new Response("Apparatus name is required", { status: 400 });
   if (recordType === "duty" && !data.duty) return new Response("Duty is required", { status: 400 });

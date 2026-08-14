@@ -4,6 +4,7 @@ import StaffingWorkspace from "./staffing-workspace";
 import FleetWorkspace from "./fleet-workspace";
 import DailyDutiesWorkspace from "./daily-duties-workspace";
 import PreplanMap from "./preplan-map";
+import ScheduleCalendar from "./schedule-calendar";
 
 type Props = {
   module: string;
@@ -43,6 +44,21 @@ function formatDate(value: string) {
         day: "numeric",
         year: "numeric",
       });
+}
+
+const scheduleColors = [["#8b1e24", "Deep red"], ["#111318", "Black"], ["#c89b2c", "Gold"], ["#2569bd", "Blue"], ["#d96b22", "Orange"]] as const;
+
+function scheduleColor(name: string, saved?: string) {
+  if (scheduleColors.some(([value]) => value === saved?.toLowerCase())) return saved!.toLowerCase();
+  let hash = 0;
+  for (const character of name) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return scheduleColors[hash % scheduleColors.length][0];
+}
+
+function chicagoDate() {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function documentHref(value: string) {
@@ -186,6 +202,12 @@ function ScheduleForm({ departmentId, supportSessionId, employees, assignment }:
           Shift
           <input required name="shift_name" defaultValue={assignment?.shift_name ?? "24-Hour Tour"} />
         </label>
+        <label className="schedule-color-field">
+          Shift color
+          <select name="shift_color" defaultValue={scheduleColor(assignment?.shift_name ?? "24-Hour Tour", assignment?.shift_color)}>
+            {scheduleColors.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
         <label>
           Start time
           <input required name="start_time" type="time" defaultValue={assignment?.start_time ?? "07:00"} />
@@ -243,7 +265,10 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
         <b>{rows.filter(eligible).length}</b>
       </div>
       {editable && (data.employees ?? []).length ? <ScheduleForm departmentId={departmentId} supportSessionId={supportSessionId} employees={data.employees ?? []} /> : null}
+      <ScheduleCalendar rows={rows} today={chicagoDate()} />
       {rows.length ? (
+        <details className="stickney-archive schedule-assignment-records">
+          <summary>Assignment records</summary>
         <div className="stickney-schedule">
           {[...grouped.entries()].map(([date, assignments]) => {
             const valid = assignments.filter(eligible).length;
@@ -281,6 +306,7 @@ function Schedule({ departmentId, data, editable, supportSessionId }: { departme
             );
           })}
         </div>
+        </details>
       ) : (
         <Empty title="No filled assignments in this window" text={(data.employees ?? []).length ? "Add a dated assignment above. Only employment-date and qualified-role matches are accepted." : "Add active employees and their roles in Roster & Staffing before building assignments."} />
       )}
