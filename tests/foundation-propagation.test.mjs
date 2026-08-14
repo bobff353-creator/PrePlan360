@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { configPath, currentModuleHashes, lockPath, projectRoot, readJson } from "../scripts/foundation-propagation-lib.mjs";
+import { configPath, currentModuleHashes, lockPath, normalizeTextForHash, projectRoot, readJson } from "../scripts/foundation-propagation-lib.mjs";
+
+test("foundation hashes are stable across Windows and Vercel line endings", () => {
+  assert.equal(normalizeTextForHash("first\r\nsecond\r\n"), normalizeTextForHash("first\nsecond\n"));
+});
 
 test("all department builds share the dynamic department route", async () => {
   const [page, styles] = await Promise.all([

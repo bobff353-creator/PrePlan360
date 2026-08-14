@@ -10,13 +10,18 @@ export async function readJson(file) {
   return JSON.parse(await readFile(file, "utf8"));
 }
 
+export function normalizeTextForHash(content) {
+  return content.replaceAll("\r\n", "\n");
+}
+
 export async function hashFiles(files) {
   const hash = createHash("sha256");
   for (const relativePath of [...files].sort()) {
     const absolutePath = path.join(projectRoot, relativePath);
+    const content = normalizeTextForHash(await readFile(absolutePath, "utf8"));
     hash.update(relativePath.replaceAll("\\", "/"));
     hash.update("\0");
-    hash.update(await readFile(absolutePath));
+    hash.update(content);
     hash.update("\0");
   }
   return hash.digest("hex");
