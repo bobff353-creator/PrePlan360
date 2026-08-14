@@ -52,3 +52,19 @@ test("shared fleet workspace exposes interactive check, evidence, and repair API
   assert.match(evidence, /canAccessDepartment/);
   assert.match(propagation, /apparatus-and-logistics/);
 });
+
+test("shared Stickney and Fermilab fleet workspace exposes the reviewed mobile asset scanner", async () => {
+  const [workspace, capture, assetRoute] = await Promise.all([
+    readFile(new URL("../app/d/[slug]/fleet-workspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/d/[slug]/asset-capture.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/departments/[id]/assets/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(workspace, /dynamic\(\(\) => import\("\.\/asset-capture"\)\)/);
+  assert.match(workspace, /<AssetCapture departmentId=\{departmentId\}/);
+  assert.match(workspace, /Imported \{sourceName\} apparatus stays unchanged/);
+  assert.match(capture, /Scan VIN/);
+  assert.match(capture, /Scan barcode \/ QR/);
+  assert.match(capture, /NHTSA and never save until you review/);
+  assert.match(assetRoute, /canWriteDepartment/);
+  assert.match(assetRoute, /That VIN or barcode is already assigned in this department/);
+});

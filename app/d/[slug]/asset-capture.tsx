@@ -9,7 +9,6 @@ export default function AssetCapture({ departmentId, supportSessionId = "" }: { 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const [assetType, setAssetType] = useState("vehicle");
-  const [scanMode, setScanMode] = useState<"vin" | "barcode">("vin");
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState("Camera is off");
   const [vin, setVin] = useState("");
@@ -32,7 +31,6 @@ export default function AssetCapture({ departmentId, supportSessionId = "" }: { 
   }
 
   async function startCamera(mode: "vin" | "barcode") {
-    setScanMode(mode);
     setScanStatus("Requesting rear camera…");
     try {
       const reader = new BrowserMultiFormatReader();
