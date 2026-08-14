@@ -116,27 +116,52 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   return (
     <main className="department-app" style={style} data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
       <aside className="dept-app-sidebar">
+        <input
+          aria-label="Expand or collapse department navigation"
+          className="dept-sidebar-toggle"
+          id="dept-sidebar-expanded"
+          type="checkbox"
+        />
+        <label
+          aria-label="Expand or collapse department navigation"
+          className="dept-sidebar-toggle-label"
+          htmlFor="dept-sidebar-expanded"
+          title="Expand or collapse department navigation"
+        >
+          <span aria-hidden="true" className="dept-sidebar-toggle-open">›</span>
+          <span aria-hidden="true" className="dept-sidebar-toggle-close">‹</span>
+        </label>
         <div className="dept-app-brand">
           <DepartmentLogo department={department} />
-          <div>
+          <div className="dept-sidebar-copy dept-app-brand-copy">
             <b>{department.app_title || department.name}</b>
             <small>Department operations</small>
           </div>
         </div>
         <nav>
           {visibleModules.map(([key, label, number]) => (
-            <a className={active[0] === key ? "active" : ""} href={`/d/${slug}?module=${key}${supportQuery}`} key={key}>
+            <a
+              aria-label={label}
+              className={active[0] === key ? "active" : ""}
+              href={`/d/${slug}?module=${key}${supportQuery}`}
+              key={key}
+              title={label}
+            >
               <span>{number}</span>
-              {label}
+              <span className="dept-sidebar-copy dept-nav-label">{label}</span>
             </a>
           ))}
         </nav>
         <div className="dept-sidebar-foot">
-          <span>
-            <i /> {ownerSupport ? "Audited owner support" : "Secure department app"}
+          <span className="dept-security-status" title={ownerSupport ? "Audited owner support" : "Secure department app"}>
+            <i />
+            <span className="dept-sidebar-copy">{ownerSupport ? "Audited owner support" : "Secure department app"}</span>
           </span>
           <form method="post" action="/api/member/logout">
-            <button type="submit">Sign out</button>
+            <button aria-label="Sign out" title="Sign out" type="submit">
+              <span aria-hidden="true" className="dept-signout-mark">↪</span>
+              <span className="dept-sidebar-copy">Sign out</span>
+            </button>
           </form>
         </div>
       </aside>

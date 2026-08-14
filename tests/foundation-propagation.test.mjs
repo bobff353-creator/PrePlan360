@@ -5,11 +5,18 @@ import path from "node:path";
 import { configPath, currentModuleHashes, lockPath, projectRoot, readJson } from "../scripts/foundation-propagation-lib.mjs";
 
 test("all department builds share the dynamic department route", async () => {
-  const page = await readFile(path.join(projectRoot, "app", "d", "[slug]", "page.tsx"), "utf8");
+  const [page, styles] = await Promise.all([
+    readFile(path.join(projectRoot, "app", "d", "[slug]", "page.tsx"), "utf8"),
+    readFile(path.join(projectRoot, "app", "department-app.css"), "utf8"),
+  ]);
   assert.match(page, /getDepartmentBySlug\(slug\)/);
   assert.match(page, /getDepartmentFoundation\(department\.id\)/);
   assert.match(page, /orderedVisibleModules\(foundation\)/);
   assert.match(page, /<LiveOpsBoard/);
+  assert.match(page, /id="dept-sidebar-expanded"/);
+  assert.match(page, /className="dept-sidebar-copy dept-nav-label"/);
+  assert.match(styles, /grid-template-columns:76px minmax\(0,1fr\)/);
+  assert.match(styles, /:has\(\.dept-sidebar-toggle:checked\)\{grid-template-columns:240px/);
   assert.equal((page.match(/department\.slug === "stickney"/g) || []).length, 1, "Only the legacy-data adapter may specialize Stickney; the application shell and foundation stay shared.");
   assert.doesNotMatch(page, /department\.slug === "fermilab"/);
 });

@@ -4,3 +4,37 @@
 
 @media(max-width:900px){.branding-editor form{grid-template-columns:repeat(2,1fr)}.department-app{grid-template-columns:190px minmax(0,1fr)}.dept-app-brand b{font-size:11px}.dept-home-grid{grid-template-columns:1fr}.dept-metrics{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.branding-editor form{grid-template-columns:1fr}.branding-editor form .wide{grid-column:auto}.logo-uploader{grid-template-columns:1fr}.logo-uploader form{align-items:stretch;flex-direction:column}.department-app{display:block}.dept-app-sidebar{position:static;display:block;height:auto;border-right:0}.dept-app-brand,.dept-sidebar-foot{display:none}.dept-app-sidebar nav{display:flex;gap:5px;overflow-x:auto;padding:7px;border-bottom:1px solid rgba(255,255,255,.1)}.dept-app-sidebar nav a{flex:0 0 auto;padding:9px;border-left:0;border-bottom:2px solid transparent}.dept-app-sidebar nav a.active{border-left:0;border-bottom-color:var(--dept-accent)}.dept-app-sidebar nav a span{display:none}.dept-app-workspace>header{padding:0 13px}.dept-mobile-mark{display:block;padding:0;border:0;background:none}.dept-mobile-mark .department-logo,.dept-mobile-mark .department-monogram{width:35px;height:35px}.dept-app-workspace>header>div:first-of-type span,.dept-user>span{display:none}.dept-app-content{width:calc(100% - 28px);padding:30px 0 55px}.dept-app-heading{flex-direction:column}.dept-app-heading h1{font-size:42px}.dept-metrics{grid-template-columns:1fr}.dept-module-grid{grid-template-columns:1fr 1fr}}
+
+/* The department app uses a compact navigation rail by default. The native
+   checkbox keeps the full menu available without making the shared shell a
+   client-only component. This applies to every current and future department. */
+@media(min-width:641px){
+  .department-app{grid-template-columns:76px minmax(0,1fr);transition:grid-template-columns .18s ease}
+  .department-app:has(.dept-sidebar-toggle:checked){grid-template-columns:240px minmax(0,1fr)}
+  .dept-app-sidebar{overflow:visible}
+  .dept-sidebar-toggle{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .dept-sidebar-toggle-label{position:absolute;z-index:5;top:62px;right:-13px;display:grid;place-items:center;width:26px;height:26px;border:1px solid color-mix(in srgb,var(--dept-action) 70%,#fff 15%);border-radius:999px;background:color-mix(in srgb,var(--dept-bg) 88%,white 8%);color:#fff;font:900 19px/1 Arial;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer}
+  .dept-sidebar-toggle-label:hover{border-color:var(--dept-accent);color:var(--dept-accent)}
+  .dept-sidebar-toggle-close{display:none}
+  .dept-sidebar-toggle:checked+.dept-sidebar-toggle-label .dept-sidebar-toggle-open{display:none}
+  .dept-sidebar-toggle:checked+.dept-sidebar-toggle-label .dept-sidebar-toggle-close{display:inline}
+  .dept-app-brand{justify-content:center;min-height:76px;padding:13px 8px}
+  .dept-app-sidebar .dept-sidebar-copy{display:none}
+  .dept-app-sidebar nav{padding:10px 7px}
+  .dept-app-sidebar nav a{justify-content:center;min-height:40px;padding:9px 6px;border-left-width:2px}
+  .dept-app-sidebar nav a>span:first-child{font-size:10px;font-weight:900}
+  .dept-sidebar-foot{justify-items:center;padding:13px 7px}
+  .dept-security-status{justify-content:center}
+  .dept-sidebar-foot button{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(255,255,255,.1);border-radius:7px;text-align:center}
+  .dept-signout-mark{display:inline!important;color:var(--dept-accent);font-size:16px}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-brand{justify-content:flex-start;padding:16px}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar .dept-sidebar-copy{display:inline}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-brand-copy{display:grid}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar nav{padding:14px 9px}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-app-sidebar nav a{justify-content:flex-start;padding:11px 12px}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-sidebar-foot{justify-items:stretch;padding:16px}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-security-status{justify-content:flex-start}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-sidebar-foot button{display:flex;width:auto;height:auto;border:0;border-radius:0}
+  .department-app:has(.dept-sidebar-toggle:checked) .dept-signout-mark{display:none!important}
+}
+@media(max-width:640px){.dept-sidebar-toggle,.dept-sidebar-toggle-label{display:none}.dept-app-sidebar .dept-nav-label{display:inline}}
