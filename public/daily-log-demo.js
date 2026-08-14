@@ -2,6 +2,8 @@
 const DL_KEY = "fireflow360.dailyLog.demo.v1";
 const DL_EQUIPMENT = ["Knox Box keys", "Portable radios", "Thermal imaging cameras", "Gas detectors"];
 let dlDate = new Date().toISOString().slice(0, 10);
+let dlOpenNoteId = "";
+let dlOpenUnitsId = "";
 
 function dlLoad() {
   try {
@@ -61,6 +63,85 @@ function dlMember(id) {
 function dlMilitary(value, fallback) {
   const digits = String(value || "").replace(/\D/g, "");
   return digits.length === 4 ? digits : fallback;
+}
+
+function dlNormalizeAddress(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\b(street)\b/g, "st")
+    .replace(/\b(avenue)\b/g, "ave")
+    .replace(/\b(road)\b/g, "rd")
+    .replace(/\b(drive)\b/g, "dr")
+    .replace(/\b(boulevard)\b/g, "blvd")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function dlAddressCatalog() {
+  const preplans = typeof PREPLANS === "undefined" ? [] : PREPLANS.map(function (plan, index) {
+    return {
+      id: "preplan-" + (plan.id || index),
+      address: plan.addr || plan.address || "",
+      name: plan.name || "Saved preplan",
+      kind: "Preplan",
+      preplanId: plan.id || "",
+    };
+  });
+  const imports = typeof IMPORTS === "undefined" ? [] : IMPORTS.map(function (item, index) {
+    return {
+      id: "import-" + index,
+      address: item.addr || item.address || "",
+      name: item.name || "Imported property",
+      kind: "Address record",
+      preplanId: "",
+    };
+  });
+  const savedAddresses = typeof DL_RECORDS === "undefined" ? [] : Object.keys(DL_RECORDS).flatMap(function (date) {
+    const record = DL_RECORDS[date];
+    return record && Array.isArray(record.calls) ? record.calls.map(function (call, index) {
+      return {
+        id: "saved-" + date + "-" + (call.id || index),
+        address: call.address || "",
+        name: call.reportNumber ? "Prior call " + call.reportNumber : "Prior Daily Log address",
+        kind: "Saved address",
+        preplanId: "",
+      };
+    }) : [];
+  });
+  const seen = new Set();
+  return preplans.concat(imports, savedAddresses).filter(function (item) {
+    const key = dlNormalizeAddress(item.address);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function dlAddressMatches(value) {
+  const query = dlNormalizeAddress(value);
+  if (!query) return dlAddressCatalog().slice(0, 5);
+  return dlAddressCatalog().filter(function (item) {
+    return dlNormalizeAddress(item.address).includes(query) || dlNormalizeAddress(item.name).includes(query);
+  }).slice(0, 5);
+}
+
+function dlUnitCatalog() {
+  const source = typeof FLEET === "undefined" ? [] : FLEET;
+  return source.map(function (unit) {
+    if (Array.isArray(unit)) return { id: String(unit[0] || ""), label: String(unit[1] || "Apparatus") };
+    return { id: String(unit.id || unit.unit || unit.name || ""), label: String(unit.type || unit.kind || unit.label || "Apparatus") };
+  }).filter(function (unit) { return unit.id; });
+}
+
+function dlCallUnits(call) {
+  if (Array.isArray(call.unitIds)) return call.unitIds.map(String).filter(Boolean);
+  return String(call.units || "").split(",").map(function (unit) { return unit.trim(); }).filter(Boolean);
+}
+
+function dlNoteTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "----";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).replaceAll(":", "");
 }
 
 function dlTemplate(shift) {
@@ -199,7 +280,10 @@ function dlRemoveStaff(id) {
 }
 
 function dlAddCall() {
-  dlRecord(dlDate).calls.push({ id: dlId("call"), reportNumber: "", timeOut: "", timeIn: "", units: "", address: "", type: "EMS" });
+  const call = { id: dlId("call"), reportNumber: "", timeOut: "", timeIn: "", units: "", unitIds: [], address: "", preplanId: "", type: "EMS", notes: [] };
+  dlRecord(dlDate).calls.push(call);
+  dlOpenNoteId = "";
+  dlOpenUnitsId = "";
   dlSave("Call row added");
 }
 
@@ -213,7 +297,105 @@ function dlSetCall(id, key, value) {
 function dlRemoveCall(id) {
   const record = dlRecord(dlDate);
   record.calls = record.calls.filter(function (row) { return row.id !== id; });
+  if (dlOpenNoteId === id) dlOpenNoteId = "";
+  if (dlOpenUnitsId === id) dlOpenUnitsId = "";
   dlSave("Call row removed");
+}
+
+function dlAddressInput(id, value) {
+  const row = dlRecord(dlDate).calls.find(function (item) { return item.id === id; });
+  if (!row) return;
+  row.address = value;
+  const exact = dlAddressCatalog().find(function (item) { return dlNormalizeAddress(item.address) === dlNormalizeAddress(value); });
+  row.preplanId = exact ? exact.preplanId : "";
+  row.updatedAt = new Date().toISOString();
+  dlRecord(dlDate).updatedAt = row.updatedAt;
+  localStorage.setItem(DL_KEY, JSON.stringify(DL_RECORDS));
+  dlRenderAddressSuggestions(id, value);
+}
+
+function dlRenderAddressSuggestions(id, value) {
+  if (typeof document === "undefined") return;
+  const panel = document.getElementById("dl-address-suggestions-" + id);
+  if (!panel) return;
+  const matches = dlAddressMatches(value);
+  panel.innerHTML = matches.map(function (item) {
+    return '<button type="button" onmousedown="event.preventDefault()" onclick="dlSelectAddress(\'' + dlEsc(id) + "','" + dlEsc(item.id) + '\')"><span><b>' + dlEsc(item.address) + "</b><small>" + dlEsc(item.name) + '</small></span><em class="' + (item.preplanId ? "preplan" : "address") + '">' + dlEsc(item.kind) + "</em></button>";
+  }).join("") || '<div class="dl-address-empty">Keep typing or use the entered address.</div>';
+  panel.classList.add("open");
+}
+
+function dlCloseAddressSuggestions(id) {
+  setTimeout(function () {
+    if (typeof document === "undefined") return;
+    const panel = document.getElementById("dl-address-suggestions-" + id);
+    if (panel) panel.classList.remove("open");
+  }, 120);
+}
+
+function dlSelectAddress(callId, catalogId) {
+  const item = dlAddressCatalog().find(function (candidate) { return candidate.id === catalogId; });
+  if (!item) return;
+  const row = dlRecord(dlDate).calls.find(function (call) { return call.id === callId; });
+  if (!row) return;
+  row.address = item.address;
+  row.preplanId = item.preplanId;
+  dlSave(item.preplanId ? "Preplan address selected" : "Saved address selected");
+}
+
+function dlToggleUnit(callId, unitId, checked) {
+  const call = dlRecord(dlDate).calls.find(function (item) { return item.id === callId; });
+  if (!call) return;
+  const selected = new Set(dlCallUnits(call));
+  if (checked) selected.add(unitId);
+  else selected.delete(unitId);
+  call.unitIds = Array.from(selected);
+  call.units = call.unitIds.join(", ");
+  dlOpenUnitsId = callId;
+  dlSave("Responding units updated");
+}
+
+function dlSetUnitPicker(callId, open) {
+  if (open) dlOpenUnitsId = callId;
+  else if (dlOpenUnitsId === callId) dlOpenUnitsId = "";
+}
+
+function dlToggleCallNotes(callId) {
+  dlOpenNoteId = dlOpenNoteId === callId ? "" : callId;
+  dlOpenUnitsId = "";
+  render();
+}
+
+function dlAddCallNote(callId) {
+  if (typeof document === "undefined") return;
+  const input = document.getElementById("dl-call-note-input-" + callId);
+  const text = input && "value" in input ? String(input.value || "").trim() : "";
+  if (!text) return;
+  const call = dlRecord(dlDate).calls.find(function (item) { return item.id === callId; });
+  if (!call) return;
+  if (!Array.isArray(call.notes)) call.notes = [];
+  call.notes.push({ id: dlId("note"), text: text.slice(0, 1000), at: new Date().toISOString() });
+  dlOpenNoteId = callId;
+  dlSave("Timestamped call note added");
+}
+
+function dlCurrentCadNotes(address, reportNumber) {
+  const normalized = dlNormalizeAddress(address);
+  const records = Object.keys(DL_RECORDS).sort().reverse();
+  const matches = [];
+  records.forEach(function (date) {
+    const record = DL_RECORDS[date];
+    const calls = record && Array.isArray(record.calls) ? record.calls : [];
+    calls.forEach(function (call) {
+      const reportMatches = reportNumber && call.reportNumber === reportNumber;
+      const addressMatches = normalized && dlNormalizeAddress(call.address) === normalized;
+      if (!reportMatches && !addressMatches) return;
+      (Array.isArray(call.notes) ? call.notes : []).forEach(function (note) {
+        matches.push({ id: note.id, at: note.at, time: dlNoteTime(note.at), text: note.text, reportNumber: call.reportNumber || "", address: call.address || "" });
+      });
+    });
+  });
+  return matches.sort(function (a, b) { return String(a.at).localeCompare(String(b.at)); });
 }
 
 function dlSetNotes(value) {
@@ -252,8 +434,11 @@ function dlRecordDemoDispatch() {
     timeOut: time,
     timeIn: "",
     units: "E-1204, T-1211, M-1231",
+    unitIds: ["E-1204", "T-1211", "M-1231"],
     address: "1200 Ember Ridge Blvd",
+    preplanId: "rm",
     type: "Structure Fire",
+    notes: [],
   });
   record.updatedAt = new Date().toISOString();
   record.lastMessage = "Fictional CAD call added from Respond";
@@ -324,15 +509,44 @@ function dlStaffingTable(record) {
 }
 
 function dlCalls(record) {
-  const rows = record.calls.length
-    ? record.calls.map(function (call, index) {
-      const types = ["Fire", "EMS", "MVA", "HazMat", "Mutual Aid", "Structure Fire", "Special"].map(function (type) {
-        return "<option " + (type === call.type ? "selected" : "") + ">" + type + "</option>";
-      }).join("");
-      return '<tr><td class="mono">' + (index + 1) + '</td><td><input value="' + dlEsc(call.reportNumber) + '" onchange="dlSetCall(\'' + call.id + '\',\'reportNumber\',this.value)"></td><td><input class="mono" inputmode="numeric" maxlength="4" value="' + dlEsc(call.timeOut) + '" onchange="dlSetCall(\'' + call.id + '\',\'timeOut\',this.value)"></td><td><input class="mono" inputmode="numeric" maxlength="4" value="' + dlEsc(call.timeIn) + '" onchange="dlSetCall(\'' + call.id + '\',\'timeIn\',this.value)"></td><td><input value="' + dlEsc(call.units) + '" onchange="dlSetCall(\'' + call.id + '\',\'units\',this.value)"></td><td><input value="' + dlEsc(call.address) + '" onchange="dlSetCall(\'' + call.id + '\',\'address\',this.value)"></td><td><select onchange="dlSetCall(\'' + call.id + '\',\'type\',this.value)">' + types + '</select></td><td><button class="btn" onclick="dlRemoveCall(\'' + call.id + '\')">Remove</button></td></tr>';
-    }).join("")
-    : '<tr><td colspan="8"><div class="dl-empty">No calls recorded for this operational date.</div></td></tr>';
-  return '<div class="dl-table-wrap"><table class="dl-table dl-calls"><thead><tr><th>#</th><th>Report</th><th>Out</th><th>In</th><th>Units</th><th>Address</th><th>Type</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+  if (!record.calls.length) return '<div class="dl-empty">No calls recorded for this operational date.</div>';
+  return '<div class="dl-call-list">' + record.calls.map(function (call, index) {
+    const types = ["Fire", "EMS", "MVA", "HazMat", "Mutual Aid", "Structure Fire", "Special"].map(function (type) {
+      return `<option value="${dlEsc(type)}" ${type === call.type ? "selected" : ""}>${dlEsc(type)}</option>`;
+    }).join("");
+    const selectedUnits = dlCallUnits(call);
+    const unitOptions = dlUnitCatalog().map(function (unit) {
+      return `<label><input type="checkbox" ${selectedUnits.includes(unit.id) ? "checked" : ""} onchange="dlToggleUnit('${dlEsc(call.id)}','${dlEsc(unit.id)}',this.checked)"><span><b>${dlEsc(unit.id)}</b><small>${dlEsc(unit.label)}</small></span></label>`;
+    }).join("");
+    const unitSummary = selectedUnits.length
+      ? selectedUnits.map(function (unit) { return `<b>${dlEsc(unit)}</b>`; }).join("")
+      : "<span>Select units</span>";
+    const exactAddress = dlAddressCatalog().find(function (item) {
+      return dlNormalizeAddress(item.address) === dlNormalizeAddress(call.address);
+    });
+    const addressStatus = exactAddress
+      ? `<small class="dl-preplan-match ${exactAddress.preplanId ? "matched" : "saved"}">${dlEsc(exactAddress.kind)} · ${dlEsc(exactAddress.name)}</small>`
+      : '<small class="dl-preplan-match">Type to search preplans and saved addresses</small>';
+    const notes = Array.isArray(call.notes) ? call.notes : [];
+    const noteRows = notes.length
+      ? notes.map(function (note) { return `<div class="dl-call-note"><time>${dlEsc(dlNoteTime(note.at))}</time><p>${dlEsc(note.text)}</p></div>`; }).join("")
+      : '<div class="dl-call-note-empty">No timestamped notes yet.</div>';
+    const notepad = dlOpenNoteId === call.id
+      ? `<div class="dl-call-notepad"><header><div><span>LIVE CALL NOTES</span><b>${dlEsc(call.reportNumber || call.address || "Unnumbered response")}</b></div><em>Updates appear in Respond CAD notes</em></header><div class="dl-call-note-stream">${noteRows}</div><div class="dl-call-note-compose"><textarea id="dl-call-note-input-${dlEsc(call.id)}" rows="3" maxlength="1000" placeholder="Add a factual incident update…"></textarea><button class="btn pri" type="button" onclick="dlAddCallNote('${dlEsc(call.id)}')">Add timestamped note</button></div></div>`
+      : "";
+    return `<article class="dl-call-record">
+      <header><div><span class="mono">#${index + 1}</span><b>Response record</b></div><button class="btn" type="button" onclick="dlRemoveCall('${dlEsc(call.id)}')">Remove</button></header>
+      <div class="dl-call-fields">
+        <label><span>Report</span><input value="${dlEsc(call.reportNumber)}" onchange="dlSetCall('${dlEsc(call.id)}','reportNumber',this.value)"></label>
+        <label><span>Out</span><input class="mono" inputmode="numeric" maxlength="4" value="${dlEsc(call.timeOut)}" onchange="dlSetCall('${dlEsc(call.id)}','timeOut',this.value)"></label>
+        <label><span>In</span><input class="mono" inputmode="numeric" maxlength="4" value="${dlEsc(call.timeIn)}" onchange="dlSetCall('${dlEsc(call.id)}','timeIn',this.value)"></label>
+        <label><span>Type</span><select onchange="dlSetCall('${dlEsc(call.id)}','type',this.value)">${types}</select></label>
+        <label class="dl-call-address"><span>Address</span><div class="dl-address-input"><input autocomplete="off" value="${dlEsc(call.address)}" onfocus="dlRenderAddressSuggestions('${dlEsc(call.id)}',this.value)" oninput="dlAddressInput('${dlEsc(call.id)}',this.value)" onchange="dlSetCall('${dlEsc(call.id)}','address',this.value)" onblur="dlCloseAddressSuggestions('${dlEsc(call.id)}')"><div class="dl-address-suggestions" id="dl-address-suggestions-${dlEsc(call.id)}"></div></div>${addressStatus}</label>
+        <div class="dl-call-units"><span>Responding units</span><details ${dlOpenUnitsId === call.id ? "open" : ""} ontoggle="dlSetUnitPicker('${dlEsc(call.id)}',this.open)"><summary><span class="dl-unit-summary">${unitSummary}</span><em>${selectedUnits.length} selected</em></summary><div class="dl-unit-options">${unitOptions || '<div class="dl-address-empty">No apparatus entered for this department.</div>'}</div></details></div>
+        <button class="dl-call-note-toggle ${dlOpenNoteId === call.id ? "active" : ""}" type="button" aria-label="Open timestamped notes for response ${index + 1}" onclick="dlToggleCallNotes('${dlEsc(call.id)}')"><span>+</span><small>Notes</small><b>${notes.length}</b></button>
+      </div>${notepad}
+    </article>`;
+  }).join("") + "</div>";
 }
 
 viewDailyLog = function () {
@@ -369,4 +583,12 @@ viewDailyLog = function () {
     + '<div class="dl-lower ' + (showEquipment ? "" : "equipment-hidden") + '"><section class="card dl-section"><div class="dl-section-head"><div><span class="modtitle">SHIFT NOTES</span><h2>Handoff and follow-up</h2></div></div><textarea rows="7" placeholder="Equipment issues, coverage changes, station activity, and follow-up items…" onchange="dlSetNotes(this.value)">' + dlEsc(record.notes) + "</textarea></section>" + equipmentPanel + "</div>" + footer() + "</div>";
 };
 
-if (current === "log" || current === "board") render();
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("storage", function (event) {
+    if (event.key !== DL_KEY) return;
+    DL_RECORDS = dlLoad();
+    if (current === "respond" || current === "log") render();
+  });
+}
+
+if (current === "log" || current === "board" || current === "respond") render();

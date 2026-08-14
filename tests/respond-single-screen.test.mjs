@@ -16,6 +16,8 @@ test("demo Respond keeps the desktop command view on one screen", async () => {
   assert.match(script, /Critical hazards/);
   assert.match(script, /A-side view/);
   assert.match(script, /Current CAD notes/);
+  assert.match(script, /dlCurrentCadNotes/);
+  assert.match(script, /Daily Log update/);
   assert.match(script, /Exact-address history/);
   assert.match(script, /Area history/);
   assert.match(script, /map_action=pano/);
@@ -23,18 +25,23 @@ test("demo Respond keeps the desktop command view on one screen", async () => {
   assert.match(styles, /#main:has\(\.respond-upgrade\)\{overflow:hidden/);
   assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(styles, /\.rsp-command-context\{grid-column:1\/-1/);
+  assert.match(styles, /\.rsp-cad-note-stream/);
 });
 
 test("all department Respond pages inherit the compact editable foundation", async () => {
-  const [component, styles] = await Promise.all([
+  const [component, notes, styles] = await Promise.all([
     read("app/d/[slug]/module-builder.tsx"),
+    read("app/d/[slug]/respond-cad-notes.tsx"),
     read("app/module-builder.css"),
   ]);
   assert.match(component, /<RespondWorkspace/);
   assert.match(component, /CAD not connected/);
   assert.match(component, /Preplan intelligence/);
   assert.match(component, /A-side view/);
-  assert.match(component, /Current CAD notes/);
+  assert.match(component, /RespondCadNotes/);
+  assert.match(notes, /Current CAD notes/);
+  assert.match(notes, /5000/);
+  assert.match(notes, /Daily Log update/);
   assert.match(component, /Exact-address history/);
   assert.match(component, /Area history/);
   assert.match(component, /Locate for Street View/);

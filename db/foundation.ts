@@ -6,6 +6,7 @@ export const foundationModules = [
   { key: "respond", label: "Respond" },
   { key: "staffing", label: "Roster & Staffing" },
   { key: "scheduling", label: "Scheduling" },
+  { key: "daily-log", label: "Daily Log" },
   { key: "preplans", label: "Pre-Plans" },
   { key: "fleet", label: "Apparatus" },
   { key: "inventory", label: "Inventory" },
@@ -175,6 +176,17 @@ function validKeys(raw: string): FoundationModuleKey[] {
   return Array.isArray(values) ? values.filter((value): value is FoundationModuleKey => typeof value === "string" && known.has(value as FoundationModuleKey)) : [];
 }
 
+function insertMissingModules(savedOrder: FoundationModuleKey[]) {
+  const order = [...savedOrder];
+  foundationModules.forEach((module, defaultIndex) => {
+    if (order.includes(module.key)) return;
+    const nextSaved = foundationModules.slice(defaultIndex + 1).map((entry) => entry.key).find((key) => order.includes(key));
+    if (nextSaved) order.splice(order.indexOf(nextSaved), 0, module.key);
+    else order.push(module.key);
+  });
+  return order;
+}
+
 function safeUrl(raw: unknown) {
   try {
     const value = String(raw || "").trim();
@@ -245,7 +257,6 @@ function normalizeBoard(row: FoundationRow | null): LiveBoardSettings {
 
 function normalize(row: FoundationRow | null, scope: "master" | "department", departmentId: string | null, isOverride: boolean): FoundationSettings {
   const savedOrder = row ? validKeys(row.module_order_json) : [];
-  const remainder = foundationModules.map((module) => module.key).filter((key) => !savedOrder.includes(key));
   const hidden = row ? validKeys(row.hidden_modules_json).filter((key) => key !== "dashboard") : [];
   return {
     ...defaultSettings,
@@ -253,7 +264,7 @@ function normalize(row: FoundationRow | null, scope: "master" | "department", de
     ...normalizeBoard(row),
     scope,
     department_id: departmentId,
-    module_order: [...savedOrder, ...remainder],
+    module_order: insertMissingModules(savedOrder),
     hidden_modules: hidden,
     minimum_staffing: Math.max(
       0,

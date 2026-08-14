@@ -1,4 +1,5 @@
 import type { DepartmentModuleData, DepartmentModuleItem } from "@/db/access";
+import RespondCadNotes from "./respond-cad-notes";
 
 const defaults = {
   "live-ops": {
@@ -23,7 +24,7 @@ export default function ModuleBuilder({ moduleKey, moduleName, departmentId, dat
   const action = `/api/departments/${departmentId}/modules/${moduleKey}`;
   const controlId = `module-builder-${moduleKey}`;
 
-  if (moduleKey === "respond" && !recordManagerOnly) return <RespondWorkspace moduleName={moduleName} heading={heading} description={description} instructions={instructions} action={action} data={data} editable={editable} supportSessionId={supportSessionId}/>;
+  if (moduleKey === "respond" && !recordManagerOnly) return <RespondWorkspace departmentId={departmentId} moduleName={moduleName} heading={heading} description={description} instructions={instructions} action={action} data={data} editable={editable} supportSessionId={supportSessionId}/>;
 
   return <section className={`module-builder${recordManagerOnly ? " record-manager" : ""}`}>
     {!recordManagerOnly ? <header className="module-builder-intro"><div><span className="dept-section-label">{moduleName.toUpperCase()}</span><h2>{heading}</h2><p>{description}</p>{instructions ? <small>{instructions}</small> : null}</div><div className="module-connection-state"><i/>Manual workspace</div></header> : null}
@@ -46,7 +47,7 @@ export default function ModuleBuilder({ moduleKey, moduleName, departmentId, dat
   </section>;
 }
 
-function RespondWorkspace({ moduleName, heading, description, instructions, action, data, editable, supportSessionId }: { moduleName: string; heading: string; description: string; instructions: string; action: string; data: DepartmentModuleData; editable: boolean; supportSessionId: string }) {
+function RespondWorkspace({ departmentId, moduleName, heading, description, instructions, action, data, editable, supportSessionId }: { departmentId: string; moduleName: string; heading: string; description: string; instructions: string; action: string; data: DepartmentModuleData; editable: boolean; supportSessionId: string }) {
   const activeIncident = data.items.find((item) => item.item_type === "incident" && item.operational_status === "active");
   const incidents = data.items.filter((item) => item.item_type === "incident");
   const apparatus = data.items.filter((item) => item.item_type === "apparatus");
@@ -59,7 +60,7 @@ function RespondWorkspace({ moduleName, heading, description, instructions, acti
       <RespondPanel label="Preplan intelligence" title={`${resources.length} connected record${resources.length === 1 ? "" : "s"}`} tone="ready" items={resources} empty="No department-approved preplan, building systems, water-supply, or response resource is linked yet."/>
       <RespondPanel label="Apparatus response" title={`${apparatus.filter((item) => item.operational_status !== "offline").length} available record${apparatus.length === 1 ? "" : "s"}`} tone={apparatus.some((item) => item.operational_status === "attention" || item.operational_status === "offline") ? "danger" : "ready"} items={apparatus} empty="No apparatus response status has been entered."/>
       <RespondPanel label="Staging and guidance" title={`${guidance.length} department entr${guidance.length === 1 ? "y" : "ies"}`} tone="information" items={guidance} empty="No verified staging note, contact, or department guidance has been entered."/>
-      <DepartmentRespondContext activeIncident={activeIncident} incidents={incidents} resources={resources}/>
+      <DepartmentRespondContext departmentId={departmentId} activeIncident={activeIncident} incidents={incidents} resources={resources}/>
     </div>
     {instructions ? <div className="respond-department-note"><b>Department instructions</b><span>{instructions}</span></div> : null}
     {editable ? <details className="respond-department-manage"><summary><span className="module-build-plus">+</span><span><b>Configure Respond and manage records</b><small>Changes are saved only to this department workspace.</small></span></summary><div className="module-build-panels">
@@ -70,7 +71,7 @@ function RespondWorkspace({ moduleName, heading, description, instructions, acti
   </section>;
 }
 
-function DepartmentRespondContext({ activeIncident, incidents, resources }: { activeIncident?: DepartmentModuleItem; incidents: DepartmentModuleItem[]; resources: DepartmentModuleItem[] }) {
+function DepartmentRespondContext({ departmentId, activeIncident, incidents, resources }: { departmentId: string; activeIncident?: DepartmentModuleItem; incidents: DepartmentModuleItem[]; resources: DepartmentModuleItem[] }) {
   const currentLocation = activeIncident?.location || "";
   const exactHistory = currentLocation ? incidents.filter((item) => item.id !== activeIncident?.id && normalizeLocation(item.location) === normalizeLocation(currentLocation)) : [];
   const currentArea = areaLocationKey(currentLocation);
@@ -82,7 +83,7 @@ function DepartmentRespondContext({ activeIncident, incidents, resources }: { ac
     <header><span>Incident context</span><b>A-side → CAD notes → exact history → area history</b></header>
     <div className="respond-context-grid">
       <article className="respond-context-media"><ContextLabel label="A-side view" value={aSideLink ? "Saved image" : "Street View fallback"}/><div className={`respond-aside-view${aSideLink ? " saved" : ""}`} style={aSideLink ? { backgroundImage: `linear-gradient(180deg, transparent 30%, rgba(4, 9, 14, .85)), url(${JSON.stringify(aSideLink)})` } : undefined}><span>A</span><div><b>{aSideLink ? "Saved department A-side image" : "No saved A-side photo"}</b><small>{aSideLink ? "Confirm image date and building before use." : currentLocation ? "Locate the incident address, then open the available panorama." : "An active incident location is required for the fallback."}</small></div>{aSideLink ? <a href={aSideLink} target="_blank" rel="noreferrer">Open image</a> : streetViewLink ? <a href={streetViewLink} target="_blank" rel="noreferrer">Locate for Street View</a> : null}</div></article>
-      <article><ContextLabel label="Current CAD notes" value={activeIncident ? "Manual incident" : "No active incident"}/><p>{activeIncident?.summary || "No current CAD notes are available. CAD is not connected; an authorized user may enter a verified incident note."}</p></article>
+      <RespondCadNotes departmentId={departmentId} address={currentLocation} fallback={activeIncident?.summary || "No current CAD notes are available. CAD is not connected; an authorized user may enter a verified incident note."}/>
       <article><ContextLabel label="Exact-address history" value={`${exactHistory.length} found`}/><DepartmentHistoryRows items={exactHistory} empty="No prior incident at this exact saved address."/></article>
       <article><ContextLabel label="Area history" value={`${areaHistory.length} same-street`}/><DepartmentHistoryRows items={areaHistory} empty="No other incident on this saved street."/></article>
     </div>

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.53",
+  "release": "2026.08.14.56",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -105,10 +105,16 @@
         "public/owner-upgrade.js"
       ],
       "departments": [
+        "app/d/[slug]/daily-log-workspace.tsx",
+        "app/d/[slug]/respond-cad-notes.tsx",
         "app/d/[slug]/live-ops-board.tsx",
         "app/d/[slug]/daily-duties-workspace.tsx",
+        "app/daily-log-foundation.css",
         "app/duties-foundation.css",
         "app/d/[slug]/page.tsx",
+        "app/d/[slug]/module-builder.tsx",
+        "app/module-builder.css",
+        "app/api/departments/[id]/daily-log/route.ts",
         "app/owner/demo/foundation-editor.tsx",
         "app/api/owner/foundation/route.ts",
         "db/foundation.ts",
@@ -201,7 +207,9 @@
       ],
       "departments": [
         "app/d/[slug]/module-builder.tsx",
+        "app/d/[slug]/respond-cad-notes.tsx",
         "app/module-builder.css",
+        "app/api/departments/[id]/daily-log/route.ts",
         "app/api/departments/[id]/modules/[moduleKey]/route.ts",
         "db/access.ts"
       ]
