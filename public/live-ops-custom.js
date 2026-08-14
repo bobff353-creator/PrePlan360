@@ -10,10 +10,10 @@
   document.head.appendChild(stylesheet);
 })();
 
-const BOARD_STORAGE_KEY = "fireflow360.liveBoard.v5";
+const BOARD_STORAGE_KEY = "fireflow360.liveBoard.v6";
 const BOARD_PANEL_LABELS = { equipment: "Equipment Issues", duty: "Current Daily Duty", closecalls: "Firefighter Close Calls", lodd: "U.S. Firefighter LODD", training: "Upcoming Training", weather: "Weather", alerts: "Weather Alerts", radar: "Weather Radar" };
 const BOARD_DEFAULTS = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   department: "Redstone Valley Fire & Rescue",
   title: "Live Operations",
   order: ["summary", "station", "apparatus"],
@@ -21,7 +21,7 @@ const BOARD_DEFAULTS = {
   widths: { summary: "full", station: "half", apparatus: "half" },
   panels: ["equipment", "duty", "closecalls", "training"],
   rotationSec: 12,
-  responseSec: 45,
+  responseSec: 90,
   showNextShift: true,
   forecastDetail: "3",
   equipmentUrl: "",
@@ -85,7 +85,7 @@ function normalizeBoardCfg(raw) {
   const legacy = Number(saved.schemaVersion || 0) < BOARD_DEFAULTS.schemaVersion;
   config.schemaVersion = BOARD_DEFAULTS.schemaVersion;
   config.rotationSec = bounded(legacy ? BOARD_DEFAULTS.rotationSec : config.rotationSec, 5, 300, 12);
-  config.responseSec = bounded(config.responseSec, 5, 600, 45);
+  config.responseSec = bounded(legacy ? BOARD_DEFAULTS.responseSec : config.responseSec, 5, 600, 90);
   config.sourceRefreshMin = bounded(legacy ? BOARD_DEFAULTS.sourceRefreshMin : config.sourceRefreshMin, 1, 120, 5);
   config.radarRefreshMin = bounded(legacy ? BOARD_DEFAULTS.radarRefreshMin : config.radarRefreshMin, 1, 120, 5);
   config.radarDisplaySec = bounded(config.radarDisplaySec, 10, 180, 30);
@@ -107,7 +107,7 @@ function normalizeBoardCfg(raw) {
 function loadBoardCfg() {
   try {
     const currentValue = localStorage.getItem(BOARD_STORAGE_KEY);
-    const legacyValue = localStorage.getItem("fireflow360.liveBoard.v4") || localStorage.getItem("fireflow360.liveBoard.v3");
+    const legacyValue = localStorage.getItem("fireflow360.liveBoard.v5") || localStorage.getItem("fireflow360.liveBoard.v4") || localStorage.getItem("fireflow360.liveBoard.v3");
     return normalizeBoardCfg(JSON.parse(currentValue || legacyValue || "null"));
   } catch { return cloneBoardDefaults(); }
 }

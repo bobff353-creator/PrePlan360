@@ -11,6 +11,8 @@ import StickneyWorkspace from "./stickney-workspace";
 import ModuleBuilder from "./module-builder";
 import LiveOpsBoard from "./live-ops-board";
 import { getDepartmentFoundation, orderedVisibleModules } from "@/db/foundation";
+import StationDisplayButton from "@/app/station-display-button";
+import StationIncidentMonitor from "@/app/station-incident-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string; boardSaved?: string }> }) {
+export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string; boardSaved?: string; station?: string }> }) {
   const { slug } = await params;
   const department = await getDepartmentBySlug(slug);
   if (!department)
@@ -52,6 +54,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   const foundation = await getDepartmentFoundation(department.id);
   const visibleModules = orderedVisibleModules(foundation);
   const query = await searchParams;
+  const stationDisplay = query.station === "1";
   const selected = query.module || "dashboard";
   const active = visibleModules.find(([key]) => key === selected) || visibleModules[0];
   const supportSession = owner && query.support ? await getSupportSession(query.support) : null;
@@ -119,7 +122,8 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
   } as CSSProperties;
 
   return (
-    <main className="department-app" style={style} data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
+    <main className={`department-app${stationDisplay ? " station-embedded" : ""}`} style={style} data-daily-log-equipment-accountability={foundation.daily_log_equipment_accountability ? "shown" : "hidden"}>
+      {stationDisplay ? <StationIncidentMonitor departmentId={department.id} departmentSlug={department.slug} currentModule={active[0]} responseSeconds={foundation.response_duration_seconds} supportSessionId={ownerSupport ? supportSession.id : ""}/> : null}
       <aside className="dept-app-sidebar">
         <input
           aria-label="Expand or collapse department navigation"
@@ -181,6 +185,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
           </div>
           <div className="dept-user">
             <span>{user.displayName}</span>
+            {!stationDisplay ? <StationDisplayButton displayUrl={`/d/${slug}?module=live-ops&station=1${supportQuery}`}/> : null}
             {owner ? <a href="/owner">Owner console</a> : <a href="/portal">Switch department</a>}
           </div>
         </header>

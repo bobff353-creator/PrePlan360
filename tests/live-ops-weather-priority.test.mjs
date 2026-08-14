@@ -37,9 +37,11 @@ test("the owner demo uses compact military-time weather and radar priority", asy
 });
 
 test("every department inherits weather, radar, real records, visibility, and Respond priority", async () => {
-  const [board, page, stickney, foundation, schema, migration, sourceMigration, css, weatherRoute, boardRoute] = await Promise.all([
+  const [board, page, incidentMonitor, incidentRoute, stickney, foundation, schema, migration, sourceMigration, css, weatherRoute, boardRoute] = await Promise.all([
     read("app/d/[slug]/live-ops-board.tsx"),
     read("app/d/[slug]/page.tsx"),
+    read("app/station-incident-monitor.tsx"),
+    read("app/api/departments/[id]/active-incident/route.ts"),
     read("db/stickney.ts"),
     read("db/foundation.ts"),
     read("db/schema.ts"),
@@ -54,7 +56,10 @@ test("every department inherits weather, radar, real records, visibility, and Re
   assert.match(page, /sourceData=\{stickneyData\}/);
   assert.match(page, /assets=\{liveOpsAssets\}/);
   assert.match(page, /"dashboard", "live-ops", "staffing"/);
-  assert.match(board, /router\.replace\(`\/d\/\$\{departmentSlug\}\?module=respond/);
+  assert.match(page, /<StationIncidentMonitor/);
+  assert.match(incidentMonitor, /router\.replace\(`\/d\/\$\{departmentSlug\}\?module=respond&station=1/);
+  assert.match(incidentMonitor, /preplan360:station-incident/);
+  assert.match(incidentRoute, /item_type === "incident" && candidate\.operational_status === "active"/);
   assert.match(board, /setWeatherIndex/);
   assert.match(board, /setApparatusIndex/);
   assert.match(board, /live_board_show_next_shift \?/);
@@ -126,6 +131,8 @@ test("the propagation contract covers both demo and shared department implementa
   assert.ok(liveOps.demo.includes("public/live-ops-custom.js"));
   assert.ok(liveOps.demo.includes("public/live-ops-priority.css"));
   assert.ok(liveOps.departments.includes("app/d/[slug]/live-ops-board.tsx"));
+  assert.ok(liveOps.departments.includes("app/station-incident-monitor.tsx"));
+  assert.ok(liveOps.departments.includes("app/api/departments/[id]/active-incident/route.ts"));
   assert.ok(liveOps.departments.includes("app/api/departments/[id]/weather/route.ts"));
   assert.ok(liveOps.departments.includes("app/api/live-sources/lodd/route.ts"));
   assert.ok(liveOps.departments.includes("db/stickney.ts"));

@@ -1,0 +1,17 @@
+.station-display-launch{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid #deaa35;border-radius:7px;background:rgba(222,170,53,.1);color:#f0ca6f;font:800 9px Arial;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.station-display-launch:hover{background:rgba(222,170,53,.18);color:#fff}
+.station-display-overlay[hidden]{display:none!important}
+.station-display-overlay{position:fixed;z-index:10000;inset:0;display:grid;grid-template-rows:40px minmax(0,1fr);width:100vw;height:100dvh;background:#071018;color:#fff}
+.station-display-overlay>header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 12px;border-bottom:1px solid #2a3540;background:#101720;font:10px Arial}
+.station-display-overlay>header>div{display:flex;align-items:center;gap:12px}.station-display-overlay>header b{font-size:11px}.station-display-overlay>header span{color:#8296a7}
+.station-display-overlay>header button{padding:6px 9px;border:1px solid #ff6254;border-radius:6px;background:#c9342d;color:#fff;font:800 9px Arial;cursor:pointer}
+.station-display-overlay>iframe{display:block;width:100%;height:100%;border:0;background:#071018}
+.demo-actions{justify-self:end;display:flex;align-items:center;gap:12px}.demo-actions .demo-mode{justify-self:auto}
+.department-app.station-embedded{display:block;height:100dvh;min-height:0;overflow:hidden}
+.department-app.station-embedded .dept-app-sidebar,.department-app.station-embedded .dept-app-workspace>header,.department-app.station-embedded .dept-app-heading,.department-app.station-embedded .dept-foundation-rulebar{display:none!important}
+.department-app.station-embedded .dept-app-workspace{height:100dvh;overflow:auto}
+.department-app.station-embedded .dept-app-content{width:100%;margin:0;padding:12px 16px 35px}
+.department-app.station-embedded .live-ops-foundation{gap:10px}
+.station-incident-monitor{position:fixed;z-index:60;right:16px;bottom:12px;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(59,209,131,.32);border-radius:999px;background:rgba(5,13,19,.9);color:#a7dfc0;font:800 9px Arial;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.station-incident-monitor i{width:7px;height:7px;border-radius:50%;background:#3bd183;box-shadow:0 0 9px #3bd183}
+@media(max-width:700px){.station-display-overlay{grid-template-rows:48px minmax(0,1fr)}.station-display-overlay>header span{display:none}.station-display-overlay>header>div{gap:7px}.demo-actions{gap:6px}.department-app.station-embedded .dept-app-content{padding:8px}}

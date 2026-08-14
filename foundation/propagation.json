@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.52",
+  "release": "2026.08.13.53",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -8,6 +8,8 @@
         "app/demo/page.tsx",
         "app/page.tsx",
         "public/fireflow-360-demo.html",
+        "public/station-display.css",
+        "public/station-display.js",
         "public/mobile-layout.css",
         "public/mobile-layout.js",
         "public/navigation-compact.css",
@@ -18,17 +20,27 @@
       "departments": [
         "app/d/[slug]/page.tsx",
         "app/department-app.css",
+        "app/station-display-button.tsx",
+        "app/station-display.css",
+        "app/station-incident-monitor.tsx",
+        "app/api/departments/[id]/active-incident/route.ts",
         "db/foundation.ts"
       ]
     },
     "live-operations": {
       "demo": [
         "public/live-ops-custom.js",
-        "public/live-ops-priority.css"
+        "public/live-ops-priority.css",
+        "public/station-display.css",
+        "public/station-display.js"
       ],
       "departments": [
         "app/d/[slug]/page.tsx",
         "app/d/[slug]/live-ops-board.tsx",
+        "app/station-display-button.tsx",
+        "app/station-display.css",
+        "app/station-incident-monitor.tsx",
+        "app/api/departments/[id]/active-incident/route.ts",
         "app/live-ops-foundation.css",
         "app/api/departments/[id]/live-ops-board/route.ts",
         "app/api/departments/[id]/weather/route.ts",

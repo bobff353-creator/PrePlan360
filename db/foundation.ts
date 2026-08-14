@@ -128,7 +128,7 @@ const defaultSettings: Omit<FoundationSettings, "scope" | "department_id" | "is_
   module_order: foundationModules.map((module) => module.key),
   hidden_modules: [],
   board_rotation_seconds: 12,
-  response_duration_seconds: 45,
+  response_duration_seconds: 90,
   live_board_title: "Live Operations Board",
   live_board_order: liveBoardWidgets.map((widget) => widget.key),
   live_board_hidden: [],

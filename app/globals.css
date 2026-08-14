@@ -15,6 +15,7 @@
 @import "./schedule-foundation.css";
 @import "./fleet-foundation.css";
 @import "./duties-foundation.css";
+@import "./station-display.css";
 
 :root{color-scheme:dark;background:#070b10;font-family:Arial,Helvetica,sans-serif;--ink:#f7f1e8;--muted:#9cacbd;--line:#26313c;--panel:#111821;--fire:#cf3028;--orange:#e66b25;--gold:#d6a936;--blue:#2f78c9}
 *{box-sizing:border-box}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { useRouter } from "next/navigation";
 import type { DepartmentAsset, DepartmentModuleData, DepartmentModuleItem } from "@/db/access";
 import { liveBoardPanels, liveBoardWidgets, type FoundationSettings, type LiveBoardWidth } from "@/db/foundation";
 import type { StickneyModuleData } from "@/db/stickney";
@@ -96,7 +95,6 @@ function militaryTime(date: Date | null) {
 }
 
 export default function LiveOpsBoard({ departmentId, departmentSlug, departmentName, weatherLocation, vehicleCount, settings, data, sourceData, assets, editable, supportSessionId, saveStatus }: Props) {
-  const router = useRouter();
   const definitions = useMemo(() => [
     ...liveBoardWidgets,
     ...settings.live_board_external_links.map((entry) => ({ key: entry.id, label: entry.title })),
@@ -143,13 +141,6 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (activeIncident) {
-      const support = supportSessionId ? `&support=${encodeURIComponent(supportSessionId)}` : "";
-      router.replace(`/d/${departmentSlug}?module=respond${support}`);
-    }
-  }, [activeIncident, departmentSlug, router, supportSessionId]);
 
   useEffect(() => {
     const every = Math.max(1, settings.live_board_source_refresh_minutes) * 60_000;
