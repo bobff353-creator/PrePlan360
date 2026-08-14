@@ -13,7 +13,7 @@
   const admin = params.get("view") !== "readonly" && insideVerifiedOwnerDemo();
   const STORE_KEY = "preplan360.boxCards.v1";
   const DB_NAME = "preplan360-box-card-sources";
-  const COLUMNS = ["Engines", "Trucks", "Squads", "EMS", "Chiefs", "Special", "Notifications"];
+  const COLUMNS = ["Engines", "Trucks", "Squads", "EMS", "Chiefs", "Special", "Change of Quarters", "Notifications"];
   const esc = typeof safeText === "function" ? safeText : function (value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character];
@@ -37,9 +37,9 @@
         sourceName: "Demo foundation",
         sourceType: "fictional",
         rows: [
-          { alarm: "1st Alarm", cells: ["", "", "", "", "", String(card.a1 || ""), ""] },
-          { alarm: "2nd Alarm", cells: ["", "", "", "", "", String(card.a2 || ""), ""] },
-          { alarm: "3rd Alarm", cells: ["", "", "", "", "", String(card.a3 || ""), ""] },
+          { alarm: "1st Alarm", cells: ["", "", "", "", "", String(card.a1 || ""), "", ""] },
+          { alarm: "2nd Alarm", cells: ["", "", "", "", "", String(card.a2 || ""), "", ""] },
+          { alarm: "3rd Alarm", cells: ["", "", "", "", "", String(card.a3 || ""), "", ""] },
         ],
         interdivisional: "",
         updatedAt: "Demo foundation",

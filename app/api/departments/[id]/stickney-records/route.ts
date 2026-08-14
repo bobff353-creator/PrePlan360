@@ -131,11 +131,16 @@ const definitions: Record<
     permission: "documents",
     module: "documents",
     fields: {
+      department: 120,
       title: 200,
       address: 240,
       box_number: 100,
-      access_notes: 3000,
+      division: 120,
+      status: 40,
+      access_notes: 6000,
       details: 5000,
+      alarm_rows: 30000,
+      interdivisional: 6000,
     },
   },
   policy: {
@@ -184,7 +189,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (recordType === "schedule" && recordId === "new") recordId = id("schedule");
   if (recordType === "apparatus" && recordId === "new") recordId = id("apparatus");
   if (recordType === "duty" && recordId === "new") recordId = id("duty");
-  const data: Record<string, string | string[]> = Object.fromEntries(
+  const data: Record<string, unknown> = Object.fromEntries(
     Object.entries(definition.fields).map(([field, max]) => [
       field,
       String(form.get(field) || "")
@@ -227,6 +232,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (recordType === "apparatus" && !data.name) return new Response("Apparatus name is required", { status: 400 });
   if (recordType === "duty" && !data.duty) return new Response("Duty is required", { status: 400 });
+  if (recordType === "box_card") {
+    if (!data.department || !data.box_number || !data.title) return new Response("Town, box number, and title are required", { status: 400 });
+    const statuses = new Set(["Active", "Draft - review required", "Reviewed", "Published"]);
+    data.status = statuses.has(String(data.status || "")) ? String(data.status) : "Draft - review required";
+    try {
+      const rows = JSON.parse(String(data.alarm_rows || "[]"));
+      if (!Array.isArray(rows) || rows.length < 1 || rows.length > 20) throw new Error();
+      data.alarm_rows = rows.map((row) => {
+        const record = row && typeof row === "object" ? row as { alarm?: unknown; cells?: unknown } : {};
+        const alarm = String(record.alarm || "Alarm").trim().slice(0, 80) || "Alarm";
+        const cells = Array.isArray(record.cells) ? record.cells.slice(0, 8).map((cell) => String(cell || "").trim().slice(0, 2000)) : [];
+        while (cells.length < 8) cells.push("");
+        return { alarm, cells };
+      });
+    } catch {
+      return new Response("Box Card alarm rows must contain 1 to 20 valid rows", { status: 400 });
+    }
+  }
   for (const field of ["schedule_sms_opt_in", "station_notify_email", "station_notify_text"]) data[field] = data[field] === "1" ? "1" : "0";
   if (recordType === "preplan") data.floor_count = String(Math.max(0, Math.min(200, Number(data.floor_count) || 0)));
   if (recordType === "preplan" || recordType === "hydrant") {

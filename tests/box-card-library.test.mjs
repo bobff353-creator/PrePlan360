@@ -59,10 +59,13 @@ test("only owner demo edits while public and department builds stay protected", 
 });
 
 test("department Box Cards use real town groups, protected edits, and downloads", async () => {
-  const [workspace, stickneyWorkspace, styles] = await Promise.all([
+  const [workspace, stickneyWorkspace, styles, route, layouts, propagation] = await Promise.all([
     read("app/d/[slug]/documents-workspace.tsx"),
     read("app/d/[slug]/stickney-workspace.tsx"),
     read("app/stickney-workspace.css"),
+    read("app/api/departments/[id]/stickney-records/route.ts"),
+    read("db/stickney-box-card-layouts.ts"),
+    read("foundation/propagation.json"),
   ]);
 
   assert.match(stickneyWorkspace, /<DocumentsWorkspace/);
@@ -73,8 +76,21 @@ test("department Box Cards use real town groups, protected edits, and downloads"
   assert.match(workspace, /if \(!editable\) return null/);
   assert.match(workspace, /Download original/);
   assert.match(workspace, /Download editable/);
+  assert.match(workspace, /Download CSV/);
   assert.match(workspace, /Print \/ Save PDF/);
+  assert.match(workspace, /ADMIN EDITOR/);
+  assert.match(workspace, /Change of Quarters/);
+  assert.match(workspace, /\+ Add alarm row/);
+  assert.match(workspace, /name="alarm_rows"/);
+  assert.match(workspace, /Original source preserved/);
   assert.match(workspace, /never delete or rewrite the source/);
   assert.match(styles, /\.box-group-tabs/);
   assert.match(styles, /\.department-box-grid/);
+  assert.match(styles, /\.department-box-editor/);
+  assert.match(route, /alarm_rows: 30000/);
+  assert.match(route, /rows\.length < 1 \|\| rows\.length > 20/);
+  assert.match(layouts, /"300-E"/);
+  assert.match(layouts, /stickney-1\.jpg/);
+  assert.match(layouts, /hydrateStickneyBoxCardLayout/);
+  assert.match(propagation, /db\/stickney-box-card-layouts\.ts/);
 });

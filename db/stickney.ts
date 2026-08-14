@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
+import { hydrateStickneyBoxCardLayout } from "@/db/stickney-box-card-layouts";
 
 const SUPABASE_URL = "https://ukpdacqjmhvlhmrwxtcx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HY1UlYHvPnvDIuq_N_X_Sg_xu7bxTzs";
@@ -215,6 +216,11 @@ export type StickneyDuty = {
   completed_date?: string;
   updated_at: string;
 };
+export type StickneyBoxCardAlarmRow = {
+  alarm: string;
+  cells: string[];
+};
+
 export type StickneyBoxCard = {
   id: string;
   title: string;
@@ -227,6 +233,9 @@ export type StickneyBoxCard = {
   document_page: number;
   status: string;
   updated_at: string;
+  division?: string;
+  alarm_rows?: StickneyBoxCardAlarmRow[];
+  interdivisional?: string;
 };
 export type StickneyPolicy = {
   id: string;
@@ -534,8 +543,9 @@ export async function loadStickneyModule(module: string, departmentId = ""): Pro
   }
   if (module === "documents") {
     const [boxCards, policies] = await Promise.all([read<StickneyBoxCard>(`select id,title,address,box_number,access_notes,details,department,document_url,document_page,status,updated_at from box_cards where status='Active' order by department,title`), read<StickneyPolicy>(`select id,title,policy_number,category,effective_date,body,status,updated_at from policies where status='Active' order by policy_number,title`)]);
+    const hydratedBoxCards = boxCards.map(hydrateStickneyBoxCardLayout);
     return {
-      boxCards: departmentId ? await applyOverrides(departmentId, "box_card", boxCards) : boxCards,
+      boxCards: departmentId ? await applyOverrides(departmentId, "box_card", hydratedBoxCards) : hydratedBoxCards,
       policies: departmentId ? await applyOverrides(departmentId, "policy", policies) : policies,
     };
   }
