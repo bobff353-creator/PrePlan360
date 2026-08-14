@@ -22,6 +22,10 @@ type Props = {
   editable: boolean;
   supportSessionId?: string;
   connectionError?: string;
+  inventoryQuery?: string;
+  inventoryUnit?: string;
+  inventoryPage?: string;
+  inventoryPhotoPage?: string;
 };
 
 function SourceNotice({ source, inherited = false }: { source: DepartmentSourcePresentation; inherited?: boolean }) {
@@ -118,7 +122,7 @@ function EditableRecord({
   );
 }
 
-export default function StickneyWorkspace({ module, departmentId, departmentSlug, source, data, minimumStaffing, scheduleRequests, selfEmployeeId, editable, supportSessionId = "", connectionError }: Props) {
+export default function StickneyWorkspace({ module, departmentId, departmentSlug, source, data, minimumStaffing, scheduleRequests, selfEmployeeId, editable, supportSessionId = "", connectionError, inventoryQuery = "", inventoryUnit = "", inventoryPage = "1", inventoryPhotoPage = "1" }: Props) {
   if (connectionError) {
     return (
       <section className="stickney-panel">
@@ -133,7 +137,7 @@ export default function StickneyWorkspace({ module, departmentId, departmentSlug
   if (module === "preplans") return <Preplans source={source} departmentId={departmentId} departmentSlug={departmentSlug} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "hydrants") return <Hydrants source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "fleet") return <Fleet source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
-  if (module === "inventory") return <Inventory source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
+  if (module === "inventory") return <Inventory source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} query={inventoryQuery} selectedUnit={inventoryUnit} requestedPage={inventoryPage} requestedPhotoPage={inventoryPhotoPage} />;
   if (module === "duties") return <Duties source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "documents") return <Documents source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
   if (module === "phones") return <Phones source={source} departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} />;
@@ -516,13 +520,44 @@ function Fleet({ source, departmentId, data, editable, supportSessionId }: { sou
   return <FleetWorkspace departmentId={departmentId} data={data} sourceName={source.name} sourceSystem={source.systemName} inventoryPhotoRoute={source.inventoryPhotoRoute} editable={editable} supportSessionId={supportSessionId} />;
 }
 
-function Inventory({ source, departmentId, data, editable, supportSessionId }: { source: DepartmentSourcePresentation; departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string }) {
+function Inventory({ source, departmentId, data, editable, supportSessionId, query, selectedUnit, requestedPage, requestedPhotoPage }: { source: DepartmentSourcePresentation; departmentId: string; data: StickneyModuleData; editable: boolean; supportSessionId: string; query: string; selectedUnit: string; requestedPage: string; requestedPhotoPage: string }) {
   const apparatus = data.apparatus ?? [];
   const compartments = data.compartments ?? [];
   const items = data.inventory ?? [];
   const photos = data.inventoryPhotos ?? [];
   const unitName = new Map(apparatus.map((item) => [item.id, item.name]));
   const compartmentName = new Map(compartments.map((item) => [item.id, item.label]));
+  const normalizedQuery = query.trim().toLowerCase();
+  const activeUnit = apparatus.some((unit) => unit.id === selectedUnit) ? selectedUnit : "";
+  const filteredItems = items.filter((item) => {
+    if (activeUnit && item.apparatus_id !== activeUnit) return false;
+    if (!normalizedQuery) return true;
+    return [unitName.get(item.apparatus_id), item.compartment_id ? compartmentName.get(item.compartment_id) : "", item.name, item.manufacturer, item.model, item.serial_number, item.barcode, item.equipment_category, ...(item.check_types ?? [])]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery);
+  });
+  const itemPageSize = 75;
+  const itemPageCount = Math.max(1, Math.ceil(filteredItems.length / itemPageSize));
+  const itemPage = Math.min(itemPageCount, Math.max(1, Number.parseInt(requestedPage, 10) || 1));
+  const visibleItems = filteredItems.slice((itemPage - 1) * itemPageSize, itemPage * itemPageSize);
+  const filteredPhotos = photos.filter((photo) => !activeUnit || photo.apparatus_id === activeUnit);
+  const photoPageSize = 18;
+  const photoPageCount = Math.max(1, Math.ceil(filteredPhotos.length / photoPageSize));
+  const photoPage = Math.min(photoPageCount, Math.max(1, Number.parseInt(requestedPhotoPage, 10) || 1));
+  const visiblePhotos = filteredPhotos.slice((photoPage - 1) * photoPageSize, photoPage * photoPageSize);
+  const inventoryHref = (nextItemPage = itemPage, nextPhotoPage = photoPage) => {
+    const params = new URLSearchParams({ module: "inventory" });
+    if (query.trim()) params.set("invQ", query.trim());
+    if (activeUnit) params.set("invUnit", activeUnit);
+    if (nextItemPage > 1) params.set("invPage", String(nextItemPage));
+    if (nextPhotoPage > 1) params.set("photoPage", String(nextPhotoPage));
+    if (supportSessionId) params.set("support", supportSessionId);
+    return `?${params.toString()}`;
+  };
+  const clearParams = new URLSearchParams({ module: "inventory" });
+  if (supportSessionId) clearParams.set("support", supportSessionId);
   return (
     <section className="stickney-panel">
       <SourceNotice source={source} />
@@ -534,11 +569,21 @@ function Inventory({ source, departmentId, data, editable, supportSessionId }: {
         </div>
         <b>{items.length.toLocaleString()}</b>
       </div>
-      {photos.length ? (
+      <form className="inventory-browser" method="get">
+        <input type="hidden" name="module" value="inventory" />
+        {supportSessionId ? <input type="hidden" name="support" value={supportSessionId} /> : null}
+        <label><span>Search inventory</span><input name="invQ" defaultValue={query} placeholder="Item, compartment, serial, barcode, category..." /></label>
+        <label><span>Apparatus</span><select name="invUnit" defaultValue={activeUnit}><option value="">All apparatus</option>{apparatus.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label>
+        <button type="submit">Find records</button>
+        <a href={`?${clearParams.toString()}`}>Clear</a>
+      </form>
+      <div className="inventory-results"><b>{filteredItems.length.toLocaleString()} matching item{filteredItems.length === 1 ? "" : "s"}</b><span>Showing no more than {itemPageSize} rows at once so the department app stays responsive.</span></div>
+      {filteredPhotos.length ? (
+        <>
         <div className="stickney-photo-gallery">
-          {photos.map((photo) => (
+          {visiblePhotos.map((photo) => (
             <figure key={photo.id}>
-              <img src={`/api/departments/${departmentId}/${source.inventoryPhotoRoute}/${photo.id}`} alt={`${unitName.get(photo.apparatus_id) || "Apparatus"} ${photo.view_level} inventory view`} />
+              <img loading="lazy" src={`/api/departments/${departmentId}/${source.inventoryPhotoRoute}/${photo.id}`} alt={`${unitName.get(photo.apparatus_id) || "Apparatus"} ${photo.view_level} inventory view`} />
               <figcaption>
                 <b>{unitName.get(photo.apparatus_id) || "Apparatus"}</b>
                 <span>{[photo.view_level, photo.door_state].filter(Boolean).join(" · ")}</span>
@@ -546,13 +591,15 @@ function Inventory({ source, departmentId, data, editable, supportSessionId }: {
             </figure>
           ))}
         </div>
+        {photoPageCount > 1 ? <nav className="inventory-pagination" aria-label="Inventory photo pages">{photoPage > 1 ? <a href={inventoryHref(itemPage, photoPage - 1)}>Previous photos</a> : <span>Previous photos</span>}<b>Photos {(photoPage - 1) * photoPageSize + 1}-{Math.min(photoPage * photoPageSize, filteredPhotos.length)} of {filteredPhotos.length}</b>{photoPage < photoPageCount ? <a href={inventoryHref(itemPage, photoPage + 1)}>Next photos</a> : <span>Next photos</span>}</nav> : null}
+        </>
       ) : (
         <div className="stickney-photo-status">
           <b>No inventory pictures stored</b>
-          <span>The source currently has no active inventory photo views.</span>
+          <span>{activeUnit ? "No active inventory photo views are attached to this apparatus." : "The source currently has no active inventory photo views."}</span>
         </div>
       )}
-      {items.length ? (
+      {visibleItems.length ? (
         <div className="stickney-table inventory">
           <table>
             <thead>
@@ -567,7 +614,7 @@ function Inventory({ source, departmentId, data, editable, supportSessionId }: {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <tr key={item.id}>
                   <td>{unitName.get(item.apparatus_id) || "Unknown unit"}</td>
                   <td>{item.compartment_id ? compartmentName.get(item.compartment_id) || "Unlabeled" : "Not assigned"}</td>
@@ -622,8 +669,9 @@ function Inventory({ source, departmentId, data, editable, supportSessionId }: {
           </table>
         </div>
       ) : (
-        <Empty title="No active inventory" text={`The ${source.name} operational inventory returned no active equipment records.`} />
+        <Empty title={items.length ? "No matching inventory" : "No active inventory"} text={items.length ? "Change the search or apparatus filter to see other preserved records." : `The ${source.name} operational inventory returned no active equipment records.`} />
       )}
+      {itemPageCount > 1 ? <nav className="inventory-pagination" aria-label="Inventory item pages">{itemPage > 1 ? <a href={inventoryHref(itemPage - 1, photoPage)}>Previous</a> : <span>Previous</span>}<b>Items {(itemPage - 1) * itemPageSize + 1}-{Math.min(itemPage * itemPageSize, filteredItems.length)} of {filteredItems.length.toLocaleString()}</b>{itemPage < itemPageCount ? <a href={inventoryHref(itemPage + 1, photoPage)}>Next</a> : <span>Next</span>}</nav> : null}
     </section>
   );
 }

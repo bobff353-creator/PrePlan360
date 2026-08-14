@@ -42,3 +42,10 @@ test("shared department route selects the registered Fermilab adapter", () => {
   assert.match(workspace, /source\.recordsLabel/);
   assert.doesNotMatch(workspace, /Live Stickney records/);
 });
+
+test("large transferred inventories render in searchable pages", () => {
+  assert.match(workspace, /const itemPageSize = 75/);
+  assert.match(workspace, /filteredItems\.slice/);
+  assert.match(workspace, /Search inventory/);
+  assert.match(workspace, /loading="lazy"/);
+});

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import "../../live-ops-foundation.css";
+import "../../inventory-browser.css";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { canAccessDepartment, canDepartmentPermission, getDepartmentBySlug, getDepartmentModuleData, getSupportSession, isOwner, listDepartmentAssets, listDepartmentHydrants, listDepartmentPreplans, listDepartmentScheduleRequests, listSharedHydrants, listSharedPreplans } from "@/db/access";
 import { DepartmentLogo } from "@/app/departments/department-brand";
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string; boardSaved?: string; station?: string }> }) {
+export default async function BrandedDepartmentApp({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ module?: string; asset?: string; support?: string; boardSaved?: string; station?: string; invQ?: string; invUnit?: string; invPage?: string; photoPage?: string }> }) {
   const { slug } = await params;
   const department = await getDepartmentBySlug(slug);
   if (!department)
@@ -236,7 +237,7 @@ export default async function BrandedDepartmentApp({ params, searchParams }: { p
             <DailyLogWorkspace departmentId={department.id} departmentName={department.name} initialDate={dailyLogDate} initialItems={dailyLogReference[0].items} preplans={dailyLogPreplans} units={dailyLogUnits} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""}/>
           ) : sourceData && source ? (
             <>
-              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} source={source} data={sourceData} minimumStaffing={foundation.minimum_staffing} scheduleRequests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={sourceConnectionError || undefined} />
+              <StickneyWorkspace module={active[0]} departmentId={department.id} departmentSlug={department.slug} source={source} data={sourceData} minimumStaffing={foundation.minimum_staffing} scheduleRequests={scheduleRequests} selfEmployeeId={selfEmployeeId} editable={editable} supportSessionId={ownerSupport ? supportSession.id : ""} connectionError={sourceConnectionError || undefined} inventoryQuery={query.invQ || ""} inventoryUnit={query.invUnit || ""} inventoryPage={query.invPage || "1"} inventoryPhotoPage={query.photoPage || "1"} />
               {active[0] === "fleet" ? (
                 <details id="native-assets" className="stickney-archive">
                   <summary>VIN, barcode, QR, and odometer capture</summary>
