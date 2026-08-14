@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.30",
-  "generatedAt": "2026-08-14T02:14:16.268Z",
+  "release": "2026.08.13.32",
+  "generatedAt": "2026-08-14T02:20:01.116Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -11,7 +11,7 @@
   "modules": {
     "application-shell": {
       "demo": "151dfd0ada83f9add728cdacb3b30e90b3ac357b14e4d9faa9a5c73683979a52",
-      "departments": "156ce5393d2b51f7a165eaa65e50bf3e8fde0fe823faea04b615486b0b24d201"
+      "departments": "92d7c96a353ff0d2789649efe3c09ae340d7f1e6a44b9acfe5cdb0d91f3bb675"
     },
     "live-operations": {
       "demo": "e9f8de0b61dc0f8847e96f7964b86cfd5ec1cfa47ccea6cb0052f7b7f1f009ca",
@@ -19,15 +19,15 @@
     },
     "roster-and-staffing": {
       "demo": "6484f976685c460cb3e598c2fbeb4b4acc81d36de2cd2960e4a55c0eb452a98e",
-      "departments": "622710c82d97b42a9afd49b45500b27468a008037288f93ed371789b5e8cbbed"
+      "departments": "70439d10b2ce546d33175743b3466844144151fae5c28a19b5bb1bf1b3295858"
     },
     "scheduling": {
       "demo": "79d1137a7263685bfbf1346fbb94628c11a0d31576228811d052ff3b1b37dab8",
-      "departments": "968e565754d9c360fbb8d4b7565cdc09a6fb8ad3547141681aca30730dae9c08"
+      "departments": "dceb91f8ed8357918c7b0dc0c0018417ea48066e2781ed27a333f18762b496d4"
     },
     "daily-log-and-duties": {
       "demo": "70c48a09bf6618e9591c35e3e6300bcc4db0c19d460db808b689610afaea8ff5",
-      "departments": "af0ab7365aa9723f755bb1c6b55804321d55a367f5867f197b70cce14b965d13"
+      "departments": "26bf5ee395a3d2b863e8b8150376556c906348103e817da9402ab28be2805d7b"
     },
     "owner-foundation": {
       "demo": "c878dfdabdf07104456af86f2f5f3553d649c713aaf38dcb270bc78dfc1956a2",
@@ -35,15 +35,15 @@
     },
     "inspections": {
       "demo": "03a6502ff7f5e81e7642d5b4125adf5f43b93c7686677ef46ad8fe5bc03c7e61",
-      "departments": "603de990f5ce8c3b64bd9facbb978a69b4889cf6394169b1d766eb5618d69208"
+      "departments": "119927b747c7def0271086b47a5a5d8c74f50b89ec736682295a4d9a46e6dd29"
     },
     "box-cards-and-documents": {
       "demo": "1fc97ef7c3eddf911339d239586ad0b623a83df039656a5fee6d969a70f2f5f0",
-      "departments": "0b7f3c48e837527202fabeac4bf29821a0687854a72394339391d84638e3c8cb"
+      "departments": "0acec9ae2781ebfeb4df6ce749e1f032c1849a241ce996022f1707ac857dbf31"
     },
     "preplans": {
       "demo": "d969fb56fbdcfd72fc47baaa4ab98c59ee2e42e69530e14ebd64913bab622841",
-      "departments": "a53c9dbbc56531d9aeeb9b3bb0f9ef78cb193736d4a8f6541f60afa6fa2220d2"
+      "departments": "2cdbe3e46bcc56df09a19f9ff6bcccd43e26bcacb898eba0890a91d5dc9b725c"
     },
     "respond": {
       "demo": "31dc21b7ef3063f025b9a27a496ccdf32ff57c23e0a3d7284e91852e7dce3a9b",

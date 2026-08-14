@@ -264,9 +264,9 @@ function DocumentsFoundation({ owner }: { owner: boolean }) {
     <section className="dept-module-empty" data-box-card-release="owner-preview" aria-label="Box Card publishing status">
       <div className="dept-empty-mark">LIB</div>
       <span className="dept-section-label">POLICIES & BOX CARDS</span>
-      <h2>Grouped Box Card foundation ready. Department records not published.</h2>
-      <p>The shared owner build now supports town/group tabs, secure browser-safe source imports, structured alarm rows, and autosaved owner edits. Only the signed-in, verified platform owner can build drafts; this department remains empty until an authorized administrator publishes verified cards to tenant storage.</p>
-      <a aria-label={owner ? "Open owner Box Card development workbench" : "Return to department portal"} href={owner ? "/demo?owner=1&module=box-cards" : "/portal"}>{owner ? "Open owner Box Card workbench" : "Return to department portal"}</a>
+      <h2>Policy and grouped Box Card foundation ready. Department records not published.</h2>
+      <p>The shared owner build supports a searchable, paged policy library with a focused document reader, plus town/group Box Card tabs, secure browser-safe imports, structured alarm rows, and autosaved owner edits. Only the signed-in, verified platform owner can build drafts; this department remains empty until an authorized administrator publishes verified records to tenant storage.</p>
+      <a aria-label={owner ? "Open owner Documents development workbench" : "Return to department portal"} href={owner ? "/demo?owner=1&module=box-cards" : "/portal"}>{owner ? "Open owner Documents workbench" : "Return to department portal"}</a>
     </section>
   );
 }

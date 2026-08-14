@@ -30,8 +30,9 @@ test("owner policy library avoids long pages and opens one policy at a time", as
 });
 
 test("department policy library searches, pages, and opens real policy bodies", async () => {
-  const [workspace, styles, propagation] = await Promise.all([
+  const [workspace, route, styles, propagation] = await Promise.all([
     read("app/d/[slug]/documents-workspace.tsx"),
+    read("app/d/[slug]/page.tsx"),
     read("app/stickney-workspace.css"),
     read("foundation/propagation.json"),
   ]);
@@ -45,6 +46,8 @@ test("department policy library searches, pages, and opens real policy bodies", 
   assert.match(workspace, /if \(!editable\) return null/);
   assert.match(styles, /\.department-policy-list/);
   assert.match(styles, /\.department-policy-reader/);
+  assert.match(route, /Policy and grouped Box Card foundation ready/);
+  assert.match(route, /searchable, paged policy library with a focused document reader/);
   assert.match(propagation, /public\/policies-upgrade\.js/);
   assert.match(propagation, /app\/d\/\[slug\]\/documents-workspace\.tsx/);
 });
