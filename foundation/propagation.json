@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.13.37",
+  "release": "2026.08.13.38",
   "description": "A demo change cannot become a release until its shared department implementation is changed and acknowledged. All departments render through app/d/[slug].",
   "modules": {
     "application-shell": {
@@ -32,12 +32,14 @@
         "app/live-ops-foundation.css",
         "app/api/departments/[id]/live-ops-board/route.ts",
         "app/api/departments/[id]/weather/route.ts",
+        "app/api/live-sources/lodd/route.ts",
         "app/departments/department-brand.tsx",
         "app/owner/demo/foundation-editor.tsx",
         "db/foundation.ts",
         "db/stickney.ts",
         "db/schema.ts",
-        "drizzle/0014_live_ops_weather_priority.sql"
+        "drizzle/0014_live_ops_weather_priority.sql",
+        "drizzle/0015_live_ops_panel_sources.sql"
       ]
     },
     "roster-and-staffing": {
@@ -103,7 +105,8 @@
         "db/foundation.ts",
         "db/schema.ts",
         "drizzle/0013_daily_log_display.sql",
-        "drizzle/0014_live_ops_weather_priority.sql"
+        "drizzle/0014_live_ops_weather_priority.sql",
+        "drizzle/0015_live_ops_panel_sources.sql"
       ]
     },
     "inspections": {

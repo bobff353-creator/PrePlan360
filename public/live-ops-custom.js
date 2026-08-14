@@ -10,10 +10,10 @@
   document.head.appendChild(stylesheet);
 })();
 
-const BOARD_STORAGE_KEY = "fireflow360.liveBoard.v4";
+const BOARD_STORAGE_KEY = "fireflow360.liveBoard.v5";
 const BOARD_PANEL_LABELS = { equipment: "Equipment Issues", duty: "Current Daily Duty", closecalls: "Firefighter Close Calls", lodd: "U.S. Firefighter LODD", training: "Upcoming Training", weather: "Weather", alerts: "Weather Alerts", radar: "Weather Radar" };
 const BOARD_DEFAULTS = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   department: "Redstone Valley Fire & Rescue",
   title: "Live Operations",
   order: ["summary", "station", "apparatus"],
@@ -24,6 +24,11 @@ const BOARD_DEFAULTS = {
   responseSec: 45,
   showNextShift: true,
   forecastDetail: "3",
+  equipmentUrl: "",
+  closecallsUrl: "",
+  loddUrl: "https://apps.usfa.fema.gov/firefighter-fatalities",
+  trainingUrl: "",
+  sourceRefreshMin: 5,
   weatherUrl: "",
   alertsUrl: "",
   radarUrl: "",
@@ -54,6 +59,8 @@ let nextApparatusRotateAt = Date.now() + 12000;
 let nextScheduledRadarAt = Date.now() + 5 * 60000;
 let radarTakeover = null;
 let radarTakeoverTimer = null;
+let lastSourceRefresh = Date.now();
+let demoLodd = null;
 
 function cloneBoardDefaults() { return JSON.parse(JSON.stringify(BOARD_DEFAULTS)); }
 function safeText(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]; }); }
@@ -78,11 +85,16 @@ function normalizeBoardCfg(raw) {
   config.schemaVersion = BOARD_DEFAULTS.schemaVersion;
   config.rotationSec = bounded(legacy ? BOARD_DEFAULTS.rotationSec : config.rotationSec, 5, 300, 12);
   config.responseSec = bounded(config.responseSec, 5, 600, 45);
+  config.sourceRefreshMin = bounded(legacy ? BOARD_DEFAULTS.sourceRefreshMin : config.sourceRefreshMin, 1, 120, 5);
   config.radarRefreshMin = bounded(legacy ? BOARD_DEFAULTS.radarRefreshMin : config.radarRefreshMin, 1, 120, 5);
   config.radarDisplaySec = bounded(config.radarDisplaySec, 10, 180, 30);
   config.severeRadarSec = bounded(config.severeRadarSec, 30, 300, 90);
   config.showNextShift = config.showNextShift !== false;
   config.forecastDetail = ["current", "3", "7"].includes(String(config.forecastDetail)) ? String(config.forecastDetail) : "3";
+  config.equipmentUrl = validHttpUrl(config.equipmentUrl);
+  config.closecallsUrl = validHttpUrl(config.closecallsUrl);
+  config.loddUrl = validHttpUrl(config.loddUrl) || BOARD_DEFAULTS.loddUrl;
+  config.trainingUrl = validHttpUrl(config.trainingUrl);
   config.weatherUrl = validHttpUrl(config.weatherUrl);
   config.alertsUrl = validHttpUrl(config.alertsUrl);
   config.radarUrl = validHttpUrl(config.radarUrl);
@@ -94,7 +106,7 @@ function normalizeBoardCfg(raw) {
 function loadBoardCfg() {
   try {
     const currentValue = localStorage.getItem(BOARD_STORAGE_KEY);
-    const legacyValue = localStorage.getItem("fireflow360.liveBoard.v3");
+    const legacyValue = localStorage.getItem("fireflow360.liveBoard.v4") || localStorage.getItem("fireflow360.liveBoard.v3");
     return normalizeBoardCfg(JSON.parse(currentValue || legacyValue || "null"));
   } catch { return cloneBoardDefaults(); }
 }
@@ -116,6 +128,31 @@ function sourceFrame(url, label, height, refresh) {
   let source = url;
   if (refresh) { try { const refreshed = new URL(url); refreshed.searchParams.set("fireflow_refresh", String(Date.now())); source = refreshed.toString(); } catch { /* Keep the validated source unchanged. */ } }
   return '<div class="embed-shell"><iframe src="' + safeText(source) + '" title="' + safeText(label) + '" style="min-height:' + height + 'px" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-forms allow-popups allow-scripts allow-same-origin"></iframe><div class="embed-tools"><span class="muted" style="font-size:11px;flex:1">If the source blocks embedding, use Open source.</span><a class="btn" target="_blank" rel="noopener noreferrer" href="' + safeText(url) + '">Open source</a></div></div>';
+}
+function sourceButton(url, label) {
+  return url ? '<a class="btn source-link" target="_blank" rel="noopener noreferrer" href="' + safeText(url) + '">' + safeText(label) + '</a>' : '<button class="btn source-link" type="button" onclick="openBoardSettings()">Set source link</button>';
+}
+function internalPanelAction(view, label, detail) {
+  return '<div class="panel-action"><span>' + safeText(detail) + '</span><button class="btn pri" type="button" onclick="go(\'' + safeText(view) + '\')">' + safeText(label) + '</button></div>';
+}
+function externalPanelAction(url, label, detail) {
+  return '<div class="panel-action"><span>' + safeText(detail) + '</span>' + sourceButton(url, label) + '</div>';
+}
+function loddMarkup() {
+  if (!demoLodd) return '<div class="board-empty"><b>Loading official U.S. Fire Administration records</b><div style="margin-top:6px">This source rechecks every ' + boardCfg.sourceRefreshMin + ' minutes while the board is open.</div></div>';
+  if (demoLodd.error) return '<div class="board-empty"><b>' + safeText(demoLodd.error) + '</b><div style="margin-top:6px">No total is shown while the official source is unavailable.</div>' + sourceButton(boardCfg.loddUrl || demoLodd.sourceUrl, "Open official USFA source") + '</div>';
+  const recent = (demoLodd.recent || []).slice(0, 5).map(function (entry) { return '<a class="lodd-entry" target="_blank" rel="noopener noreferrer" href="' + safeText(entry.url || demoLodd.sourceUrl) + '"><b>' + safeText(entry.name) + '</b><span>' + safeText([entry.department, entry.location, entry.deathDate].filter(Boolean).join(" · ")) + '</span></a>'; }).join("");
+  return '<div class="lodd-live"><div class="lodd-total"><strong>' + safeText(demoLodd.total) + '</strong><span>U.S. firefighter fatalities reported for ' + safeText(demoLodd.year) + '</span></div><div class="lodd-recent">' + recent + '</div><div class="lodd-source"><span>Official USFA feed · rechecks every ' + boardCfg.sourceRefreshMin + ' minutes</span>' + sourceButton(boardCfg.loddUrl || demoLodd.sourceUrl, "Open official source") + '</div></div>';
+}
+async function loadDemoLodd() {
+  try {
+    const response = await fetch("/api/live-sources/lodd", { cache: "no-store" });
+    demoLodd = await response.json();
+  } catch {
+    demoLodd = { sourceUrl: boardCfg.loddUrl, error: "Official LODD source temporarily unavailable", recent: [] };
+  }
+  const panels = activeBoardPanels();
+  if (current === "board" && panels[rotIdx] === "lodd") paintRot(false);
 }
 function widgetShell(id, body) { const width = boardCfg.widths[id] || "half"; return '<section class="board-widget w-' + safeText(width) + '" draggable="true" data-widget="' + safeText(id) + '" ondragstart="boardDragStart(event,\'' + safeText(id) + '\')" ondragover="boardDragOver(event)" ondragleave="boardDragLeave(event)" ondrop="boardDrop(event,\'' + safeText(id) + '\')" ondragend="boardDragEnd(event)"><div class="widget-grip" title="Drag to move"><span>Move</span><b>::</b></div>' + body + '</section>'; }
 
@@ -146,14 +183,14 @@ paintRot = function (forceRefresh) {
   const key = panels[rotIdx], title = document.getElementById("rotTitle"), body = document.getElementById("rotBody"), dots = document.getElementById("rotDots");
   if (!title || !body || !dots) return;
   title.textContent = BOARD_PANEL_LABELS[key] || "Station Information";
-  if (key === "equipment") body.innerHTML = EQUIP.map(function (equipment) { return '<div class="newsitem"><strong>' + safeText(equipment.item) + ' · <span style="color:var(--warn)">' + safeText(equipment.status) + '</span></strong><span class="muted" style="font-size:12px">' + safeText(equipment.detail) + '</span></div>'; }).join("");
-  else if (key === "duty") body.innerHTML = '<div class="result" style="text-align:left"><span class="pill p-fire">NOW · Afternoon</span><div style="font-size:18px;font-weight:800;margin-top:8px">Hydrant flow testing · Zone 4 East</div><div class="muted">5 hydrants due this cycle · record static/residual in Hydrants</div></div>';
-  else if (key === "closecalls") body.innerHTML = CLOSECALLS.map(function (call) { return '<div class="newsitem"><time>' + safeText(call.date) + '</time><strong>' + safeText(call.title) + '</strong></div>'; }).join("");
-  else if (key === "lodd") body.innerHTML = '<div class="board-empty"><b>Connect an official LODD source</b><div style="margin-top:6px">This board does not display an unverified live total.</div></div>';
-  else if (key === "training") body.innerHTML = TRAINING.map(function (training) { return '<div class="newsitem"><strong>' + safeText(training.course) + '</strong><span class="muted" style="font-size:12px">' + safeText(training.prov) + ' · ' + safeText(training.dates) + '</span></div>'; }).join("");
+  if (key === "equipment") body.innerHTML = EQUIP.map(function (equipment) { return '<div class="newsitem"><strong>' + safeText(equipment.item) + ' · <span style="color:var(--warn)">' + safeText(equipment.status) + '</span></strong><span class="muted" style="font-size:12px">' + safeText(equipment.detail) + '</span></div>'; }).join("") + (boardCfg.equipmentUrl ? externalPanelAction(boardCfg.equipmentUrl, "Open apparatus checks", "Record Pass, Fail, or Missing. Failed and missing items use a write-up note and phone photo.") : internalPanelAction("inv", "Open apparatus checks", "Record Pass, Fail, or Missing. Failed and missing items use a write-up note and phone photo."));
+  else if (key === "duty") body.innerHTML = '<div class="result" style="text-align:left"><span class="pill p-fire">NOW · Afternoon</span><div style="font-size:18px;font-weight:800;margin-top:8px">Hydrant flow testing · Zone 4 East</div><div class="muted">5 hydrants due this cycle · record static/residual in Hydrants</div></div>' + internalPanelAction("duty", "Open Daily Duties", "View and complete today’s station duties.");
+  else if (key === "closecalls") body.innerHTML = CLOSECALLS.map(function (call) { return '<div class="newsitem"><time>' + safeText(call.date) + '</time><strong>' + safeText(call.title) + '</strong></div>'; }).join("") + externalPanelAction(boardCfg.closecallsUrl, "Open close-call source", "Demo headlines are fictional. Open the department’s configured source for current reports.");
+  else if (key === "lodd") body.innerHTML = loddMarkup();
+  else if (key === "training") body.innerHTML = TRAINING.map(function (training) { return '<div class="newsitem"><strong>' + safeText(training.course) + '</strong><span class="muted" style="font-size:12px">' + safeText(training.prov) + ' · ' + safeText(training.dates) + '</span></div>'; }).join("") + externalPanelAction(boardCfg.trainingUrl, "Open training source", "Demo training is fictional. Open the configured source for current opportunities.");
   else if (key === "weather") body.innerHTML = '<div class="muted" style="font-size:11px;margin-bottom:8px">Configured weather view: ' + safeText(boardCfg.forecastDetail === "current" ? "current conditions" : boardCfg.forecastDetail + " day") + '</div>' + sourceFrame(boardCfg.weatherUrl, "Weather", forecastHeight(), !!forceRefresh);
   else if (key === "alerts") body.innerHTML = '<div class="weather-alert"><b>Weather alert source</b><div class="muted" style="font-size:11px;margin-top:3px">Only the configured source is displayed. This fictional demo does not issue live warnings.</div></div>' + sourceFrame(boardCfg.alertsUrl, "Weather alerts", 320, !!forceRefresh);
-  else if (key === "radar") { body.innerHTML = sourceFrame(boardCfg.radarUrl, "Weather radar", 470, true); lastRadarRefresh = Date.now(); }
+  else if (key === "radar") { body.innerHTML = sourceFrame(boardCfg.radarUrl, "Weather radar", 470, true) + '<div class="muted" style="font-size:11px;margin-top:6px">Live embed is loaded only while this panel is visible.</div>'; lastRadarRefresh = Date.now(); }
   dots.innerHTML = panels.map(function (panel, index) { return '<button class="' + (index === rotIdx ? "active" : "") + '" onclick="setRot(' + index + ')" aria-label="Show ' + safeText(BOARD_PANEL_LABELS[panel]) + '"></button>'; }).join("") + '<span>Rotates every ' + boardCfg.rotationSec + ' seconds</span>';
 };
 cycleRot = function () { const panels = activeBoardPanels(); rotIdx = (rotIdx + 1) % panels.length; nextBoardRotateAt = Date.now() + boardCfg.rotationSec * 1000; paintRot(false); };
@@ -203,11 +240,16 @@ function saveBoardSettings() {
   boardCfg.title = document.getElementById("bc_title").value.trim() || BOARD_DEFAULTS.title;
   boardCfg.rotationSec = document.getElementById("bc_rotation").value;
   boardCfg.responseSec = document.getElementById("bc_response").value;
+  boardCfg.sourceRefreshMin = document.getElementById("bc_source_refresh").value;
   boardCfg.radarRefreshMin = document.getElementById("bc_radar_refresh").value;
   boardCfg.radarDisplaySec = document.getElementById("bc_radar_duration").value;
   boardCfg.severeRadarSec = document.getElementById("bc_severe_duration").value;
   boardCfg.showNextShift = document.getElementById("bc_show_next_shift").checked;
   boardCfg.forecastDetail = document.getElementById("bc_forecast").value;
+  boardCfg.equipmentUrl = document.getElementById("bc_equipment_url").value;
+  boardCfg.closecallsUrl = document.getElementById("bc_closecalls_url").value;
+  boardCfg.loddUrl = document.getElementById("bc_lodd_url").value;
+  boardCfg.trainingUrl = document.getElementById("bc_training_url").value;
   boardCfg.weatherUrl = document.getElementById("bc_weather_url").value;
   boardCfg.alertsUrl = document.getElementById("bc_alerts_url").value;
   boardCfg.radarUrl = document.getElementById("bc_radar_url").value;
@@ -221,11 +263,13 @@ function saveBoardSettings() {
   nextApparatusRotateAt = nextBoardRotateAt;
   nextScheduledRadarAt = Date.now() + boardCfg.radarRefreshMin * 60000;
   lastRadarRefresh = 0;
+  lastSourceRefresh = Date.now();
+  void loadDemoLodd();
   render();
 }
 function addExternalSource() { const title = document.getElementById("bc_ext_title").value.trim() || "External display", url = validHttpUrl(document.getElementById("bc_ext_url").value); if (!url) { alert("Enter a complete http or https link."); return; } const id = "ext-" + Date.now().toString(36); boardCfg.external.push({ id, title: title.slice(0, 80), url }); boardCfg.order.push(id); boardCfg.visible[id] = true; boardCfg.widths[id] = "half"; saveBoardCfg(); render(); }
 function removeExternalSource(id) { boardCfg.external = boardCfg.external.filter(function (source) { return source.id !== id; }); boardCfg.order = boardCfg.order.filter(function (entry) { return entry !== id; }); delete boardCfg.visible[id]; delete boardCfg.widths[id]; saveBoardCfg(); render(); }
-function resetBoardSettings() { if (!confirm("Reset this display to the default Live Ops layout?")) return; localStorage.removeItem(BOARD_STORAGE_KEY); boardCfg = cloneBoardDefaults(); saveBoardCfg(); boardSettingsOpen = false; rotIdx = 0; nextScheduledRadarAt = Date.now() + boardCfg.radarRefreshMin * 60000; render(); }
+function resetBoardSettings() { if (!confirm("Reset this display to the default Live Ops layout?")) return; localStorage.removeItem(BOARD_STORAGE_KEY); boardCfg = cloneBoardDefaults(); saveBoardCfg(); boardSettingsOpen = false; rotIdx = 0; nextScheduledRadarAt = Date.now() + boardCfg.radarRefreshMin * 60000; lastSourceRefresh = Date.now(); void loadDemoLodd(); render(); }
 
 function boardConfigMarkup() {
   const panelChecks = Object.keys(BOARD_PANEL_LABELS).map(function (key) { return '<label class="checkrow"><input type="checkbox" data-board-panel value="' + key + '" ' + (boardCfg.panels.includes(key) ? "checked" : "") + '><span>' + safeText(BOARD_PANEL_LABELS[key]) + '</span></label>'; }).join("");
@@ -234,6 +278,7 @@ function boardConfigMarkup() {
   return '<div class="config-backdrop" role="dialog" aria-modal="true" aria-label="Live Ops Board settings" onclick="if(event.target===this)closeBoardSettings()"><div class="config-panel"><div class="config-head"><div><div class="eyebrow">This display</div><h2>Live Ops Board settings</h2></div><button class="btn" onclick="closeBoardSettings()">Close</button></div><div class="config-body"><div class="config-grid">' +
     '<section class="config-section"><h3>Display timing</h3><div class="field"><label for="bc_department">Department or station</label><input id="bc_department" value="' + safeText(boardCfg.department) + '"></div><div class="field"><label for="bc_title">Display label</label><input id="bc_title" value="' + safeText(boardCfg.title) + '"></div><div class="field"><label for="bc_rotation">Weather, station, and riding rotation (seconds)</label><input id="bc_rotation" type="number" min="5" max="300" value="' + boardCfg.rotationSec + '"></div><div class="field"><label for="bc_response">Respond display time after incident clears (seconds)</label><input id="bc_response" type="number" min="5" max="600" value="' + boardCfg.responseSec + '"></div><label class="checkrow"><input id="bc_show_next_shift" type="checkbox" ' + (boardCfg.showNextShift ? "checked" : "") + '><span>Show Next Shift Change tile</span></label></section>' +
     '<section class="config-section"><h3>Station information rotation</h3><div class="checkgrid">' + panelChecks + '</div><div class="muted" style="font-size:11px;margin-top:10px">Choose exactly what this screen cycles through. At least one panel remains enabled.</div></section>' +
+    '<section class="config-section full"><h3>Connected panel links and source timing</h3><div class="config-grid"><div><div class="field"><label for="bc_equipment_url">Apparatus check link</label><input id="bc_equipment_url" type="url" placeholder="https://..." value="' + safeText(boardCfg.equipmentUrl) + '"></div><div class="field"><label for="bc_closecalls_url">Firefighter close calls link</label><input id="bc_closecalls_url" type="url" placeholder="https://..." value="' + safeText(boardCfg.closecallsUrl) + '"></div><div class="field"><label for="bc_lodd_url">Official LODD link</label><input id="bc_lodd_url" type="url" placeholder="https://apps.usfa.fema.gov/firefighter-fatalities" value="' + safeText(boardCfg.loddUrl) + '"></div></div><div><div class="field"><label for="bc_training_url">Upcoming training link</label><input id="bc_training_url" type="url" placeholder="https://..." value="' + safeText(boardCfg.trainingUrl) + '"></div><div class="field"><label for="bc_source_refresh">Outside source recheck (minutes)</label><input id="bc_source_refresh" type="number" min="1" max="120" value="' + boardCfg.sourceRefreshMin + '"></div><div class="muted" style="font-size:11px">Default: 5 minutes. Official feeds and active embeds recheck only while this board is open; link-only panels open the source’s current page.</div></div></div></section>' +
     '<section class="config-section full"><h3>Weather priority and radar</h3><div class="config-grid"><div><div class="field"><label for="bc_forecast">Weather amount</label><select id="bc_forecast"><option value="current" ' + (boardCfg.forecastDetail === "current" ? "selected" : "") + '>Current conditions</option><option value="3" ' + (boardCfg.forecastDetail === "3" ? "selected" : "") + '>3-day view</option><option value="7" ' + (boardCfg.forecastDetail === "7" ? "selected" : "") + '>7-day view</option></select></div><div class="field"><label for="bc_radar_refresh">Full-screen radar every (minutes)</label><input id="bc_radar_refresh" type="number" min="1" max="120" value="' + boardCfg.radarRefreshMin + '"></div><div class="field"><label for="bc_radar_duration">Scheduled radar duration (seconds)</label><input id="bc_radar_duration" type="number" min="10" max="180" value="' + boardCfg.radarDisplaySec + '"></div><div class="field"><label for="bc_severe_duration">Severe warning radar duration (seconds)</label><input id="bc_severe_duration" type="number" min="30" max="300" value="' + boardCfg.severeRadarSec + '"></div></div><div><div class="field"><label for="bc_weather_url">Weather display link</label><input id="bc_weather_url" type="url" placeholder="https://..." value="' + safeText(boardCfg.weatherUrl) + '"></div><div class="field"><label for="bc_alerts_url">Weather alert link</label><input id="bc_alerts_url" type="url" placeholder="https://..." value="' + safeText(boardCfg.alertsUrl) + '"></div><div class="field"><label for="bc_radar_url">Selected-area radar link</label><input id="bc_radar_url" type="url" placeholder="https://radar.weather.gov/..." value="' + safeText(boardCfg.radarUrl) + '"></div><div class="priority-preview-actions"><button class="btn" type="button" onclick="previewRadarTakeover()">Preview 30s radar</button><button class="btn severe" type="button" onclick="previewSevereRadarTakeover()">Preview severe warning</button></div></div></div><p class="muted" style="font-size:11px">Demo weather and alerts are simulated. A department must save a verified location and radar source before operational weather is shown.</p></section>' +
     '<section class="config-section full"><h3>Board layout</h3><div class="muted" style="font-size:11px;margin-bottom:6px">Drag cards directly on the board, or use these controls for touch and keyboard displays.</div>' + layoutRows + '</section>' +
     '<section class="config-section full"><h3>External display links</h3>' + sources + '<div class="source-row"><div class="field"><label for="bc_ext_title">Display name</label><input id="bc_ext_title" placeholder="Traffic camera"></div><div class="field"><label for="bc_ext_url">HTTPS display link</label><input id="bc_ext_url" type="url" placeholder="https://..."></div><button class="btn pri" onclick="addExternalSource()">Add display</button></div><div class="muted" style="font-size:11px;margin-top:10px">Some providers block embedded views. Their Open source button still works.</div></section>' +
@@ -242,7 +287,7 @@ function boardConfigMarkup() {
 
 viewBoard = function () {
   const canvas = boardCfg.order.filter(function (id) { return boardCfg.visible[id] !== false; }).map(renderBoardWidget).join("");
-  return '<div class="board-weather-strip"><div id="boardWeatherCopy">' + weatherStripMarkup() + '</div><div class="board-weather-actions"><button class="btn" onclick="openBoardSettings()">Customize board</button><div class="bclock"><strong id="boardClock24">--:--:--</strong><span id="bdate"></span><small><i></i> rotates every ' + boardCfg.rotationSec + 's</small></div></div></div><div class="boardcanvas">' + (canvas || '<div class="board-empty" style="grid-column:1/-1"><b>No board cards are visible.</b><div style="margin-top:8px"><button class="btn pri" onclick="openBoardSettings()">Open settings</button></div></div>') + '</div><div class="footer-note compact-board-note">Radar displays every ' + boardCfg.radarRefreshMin + ' minutes for ' + boardCfg.radarDisplaySec + ' seconds. Severe weather uses ' + boardCfg.severeRadarSec + ' seconds. Respond always takes priority. Demo records and weather are fictional.</div>' + (boardSettingsOpen ? boardConfigMarkup() : "") + radarTakeoverMarkup();
+  return '<div class="board-weather-strip"><div id="boardWeatherCopy">' + weatherStripMarkup() + '</div><div class="board-weather-actions"><button class="btn" onclick="openBoardSettings()">Customize board</button><div class="bclock"><strong id="boardClock24">--:--:--</strong><span id="bdate"></span><small><i></i> rotates every ' + boardCfg.rotationSec + 's</small></div></div></div><div class="boardcanvas">' + (canvas || '<div class="board-empty" style="grid-column:1/-1"><b>No board cards are visible.</b><div style="margin-top:8px"><button class="btn pri" onclick="openBoardSettings()">Open settings</button></div></div>') + '</div><div class="footer-note compact-board-note">Official feeds and active source embeds recheck every ' + boardCfg.sourceRefreshMin + ' minutes while open. Radar loads only while shown and displays full-screen every ' + boardCfg.radarRefreshMin + ' minutes for ' + boardCfg.radarDisplaySec + ' seconds. Respond always takes priority. Demo department records and weather are fictional; the USFA LODD feed is official.</div>' + (boardSettingsOpen ? boardConfigMarkup() : "") + radarTakeoverMarkup();
 };
 
 const originalRender = render;
@@ -278,6 +323,11 @@ setInterval(function () {
   if (now >= nextApparatusRotateAt) { apparatusRotationIndex = (apparatusRotationIndex + 1) % 2; nextApparatusRotateAt = now + boardCfg.rotationSec * 1000; paintApparatusRotation(); }
   if (now >= nextScheduledRadarAt) startRadarTakeover("scheduled", "Selected-area radar");
   const panels = activeBoardPanels(), key = panels[rotIdx];
+  if (now - lastSourceRefresh >= boardCfg.sourceRefreshMin * 60000) {
+    lastSourceRefresh = now;
+    void loadDemoLodd();
+    if (["weather", "alerts"].includes(key)) paintRot(true);
+  }
   if (key === "radar" && boardCfg.radarUrl && now - lastRadarRefresh >= boardCfg.radarRefreshMin * 60000) paintRot(true);
 }, 1000);
 
@@ -285,4 +335,5 @@ nextBoardRotateAt = Date.now() + boardCfg.rotationSec * 1000;
 nextWeatherRotateAt = nextBoardRotateAt;
 nextApparatusRotateAt = nextBoardRotateAt;
 nextScheduledRadarAt = Date.now() + boardCfg.radarRefreshMin * 60000;
+void loadDemoLodd();
 if (current === "board") render();

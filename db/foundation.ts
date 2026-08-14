@@ -52,6 +52,11 @@ export type FoundationSettings = {
   live_board_widths: Record<string, LiveBoardWidth>;
   live_board_panels: LiveBoardPanelKey[];
   live_board_forecast_detail: "current" | "3" | "7";
+  live_board_equipment_url: string;
+  live_board_closecalls_url: string;
+  live_board_lodd_url: string;
+  live_board_training_url: string;
+  live_board_source_refresh_minutes: number;
   live_board_weather_url: string;
   live_board_alerts_url: string;
   live_board_radar_url: string;
@@ -75,7 +80,8 @@ export type FoundationSettings = {
 
 export type LiveBoardSettings = Pick<FoundationSettings,
   "live_board_title" | "live_board_order" | "live_board_hidden" | "live_board_widths" | "live_board_panels" |
-  "live_board_forecast_detail" | "live_board_weather_url" | "live_board_alerts_url" | "live_board_radar_url" |
+  "live_board_forecast_detail" | "live_board_equipment_url" | "live_board_closecalls_url" | "live_board_lodd_url" |
+  "live_board_training_url" | "live_board_source_refresh_minutes" | "live_board_weather_url" | "live_board_alerts_url" | "live_board_radar_url" |
   "live_board_radar_refresh_minutes" | "live_board_radar_display_seconds" | "live_board_severe_radar_seconds" |
   "live_board_show_next_shift" | "live_board_external_links">;
 
@@ -91,6 +97,11 @@ type FoundationRow = {
   live_board_widths_json: string;
   live_board_panels_json: string;
   live_board_forecast_detail: string;
+  live_board_equipment_url: string;
+  live_board_closecalls_url: string;
+  live_board_lodd_url: string;
+  live_board_training_url: string;
+  live_board_source_refresh_minutes: number;
   live_board_weather_url: string;
   live_board_alerts_url: string;
   live_board_radar_url: string;
@@ -122,6 +133,11 @@ const defaultSettings: Omit<FoundationSettings, "scope" | "department_id" | "is_
   live_board_widths: { summary: "full", station: "half", apparatus: "half" },
   live_board_panels: ["equipment", "duty", "closecalls", "training"],
   live_board_forecast_detail: "3",
+  live_board_equipment_url: "",
+  live_board_closecalls_url: "",
+  live_board_lodd_url: "https://apps.usfa.fema.gov/firefighter-fatalities",
+  live_board_training_url: "",
+  live_board_source_refresh_minutes: 5,
   live_board_weather_url: "",
   live_board_alerts_url: "",
   live_board_radar_url: "",
@@ -208,6 +224,11 @@ function normalizeBoard(row: FoundationRow | null): LiveBoardSettings {
     live_board_widths: widths,
     live_board_panels: panels.length ? panels : ["equipment" as const],
     live_board_forecast_detail: forecast === "current" || forecast === "7" ? forecast : "3",
+    live_board_equipment_url: safeUrl(row?.live_board_equipment_url),
+    live_board_closecalls_url: safeUrl(row?.live_board_closecalls_url),
+    live_board_lodd_url: safeUrl(row?.live_board_lodd_url) || defaultSettings.live_board_lodd_url,
+    live_board_training_url: safeUrl(row?.live_board_training_url),
+    live_board_source_refresh_minutes: Math.max(1, Math.min(120, Number(row?.live_board_source_refresh_minutes) || 5)),
     live_board_weather_url: safeUrl(row?.live_board_weather_url),
     live_board_alerts_url: safeUrl(row?.live_board_alerts_url),
     live_board_radar_url: safeUrl(row?.live_board_radar_url),
@@ -236,7 +257,7 @@ function normalize(row: FoundationRow | null, scope: "master" | "department", de
   };
 }
 
-const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_radar_display_seconds,live_board_severe_radar_seconds,live_board_show_next_shift,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,daily_log_equipment_accountability,updated_at";
+const settingsColumns = "module_order_json,hidden_modules_json,board_rotation_seconds,response_duration_seconds,live_board_title,live_board_order_json,live_board_hidden_json,live_board_widths_json,live_board_panels_json,live_board_forecast_detail,live_board_equipment_url,live_board_closecalls_url,live_board_lodd_url,live_board_training_url,live_board_source_refresh_minutes,live_board_weather_url,live_board_alerts_url,live_board_radar_url,live_board_radar_refresh_minutes,live_board_radar_display_seconds,live_board_severe_radar_seconds,live_board_show_next_shift,live_board_external_links_json,shift_hours_on,shift_hours_off,shift_start_time,overtime_period_days,overtime_threshold_hours,overtime_assignment_rule,scheduling_notes,overtime_notes,daily_log_equipment_accountability,updated_at";
 
 export async function getMasterFoundation(): Promise<FoundationSettings> {
   const row = await db().prepare(`SELECT ${settingsColumns} FROM platform_foundation_settings WHERE id='master'`).first<FoundationRow>();
@@ -271,6 +292,7 @@ export function boardSettingsFromForm(form: FormData, current: FoundationSetting
   const knownPanels = new Set<LiveBoardPanelKey>(liveBoardPanels.map((panel) => panel.key));
   const panels = form.getAll("live_board_panels").map(String).filter((value): value is LiveBoardPanelKey => knownPanels.has(value as LiveBoardPanelKey));
   const forecast = String(form.get("live_board_forecast_detail") || "");
+  const sourceMinutes = Number(form.get("live_board_source_refresh_minutes"));
   const radarMinutes = Number(form.get("live_board_radar_refresh_minutes"));
   const radarSeconds = Number(form.get("live_board_radar_display_seconds"));
   const severeSeconds = Number(form.get("live_board_severe_radar_seconds"));
@@ -281,6 +303,11 @@ export function boardSettingsFromForm(form: FormData, current: FoundationSetting
     live_board_widths: widths,
     live_board_panels: panels.length ? [...new Set(panels)] : ["equipment" as LiveBoardPanelKey],
     live_board_forecast_detail: forecast === "current" || forecast === "7" ? forecast : "3",
+    live_board_equipment_url: safeUrl(form.get("live_board_equipment_url")),
+    live_board_closecalls_url: safeUrl(form.get("live_board_closecalls_url")),
+    live_board_lodd_url: safeUrl(form.get("live_board_lodd_url")) || current.live_board_lodd_url,
+    live_board_training_url: safeUrl(form.get("live_board_training_url")),
+    live_board_source_refresh_minutes: Number.isFinite(sourceMinutes) ? Math.max(1, Math.min(120, Math.round(sourceMinutes))) : current.live_board_source_refresh_minutes,
     live_board_weather_url: safeUrl(form.get("live_board_weather_url")),
     live_board_alerts_url: safeUrl(form.get("live_board_alerts_url")),
     live_board_radar_url: safeUrl(form.get("live_board_radar_url")),
@@ -296,6 +323,7 @@ export async function saveFoundation(settings: FoundationSettings, actorUserId: 
   const columns = [
     "module_order_json", "hidden_modules_json", "board_rotation_seconds", "response_duration_seconds", "live_board_title",
     "live_board_order_json", "live_board_hidden_json", "live_board_widths_json", "live_board_panels_json", "live_board_forecast_detail",
+    "live_board_equipment_url", "live_board_closecalls_url", "live_board_lodd_url", "live_board_training_url", "live_board_source_refresh_minutes",
     "live_board_weather_url", "live_board_alerts_url", "live_board_radar_url", "live_board_radar_refresh_minutes", "live_board_radar_display_seconds",
     "live_board_severe_radar_seconds", "live_board_show_next_shift", "live_board_external_links_json",
     "shift_hours_on", "shift_hours_off", "shift_start_time", "overtime_period_days", "overtime_threshold_hours", "overtime_assignment_rule",
@@ -304,6 +332,7 @@ export async function saveFoundation(settings: FoundationSettings, actorUserId: 
   const values = [
     JSON.stringify(settings.module_order), JSON.stringify(settings.hidden_modules), settings.board_rotation_seconds, settings.response_duration_seconds, settings.live_board_title,
     JSON.stringify(settings.live_board_order), JSON.stringify(settings.live_board_hidden), JSON.stringify(settings.live_board_widths), JSON.stringify(settings.live_board_panels), settings.live_board_forecast_detail,
+    settings.live_board_equipment_url, settings.live_board_closecalls_url, settings.live_board_lodd_url, settings.live_board_training_url, settings.live_board_source_refresh_minutes,
     settings.live_board_weather_url, settings.live_board_alerts_url, settings.live_board_radar_url, settings.live_board_radar_refresh_minutes,
     settings.live_board_radar_display_seconds, settings.live_board_severe_radar_seconds, settings.live_board_show_next_shift ? 1 : 0, JSON.stringify(settings.live_board_external_links),
     settings.shift_hours_on, settings.shift_hours_off, settings.shift_start_time, settings.overtime_period_days, settings.overtime_threshold_hours,

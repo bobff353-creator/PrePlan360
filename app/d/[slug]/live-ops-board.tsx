@@ -43,6 +43,25 @@ type WeatherPayload = {
   error?: string;
 };
 
+type LoddEntry = {
+  id: number;
+  name: string;
+  department: string;
+  location: string;
+  deathDate: string;
+  url: string;
+};
+
+type LoddPayload = {
+  source: string;
+  sourceUrl: string;
+  year: number;
+  total: number;
+  recent: LoddEntry[];
+  updatedAt: string;
+  error?: string;
+};
+
 type RadarTakeover = {
   kind: "scheduled" | "severe";
   title: string;
@@ -90,10 +109,13 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
   const [apparatusIndex, setApparatusIndex] = useState(0);
   const [clock, setClock] = useState<Date | null>(null);
   const [weather, setWeather] = useState<WeatherPayload | null>(null);
+  const [lodd, setLodd] = useState<LoddPayload | null>(null);
+  const [sourceRefreshKey, setSourceRefreshKey] = useState(0);
   const [takeover, setTakeover] = useState<RadarTakeover | null>(null);
   const nextRadarAt = useRef(0);
   const lastPriorityAlert = useRef("");
   const activePanels = settings.live_board_panels.length ? settings.live_board_panels : ["equipment" as const];
+  const loddEnabled = activePanels.includes("lodd");
   const activeIncident = data.items.find((item) => item.item_type === "incident" && item.operational_status === "active");
   const apparatus = useMemo<BoardApparatus[]>(() => {
     const saved = data.items.filter((item) => item.item_type === "apparatus").map((item) => ({ id: item.id, title: item.title, status: item.operational_status, detail: item.summary || item.location }));
@@ -123,11 +145,15 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
   }, [activeIncident, departmentSlug, router, supportSessionId]);
 
   useEffect(() => {
+    const every = Math.max(1, settings.live_board_source_refresh_minutes) * 60_000;
+    const timer = window.setInterval(() => setSourceRefreshKey(Date.now()), every);
+    return () => window.clearInterval(timer);
+  }, [settings.live_board_source_refresh_minutes]);
+
+  useEffect(() => {
     let cancelled = false;
-    let controller: AbortController | null = null;
+    const controller = new AbortController();
     async function loadWeather() {
-      controller?.abort();
-      controller = new AbortController();
       try {
         const response = await fetch(`/api/departments/${departmentId}/weather`, { cache: "no-store", signal: controller.signal });
         const payload = await response.json() as WeatherPayload;
@@ -137,9 +163,27 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
       }
     }
     void loadWeather();
-    const timer = window.setInterval(loadWeather, 60_000);
-    return () => { cancelled = true; controller?.abort(); window.clearInterval(timer); };
-  }, [departmentId, weatherLocation]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [departmentId, sourceRefreshKey, weatherLocation]);
+
+  useEffect(() => {
+    if (!loddEnabled) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    async function loadLodd() {
+      try {
+        const response = await fetch("/api/live-sources/lodd", { cache: "no-store", signal: controller.signal });
+        const payload = await response.json() as LoddPayload;
+        if (!cancelled) setLodd(payload);
+      } catch (error) {
+        if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) {
+          setLodd({ source: "U.S. Fire Administration", sourceUrl: settings.live_board_lodd_url, year: new Date().getFullYear(), total: 0, recent: [], updatedAt: "", error: "Official LODD source temporarily unavailable" });
+        }
+      }
+    }
+    void loadLodd();
+    return () => { cancelled = true; controller.abort(); };
+  }, [loddEnabled, settings.live_board_lodd_url, sourceRefreshKey]);
 
   useEffect(() => {
     const interval = Math.max(5, settings.board_rotation_seconds) * 1000;
@@ -228,14 +272,14 @@ export default function LiveOpsBoard({ departmentId, departmentSlug, departmentN
     <div className="live-ops-canvas">
       {visibleOrder.map((id) => <section key={id} className={`live-ops-widget width-${widths[id] || "half"}`} draggable={editable} onDragStart={() => setDragged(id)} onDragOver={(event: DragEvent<HTMLElement>) => event.preventDefault()} onDrop={() => drop(id)} onDragEnd={() => setDragged("")}>
         {editable ? <div className="live-widget-grip"><span>Move</span><b>≡</b></div> : null}
-        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items} ridingAssignments={ridingAssignments}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} sourceData={sourceData} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
+        {id === "summary" ? <SummaryWidget settings={settings} activeIncident={activeIncident} items={data.items} ridingAssignments={ridingAssignments}/> : id === "station" ? <StationWidget panel={currentPanel} items={data.items} settings={settings} weather={weather} lodd={lodd} sourceData={sourceData} departmentSlug={departmentSlug} refreshKey={sourceRefreshKey} index={panelIndex} onSelect={setPanelIndex}/> : id === "apparatus" ? <ApparatusWidget apparatus={apparatus} ridingAssignments={ridingAssignments} configuredCount={vehicleCount} view={apparatusIndex}/> : <ExternalWidget link={settings.live_board_external_links.find((entry) => entry.id === id)}/>}
       </section>)}
       {!visibleOrder.length ? <div className="live-board-empty"><b>No board cards are visible.</b><span>{editable ? "Open Customize board to restore a card." : "An authorized department editor can restore this display."}</span></div> : null}
     </div>
 
-    <footer className="live-ops-note">Saved department records and verified weather sources only. Respond always overrides this display.</footer>
+    <footer className="live-ops-note">Saved department records and verified sources only. Sources recheck every {settings.live_board_source_refresh_minutes} minutes while this board is open; radar loads only while shown. Respond always overrides this display.</footer>
     {editable ? <details className="live-ops-records"><summary>Manage live board records</summary><ModuleBuilder moduleKey="live-ops" moduleName="Live Operations" departmentId={departmentId} data={data} editable={editable} supportSessionId={supportSessionId} recordManagerOnly/></details> : null}
-    {takeover && !activeIncident ? <RadarOverlay takeover={takeover} radarUrl={settings.live_board_radar_url} clock={clock} onClose={() => setTakeover(null)}/> : null}
+    {takeover && !activeIncident ? <RadarOverlay takeover={takeover} radarUrl={settings.live_board_radar_url} refreshKey={takeover.endsAt} clock={clock} onClose={() => setTakeover(null)}/> : null}
   </section>;
 }
 
@@ -262,27 +306,32 @@ function SummaryWidget({ settings, activeIncident, items, ridingAssignments }: {
   </div>;
 }
 
-function StationWidget({ panel, items, settings, weather, sourceData, index, onSelect }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; sourceData: StickneyModuleData | null; index: number; onSelect: (index: number) => void }) {
-  return <div className="live-card"><h3>{panelLabels.get(panel) || "Station information"}</h3><div className="live-rotation-body"><PanelContent panel={panel} items={items} settings={settings} weather={weather} sourceData={sourceData}/></div><div className="live-rotation-dots">{settings.live_board_panels.map((key, panelIndex) => <button type="button" className={panelIndex === index % settings.live_board_panels.length ? "active" : ""} key={key} onClick={() => onSelect(panelIndex)} aria-label={`Show ${panelLabels.get(key)}`}/>)}<span>Rotates every {settings.board_rotation_seconds} seconds</span></div></div>;
+function StationWidget({ panel, items, settings, weather, lodd, sourceData, departmentSlug, refreshKey, index, onSelect }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; lodd: LoddPayload | null; sourceData: StickneyModuleData | null; departmentSlug: string; refreshKey: number; index: number; onSelect: (index: number) => void }) {
+  return <div className="live-card"><h3>{panelLabels.get(panel) || "Station information"}</h3><div className="live-rotation-body"><PanelContent panel={panel} items={items} settings={settings} weather={weather} lodd={lodd} sourceData={sourceData} departmentSlug={departmentSlug} refreshKey={refreshKey}/></div><div className="live-rotation-dots">{settings.live_board_panels.map((key, panelIndex) => <button type="button" className={panelIndex === index % settings.live_board_panels.length ? "active" : ""} key={key} onClick={() => onSelect(panelIndex)} aria-label={`Show ${panelLabels.get(key)}`}/>)}<span>Rotates every {settings.board_rotation_seconds} seconds</span></div></div>;
 }
 
-function PanelContent({ panel, items, settings, weather, sourceData }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; sourceData: StickneyModuleData | null }) {
+function PanelContent({ panel, items, settings, weather, lodd, sourceData, departmentSlug, refreshKey }: { panel: FoundationSettings["live_board_panels"][number]; items: DepartmentModuleItem[]; settings: FoundationSettings; weather: WeatherPayload | null; lodd: LoddPayload | null; sourceData: StickneyModuleData | null; departmentSlug: string; refreshKey: number }) {
   const equipment = items.filter((item) => item.item_type === "apparatus" && ["attention", "offline"].includes(item.operational_status));
   const duty = items.filter((item) => ["station", "notice"].includes(item.item_type) && item.operational_status === "active");
   const training = items.filter((item) => item.item_type === "resource" && ["active", "ready"].includes(item.operational_status));
-  if (panel === "equipment") return <ItemList items={equipment} empty="No equipment issues are recorded on this board."/>;
+  const equipmentUrl = settings.live_board_equipment_url || (departmentSlug === "stickney" ? "https://stickney-firehouse-manager.vercel.app/inventory" : `/d/${departmentSlug}?module=inventory`);
+  const dutyUrl = `/d/${departmentSlug}?module=duties`;
+  if (panel === "equipment") return <div className="live-panel-stack"><ItemList items={equipment} empty="No equipment issues are recorded on this board."/><PanelAction href={equipmentUrl} label="Open apparatus checks" detail="Record Pass, Fail, or Missing. Failed and missing items use a write-up note and photo evidence."/></div>;
   if (panel === "duty") {
-    if (duty.length) return <ItemList items={duty} empty="No current daily duty is connected to this board."/>;
     const context = sourceData?.dutyContext;
     const importedDuties = (sourceData?.duties || []).filter((item) => !context || item.day_of_week === context.dayOfWeek).slice(0, 5);
-    return importedDuties.length ? <div className="live-news-list">{importedDuties.map((item) => <article key={item.id}><b>{item.duty}</b><span>{item.detail || item.shift_key || "Saved daily duty"}</span></article>)}</div> : <EmptySource title="No current daily duty is connected to this board."/>;
+    const dutyContent = duty.length ? <ItemList items={duty} empty="No current daily duty is connected to this board."/> : importedDuties.length ? <div className="live-news-list">{importedDuties.map((item) => <article key={item.id}><b>{item.duty}</b><span>{item.detail || item.shift_key || "Saved daily duty"}</span></article>)}</div> : <EmptySource title="No current daily duty is connected to this board."/>;
+    return <div className="live-panel-stack">{dutyContent}<PanelAction href={dutyUrl} label="Open Daily Duties" detail="View and complete the department's saved duties."/></div>;
   }
-  if (panel === "training") return <ItemList items={training} empty="No upcoming training entries are recorded on this board."/>;
-  if (panel === "closecalls") return <EmptySource title="Close-call source not connected" text="Configure an authorized source before outside reports are shown."/>;
-  if (panel === "lodd") return <EmptySource title="Official LODD source not connected" text="This board does not display an unverified live total."/>;
-  if (panel === "weather") return weather?.today ? <WeatherPanel period={weather.today}/> : <EmptySource title={weather?.error || weather?.reason || "Weather source not configured"}/>;
-  if (panel === "alerts") return weather?.alerts?.length ? <div className="live-news-list">{weather.alerts.slice(0, 5).map((alert) => <article key={alert.id}><b>{alert.event}</b><span>{alert.headline || alert.description}</span></article>)}</div> : <EmptySource title={weather?.configured ? "No active NWS alerts" : "Weather alerts not configured"}/>;
-  return <LinkedSource title="Weather radar source" url={settings.live_board_radar_url} detail={`Scheduled every ${settings.live_board_radar_refresh_minutes} minutes for ${settings.live_board_radar_display_seconds} seconds`}/>;
+  if (panel === "training") return <div className="live-panel-stack"><ItemList items={training} empty="No upcoming training entries are recorded on this board."/><LinkedSource title="Upcoming training source" url={settings.live_board_training_url} detail={`Source link reopens the latest page; official feeds recheck every ${settings.live_board_source_refresh_minutes} minutes.`}/></div>;
+  if (panel === "closecalls") return <LinkedSource title="Firefighter close-call source" url={settings.live_board_closecalls_url} detail={`Open the configured source. Official feeds recheck every ${settings.live_board_source_refresh_minutes} minutes while this board is open.`}/>;
+  if (panel === "lodd") return <LoddPanel payload={lodd} sourceUrl={settings.live_board_lodd_url} refreshMinutes={settings.live_board_source_refresh_minutes}/>;
+  if (panel === "weather") return <div className="live-panel-stack">{weather?.today ? <WeatherPanel period={weather.today}/> : <EmptySource title={weather?.error || weather?.reason || "Weather source not configured"}/>}<LinkedSource title="Department weather display" url={settings.live_board_weather_url} detail={`NWS conditions recheck every ${settings.live_board_source_refresh_minutes} minutes from the department's saved coordinates.`}/></div>;
+  if (panel === "alerts") {
+    const alertContent = weather?.alerts?.length ? <div className="live-news-list">{weather.alerts.slice(0, 5).map((alert) => <article key={alert.id}><b>{alert.event}</b><span>{alert.headline || alert.description}</span></article>)}</div> : <EmptySource title={weather?.configured ? "No active NWS alerts" : "Weather alerts not configured"}/>;
+    return <div className="live-panel-stack">{alertContent}<LinkedSource title="Weather alerts source" url={settings.live_board_alerts_url} detail={`Active NWS alerts recheck every ${settings.live_board_source_refresh_minutes} minutes.`}/></div>;
+  }
+  return settings.live_board_radar_url ? <LiveSourceFrame title="Live selected-area weather radar" url={settings.live_board_radar_url} refreshKey={refreshKey}/> : <EmptySource title="Weather radar source not configured" text="Add an HTTPS selected-area radar link in board settings."/>;
 }
 
 function WeatherPanel({ period }: { period: WeatherPeriod }) {
@@ -301,6 +350,31 @@ function EmptySource({ title, text }: { title: string; text?: string }) {
 function LinkedSource({ title, url, detail }: { title: string; url: string; detail?: string }) {
   if (!url) return <EmptySource title={`${title} not configured`} text="An authorized editor can add a complete HTTPS display link in board settings."/>;
   return <div className="live-linked-source"><b>{title} configured</b>{detail ? <span>{detail}</span> : null}<a href={url} target="_blank" rel="noreferrer">Open source</a></div>;
+}
+
+function PanelAction({ href, label, detail }: { href: string; label: string; detail: string }) {
+  const external = /^https?:\/\//i.test(href);
+  return <div className="live-panel-action"><span>{detail}</span><a href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>{label}</a></div>;
+}
+
+function LoddPanel({ payload, sourceUrl, refreshMinutes }: { payload: LoddPayload | null; sourceUrl: string; refreshMinutes: number }) {
+  if (!payload) return <EmptySource title="Loading official U.S. Fire Administration LODD records" text={`Rechecks every ${refreshMinutes} minutes while this board is open.`}/>;
+  if (payload.error) return <div className="live-panel-stack"><EmptySource title={payload.error} text="No total is displayed while the official source is unavailable."/><LinkedSource title="Official USFA LODD page" url={sourceUrl || payload.sourceUrl}/></div>;
+  return <div className="live-lodd"><div className="live-lodd-summary"><strong>{payload.total}</strong><span>U.S. firefighter fatalities reported for {payload.year}</span></div><div className="live-lodd-list">{payload.recent.slice(0, 5).map((entry) => <a href={entry.url} target="_blank" rel="noreferrer" key={entry.id}><b>{entry.name}</b><span>{[entry.department, entry.location, entry.deathDate].filter(Boolean).join(" · ")}</span></a>)}</div><a className="live-source-button" href={sourceUrl || payload.sourceUrl} target="_blank" rel="noreferrer">Open official USFA source</a><small>Official source rechecks every {refreshMinutes} minutes while this board is open.</small></div>;
+}
+
+function refreshedUrl(raw: string, refreshKey: number) {
+  try {
+    const url = new URL(raw);
+    url.searchParams.set("preplan_refresh", String(refreshKey));
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function LiveSourceFrame({ title, url, refreshKey }: { title: string; url: string; refreshKey: number }) {
+  return <div className="live-source-frame"><iframe key={refreshKey} title={title} src={refreshedUrl(url, refreshKey)} referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/><a href={url} target="_blank" rel="noreferrer">Open radar source</a><small>Loaded only while this panel is visible.</small></div>;
 }
 
 function ApparatusWidget({ apparatus, ridingAssignments, configuredCount, view }: { apparatus: BoardApparatus[]; ridingAssignments: BoardRidingAssignment[]; configuredCount: number; view: number }) {
@@ -322,9 +396,9 @@ function ExternalWidget({ link }: { link?: FoundationSettings["live_board_extern
   return <div className="live-card"><h3>{link?.title || "External display"}</h3>{link ? <div className="live-linked-source"><b>Outside display link</b><span>Open the configured source in a separate tab.</span><a href={link.url} target="_blank" rel="noreferrer">Open source</a></div> : <EmptySource title="External display not found"/>}</div>;
 }
 
-function RadarOverlay({ takeover, radarUrl, clock, onClose }: { takeover: RadarTakeover; radarUrl: string; clock: Date | null; onClose: () => void }) {
+function RadarOverlay({ takeover, radarUrl, refreshKey, clock, onClose }: { takeover: RadarTakeover; radarUrl: string; refreshKey: number; clock: Date | null; onClose: () => void }) {
   const remaining = Math.max(0, Math.ceil((takeover.endsAt - (clock?.getTime() ?? takeover.endsAt)) / 1000));
-  return <div className={`live-radar-takeover ${takeover.kind === "severe" ? "severe" : ""}`} data-incident-priority="respond" role="alert" aria-live="assertive"><header><div><span>{takeover.kind === "severe" ? "WEATHER WARNING · PRIORITY DISPLAY" : "WEATHER RADAR"}</span><h2>{takeover.title}</h2><p>{takeover.detail}</p></div><div><b>{remaining}s</b><button type="button" onClick={onClose}>Return to board</button></div></header><div className="live-radar-frame">{radarUrl ? <iframe title={`${takeover.title} radar`} src={radarUrl} referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/> : <div className="live-radar-missing"><b>Radar source not configured</b><span>The warning remains visible, but the department must save a selected-area HTTPS radar link. Respond always overrides this display.</span></div>}</div></div>;
+  return <div className={`live-radar-takeover ${takeover.kind === "severe" ? "severe" : ""}`} data-incident-priority="respond" role="alert" aria-live="assertive"><header><div><span>{takeover.kind === "severe" ? "WEATHER WARNING · PRIORITY DISPLAY" : "WEATHER RADAR"}</span><h2>{takeover.title}</h2><p>{takeover.detail}</p></div><div><b>{remaining}s</b><button type="button" onClick={onClose}>Return to board</button></div></header><div className="live-radar-frame">{radarUrl ? <iframe key={refreshKey} title={`${takeover.title} radar`} src={refreshedUrl(radarUrl, refreshKey)} referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/> : <div className="live-radar-missing"><b>Radar source not configured</b><span>The warning remains visible, but the department must save a selected-area HTTPS radar link. Respond always overrides this display.</span></div>}</div></div>;
 }
 
 function BoardSettings({ action, settings, definitions, order, hidden, widths, weatherLocation, supportSessionId, onMove, onHidden, onWidth, onPreview }: {
@@ -349,7 +423,7 @@ function BoardSettings({ action, settings, definitions, order, hidden, widths, w
       <section><h4>Display timing</h4><div className="live-settings-row"><label>Weather, station, and riding rotation<input name="board_rotation_seconds" type="number" min={5} max={300} defaultValue={settings.board_rotation_seconds}/></label><label>Response display after an incident clears<input name="response_duration_seconds" type="number" min={5} max={600} defaultValue={settings.response_duration_seconds}/></label></div><label className="live-setting-toggle"><input name="live_board_show_next_shift" type="checkbox" defaultChecked={settings.live_board_show_next_shift}/>Show next shift change tile</label><input type="hidden" name="live_board_title" value={settings.live_board_title}/></section>
       <section><h4>Station information rotation</h4><div className="live-panel-checks">{liveBoardPanels.map((panel) => <label key={panel.key}><input type="checkbox" name="live_board_panels" value={panel.key} defaultChecked={settings.live_board_panels.includes(panel.key)}/>{panel.label}</label>)}</div></section>
       <section className="full"><h4>Board layout</h4><div className="live-layout-list">{order.map((id, index) => <article key={id}><label><input type="checkbox" name="live_board_visible" value={id} checked={!hidden.includes(id)} onChange={(event) => onHidden(event.target.checked ? hidden.filter((value) => value !== id) : [...hidden, id])}/><span>{definitionMap.get(id) || id}</span></label><select name={`live_board_width_${id}`} value={widths[id] || "half"} onChange={(event) => onWidth(id, event.target.value as LiveBoardWidth)}><option value="third">One third</option><option value="half">Half</option><option value="full">Full</option></select><button type="button" onClick={() => onMove(id, -1)} disabled={index === 0}>Up</button><button type="button" onClick={() => onMove(id, 1)} disabled={index === order.length - 1}>Down</button></article>)}</div><small>Checked cards are visible. Drag cards on the board or use Up and Down.</small></section>
-      <section className="full"><h4>Weather priority, radar, and outside links</h4><p className="live-weather-location"><b>Weather coordinates:</b> {weatherLocation || "Not configured"}. Change them in Department settings.</p><div className="live-source-fields"><label>Weather display link<input name="live_board_weather_url" type="url" placeholder="https://" defaultValue={settings.live_board_weather_url}/></label><label>Weather alerts link<input name="live_board_alerts_url" type="url" placeholder="https://" defaultValue={settings.live_board_alerts_url}/></label><label>Selected-area radar link<input name="live_board_radar_url" type="url" placeholder="https://radar.weather.gov/" defaultValue={settings.live_board_radar_url}/></label><label>Full-screen radar every (minutes)<input name="live_board_radar_refresh_minutes" type="number" min={1} max={120} defaultValue={settings.live_board_radar_refresh_minutes}/></label><label>Scheduled radar duration (seconds)<input name="live_board_radar_display_seconds" type="number" min={10} max={180} defaultValue={settings.live_board_radar_display_seconds}/></label><label>Severe warning radar duration (seconds)<input name="live_board_severe_radar_seconds" type="number" min={30} max={300} defaultValue={settings.live_board_severe_radar_seconds}/></label><label>Weather amount<select name="live_board_forecast_detail" defaultValue={settings.live_board_forecast_detail}><option value="current">Current conditions</option><option value="3">3-day view</option><option value="7">7-day view</option></select></label><label className="external-lines">External displays · one per line<textarea name="live_board_external_links" rows={4} placeholder="Traffic camera | https://example.com" defaultValue={settings.live_board_external_links.map((entry) => `${entry.title} | ${entry.url}`).join("\n")}/></label></div><div className="live-radar-previews"><button type="button" onClick={() => onPreview("scheduled")}>Preview scheduled radar</button><button className="severe" type="button" onClick={() => onPreview("severe")}>Preview severe warning</button></div><small>Forecasts and active alerts use the National Weather Service only when verified coordinates are saved. Outside links open separately; never paste credentials or secret tokens.</small></section>
+      <section className="full"><h4>Connected panels, weather priority, and radar</h4><p className="live-weather-location"><b>Weather coordinates:</b> {weatherLocation || "Not configured"}. Change them in Department settings.</p><div className="live-source-fields"><label>Apparatus check link<input name="live_board_equipment_url" type="url" placeholder="https://" defaultValue={settings.live_board_equipment_url}/></label><label>Firefighter close calls link<input name="live_board_closecalls_url" type="url" placeholder="https://" defaultValue={settings.live_board_closecalls_url}/></label><label>Official LODD link<input name="live_board_lodd_url" type="url" placeholder="https://apps.usfa.fema.gov/firefighter-fatalities" defaultValue={settings.live_board_lodd_url}/></label><label>Upcoming training link<input name="live_board_training_url" type="url" placeholder="https://" defaultValue={settings.live_board_training_url}/></label><label>Outside source recheck (minutes)<input name="live_board_source_refresh_minutes" type="number" min={1} max={120} defaultValue={settings.live_board_source_refresh_minutes}/></label><label>Weather display link<input name="live_board_weather_url" type="url" placeholder="https://" defaultValue={settings.live_board_weather_url}/></label><label>Weather alerts link<input name="live_board_alerts_url" type="url" placeholder="https://" defaultValue={settings.live_board_alerts_url}/></label><label>Selected-area radar link<input name="live_board_radar_url" type="url" placeholder="https://radar.weather.gov/" defaultValue={settings.live_board_radar_url}/></label><label>Full-screen radar every (minutes)<input name="live_board_radar_refresh_minutes" type="number" min={1} max={120} defaultValue={settings.live_board_radar_refresh_minutes}/></label><label>Scheduled radar duration (seconds)<input name="live_board_radar_display_seconds" type="number" min={10} max={180} defaultValue={settings.live_board_radar_display_seconds}/></label><label>Severe warning radar duration (seconds)<input name="live_board_severe_radar_seconds" type="number" min={30} max={300} defaultValue={settings.live_board_severe_radar_seconds}/></label><label>Weather amount<select name="live_board_forecast_detail" defaultValue={settings.live_board_forecast_detail}><option value="current">Current conditions</option><option value="3">3-day view</option><option value="7">7-day view</option></select></label><label className="external-lines">External displays · one per line<textarea name="live_board_external_links" rows={4} placeholder="Traffic camera | https://example.com" defaultValue={settings.live_board_external_links.map((entry) => `${entry.title} | ${entry.url}`).join("\n")}/></label></div><div className="live-radar-previews"><button type="button" onClick={() => onPreview("scheduled")}>Preview scheduled radar</button><button className="severe" type="button" onClick={() => onPreview("severe")}>Preview severe warning</button></div><small>NWS forecasts and active alerts use verified department coordinates and recheck on the saved interval. Link-only panels open the current source page. Radar loads only while its panel or takeover is visible. Never paste credentials or secret tokens.</small></section>
     </div>
   </form>;
 }
