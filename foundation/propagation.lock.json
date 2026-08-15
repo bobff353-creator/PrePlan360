@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "release": "2026.08.14.83",
-  "generatedAt": "2026-08-14T23:58:01.484Z",
+  "release": "2026.08.14.84",
+  "generatedAt": "2026-08-15T00:04:40.757Z",
   "sharedDepartmentRoute": "app/d/[slug]/page.tsx",
   "currentDepartments": [
     "stickney",
@@ -19,7 +19,7 @@
     },
     "command-incident-and-payroll": {
       "demo": "65c1932a52129939861e692fabf8e4f21ee0118de414f6cf5b3965c6c6be596b",
-      "departments": "26edf9dd3d9b9c342926da141994654e8fd4659c751a37cc4e4f7ef20ac46501"
+      "departments": "433b13f032372acd3f0410904e78884ee40e533d10d1002a17e08d583fdbeea4"
     },
     "roster-and-staffing": {
       "demo": "ab9062b84acb7723a98dbcf92889f6cc2854f547cf9aeaeca4d81682b6d5fa57",
