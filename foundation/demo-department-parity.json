@@ -1,0 +1,105 @@
+{
+  "contractVersion": "2026.08.14",
+  "principle": "The shared department route inherits the demo software foundation while every record remains scoped to the signed-in department.",
+  "departments": ["stickney", "fermilab"],
+  "modules": [
+    {
+      "demoId": "board",
+      "demoLabel": "Live Ops Board",
+      "foundationKey": "live-ops",
+      "renderer": "app/d/[slug]/live-ops-board.tsx",
+      "requiredMarkers": ["Customize board", "OfficialRadar", "live-radar-takeover", "militaryTime"]
+    },
+    {
+      "demoId": "dash",
+      "demoLabel": "Command Center",
+      "foundationKey": "command-center",
+      "renderer": "app/d/[slug]/operations-workspaces.tsx",
+      "requiredMarkers": ["data-workspace=\"command-center\"", "ON-DUTY ROSTER", "OPERATIONAL PRIORITIES", "INCIDENT HISTORY"]
+    },
+    {
+      "demoId": "respond",
+      "demoLabel": "Respond",
+      "foundationKey": "respond",
+      "renderer": "app/d/[slug]/module-builder.tsx",
+      "requiredMarkers": ["respond-department-workspace", "A-side view", "Street View fallback", "RespondCadNotes"]
+    },
+    {
+      "demoId": "incident",
+      "demoLabel": "Active Incident",
+      "foundationKey": "active-incident",
+      "renderer": "app/d/[slug]/operations-workspaces.tsx",
+      "requiredMarkers": ["data-workspace=\"active-incident\"", "COMMAND STRUCTURE", "PREPLAN & WATER", "Incident actions"]
+    },
+    {
+      "demoId": "crew",
+      "demoLabel": "Roster & Staffing",
+      "foundationKey": "staffing",
+      "renderer": "app/d/[slug]/staffing-workspace.tsx",
+      "requiredMarkers": ["employment_end_date", "qualified_roles", "Save employee"]
+    },
+    {
+      "demoId": "sched",
+      "demoLabel": "Scheduling",
+      "foundationKey": "scheduling",
+      "renderer": "app/d/[slug]/schedule-calendar.tsx",
+      "requiredMarkers": ["schedule-day-view", "below-minimum", "schedule-upcoming-kpi", "schedule-calendar-slide"]
+    },
+    {
+      "demoId": "payroll",
+      "demoLabel": "Payroll",
+      "foundationKey": "payroll",
+      "renderer": "app/d/[slug]/operations-workspaces.tsx",
+      "requiredMarkers": ["data-workspace=\"payroll\"", "Schedule hours ledger", "Download CSV", "Rate not connected"]
+    },
+    {
+      "demoId": "log",
+      "demoLabel": "Daily Log",
+      "foundationKey": "daily-log",
+      "renderer": "app/d/[slug]/daily-log-workspace.tsx",
+      "requiredMarkers": ["department-address-suggestions", "Responding units", "department-call-notepad", "selectedDate"]
+    },
+    {
+      "demoId": "duty",
+      "demoLabel": "Daily Duties",
+      "foundationKey": "duties",
+      "renderer": "app/d/[slug]/daily-duties-workspace.tsx",
+      "requiredMarkers": ["TODAY&apos;S DUTIES", "DutyCompletionForm", "Station chore rotation"]
+    },
+    {
+      "demoId": "inv",
+      "demoLabel": "Apparatus & Logistics",
+      "foundationKey": "fleet",
+      "renderer": "app/d/[slug]/fleet-workspace.tsx",
+      "requiredMarkers": ["Daily Vehicle Check", "Weekly Apparatus Check", "Current odometer", "AssetCapture"]
+    },
+    {
+      "demoId": "preplan",
+      "demoLabel": "Pre-Plans",
+      "foundationKey": "preplans",
+      "renderer": "app/d/[slug]/stickney-workspace.tsx",
+      "requiredMarkers": ["PreplanMap", "PreplanDetail", "Open full property workspace", "Verified footprint JSON"]
+    },
+    {
+      "demoId": "insp",
+      "demoLabel": "Inspections",
+      "foundationKey": "inspections",
+      "renderer": "app/d/[slug]/page.tsx",
+      "requiredMarkers": ["Owner workbench active", "Open owner Inspection workbench", "protected from every department"]
+    },
+    {
+      "demoId": "hydrant",
+      "demoLabel": "Hydrants",
+      "foundationKey": "hydrants",
+      "renderer": "app/d/[slug]/stickney-workspace.tsx",
+      "requiredMarkers": ["HYDRANTS", "hydrant_number", "Verified latitude", "service_status"]
+    },
+    {
+      "demoId": "resources",
+      "demoLabel": "Box Cards & Docs",
+      "foundationKey": "documents",
+      "renderer": "app/d/[slug]/documents-workspace.tsx",
+      "requiredMarkers": ["TOWN / RESPONSE GROUP", "Open admin editor", "Download editable", "policyPageSize"]
+    }
+  ]
+}

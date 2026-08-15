@@ -7,21 +7,47 @@ const root = path.resolve(import.meta.dirname, "..");
 const read = (...parts) => readFile(path.join(root, ...parts), "utf8");
 
 test("the shared department foundation includes every operational demo module", async () => {
-  const [demo, foundation, page] = await Promise.all([
+  const [demo, foundation, page, contractText] = await Promise.all([
     read("public", "fireflow-360-demo.html"),
     read("db", "foundation.ts"),
     read("app", "d", "[slug]", "page.tsx"),
+    read("foundation", "demo-department-parity.json"),
   ]);
-  for (const label of ["Live Ops Board", "Command Center", "Respond", "Active Incident", "Roster & Staffing", "Scheduling", "Payroll", "Daily Log", "Daily Duties", "Apparatus & Logistics", "Pre-Plans", "Inspections", "Hydrants", "Box Cards & Docs"]) {
-    assert.match(demo, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  const contract = JSON.parse(contractText);
+  assert.equal(contract.modules.length, 14, "the demo has fourteen operational/reference modules outside Owner Studio");
+  assert.deepEqual(contract.departments, ["stickney", "fermilab"]);
+  assert.equal(new Set(contract.modules.map((module) => module.demoId)).size, contract.modules.length, "demo module ids must be unique");
+  assert.equal(new Set(contract.modules.map((module) => module.foundationKey)).size, contract.modules.length, "foundation keys must be unique");
+  for (const contractModule of contract.modules) {
+    assert.match(demo, new RegExp(contractModule.demoLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${contractModule.demoLabel} must remain in the owner demo`);
+    assert.match(foundation, new RegExp(`key: "${contractModule.foundationKey}"`), `${contractModule.foundationKey} must remain in the shared department foundation`);
+    const renderer = await read(...contractModule.renderer.split("/"));
+    for (const marker of contractModule.requiredMarkers) assert.ok(renderer.includes(marker), `${contractModule.demoLabel} is missing the shared capability marker: ${marker}`);
   }
-  for (const [key, label] of [["command-center", "Command Center"], ["active-incident", "Active Incident"], ["payroll", "Payroll"]]) {
-    assert.match(foundation, new RegExp(`key: "${key}", label: "${label}"`));
-  }
+  assert.match(page, /const \{ slug \} = await params/);
+  assert.match(page, /getDepartmentBySlug\(slug\)/);
+  assert.match(page, /getDepartmentSource\(department\.slug\)/);
   assert.match(page, /<CommandCenterWorkspace/);
   assert.match(page, /<ActiveIncidentWorkspace/);
   assert.match(page, /<PayrollWorkspace/);
-  assert.match(page, /getDepartmentSource\(department\.slug\)/);
+});
+
+test("Stickney, Fermilab, and future departments use one tenant-safe application foundation", async () => {
+  const [contractText, sourceRegistry, stickney, fermilab, page] = await Promise.all([
+    read("foundation", "demo-department-parity.json"),
+    read("db", "department-source.ts"),
+    read("db", "stickney.ts"),
+    read("db", "fermilab.ts"),
+    read("app", "d", "[slug]", "page.tsx"),
+  ]);
+  const contract = JSON.parse(contractText);
+  for (const slug of contract.departments) assert.match(sourceRegistry, new RegExp(`${slug}: \\{`));
+  for (const key of ["staffing", "scheduling", "payroll", "preplans", "hydrants", "fleet", "inventory", "duties", "documents", "phones"]) {
+    assert.ok(stickney.includes(`module === "${key}"`) || stickney.includes(`module === "${key}" ||`), `Stickney adapter must keep ${key}`);
+    assert.ok(fermilab.includes(`module === "${key}"`) || fermilab.includes(`module === "${key}" ||`), `Fermilab adapter must keep ${key}`);
+  }
+  assert.match(page, /Every department slug uses this shared route/);
+  assert.doesNotMatch(page, /slug === "stickney"|slug === "fermilab"/);
 });
 
 test("new department workspaces keep real tenant data and reject fictional demo records", async () => {

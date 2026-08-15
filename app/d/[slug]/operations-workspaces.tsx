@@ -66,34 +66,59 @@ export function CommandCenterWorkspace({ departmentName, supportQuery, source, s
   const today = chicagoDate();
   const schedule = sourceData?.schedule || [];
   const todayAssignments = schedule.filter((assignment) => assignment.work_date === today);
+  const employeeById = new Map((sourceData?.employees || []).map((employee) => [employee.id, employee]));
   const onDuty = new Set(todayAssignments.map((assignment) => assignment.employee_id || assignment.employee_name)).size;
   const units = apparatusRows(sourceData, assets);
   const availableUnits = units.filter((unit) => inService(unit.status)).length;
+  const attentionUnits = units.filter((unit) => !inService(unit.status));
   const activeIncident = liveOpsData.items.find((item) => item.item_type === "incident" && item.operational_status === "active");
+  const recentIncidents = liveOpsData.items
+    .filter((item) => item.item_type === "incident")
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .slice(0, 5);
   const day = sourceData?.dutyContext?.dayOfWeek;
   const currentDuties = (sourceData?.duties || []).filter((duty) => day === undefined || duty.day_of_week === day);
+  const openDuties = currentDuties.filter((duty) => !duty.completed_date);
   const summary = sourceData?.summary;
+  const staffingGap = settings.minimum_staffing > 0 ? Math.max(0, settings.minimum_staffing - onDuty) : 0;
 
   return <section className="ops-foundation" data-workspace="command-center">
     <SourceLine source={source} departmentName={departmentName} connectionError={connectionError}/>
     {activeIncident ? <a className="ops-incident-banner" href={`?module=active-incident${supportQuery}`}><span>ACTIVE INCIDENT</span><b>{activeIncident.title}</b><small>{activeIncident.location || activeIncident.summary || "Location not entered"}</small><strong>Open incident board →</strong></a> : null}
+    <nav className="ops-command-strip" aria-label="Command Center actions">
+      <a href={`?module=respond${supportQuery}`}><span>RESPOND</span><b>Location intelligence</b></a>
+      <a href={`?module=active-incident${supportQuery}`}><span>INCIDENT</span><b>{activeIncident ? "Open active board" : "Command standby"}</b></a>
+      <a href={`?module=scheduling${supportQuery}`}><span>SCHEDULE</span><b>{todayAssignments.length ? `${todayAssignments.length} assignments today` : "No assignments today"}</b></a>
+      <a href={`?module=daily-log${supportQuery}`}><span>DAILY LOG</span><b>Staffing and calls</b></a>
+    </nav>
     <div className="ops-kpis">
       <article className={units.length && availableUnits < units.length ? "warning" : "ready"}><b>{units.length ? `${availableUnits}/${units.length}` : "—"}</b><span>Apparatus in service</span><small>{units.length ? "From this department’s fleet" : "No fleet records connected"}</small></article>
       <article className={settings.minimum_staffing > 0 && onDuty < settings.minimum_staffing ? "danger" : "ready"}><b>{onDuty || "—"}</b><span>Personnel on duty</span><small>{todayAssignments.length ? `${todayAssignments.length} riding assignment${todayAssignments.length === 1 ? "" : "s"}` : "No approved assignments today"}</small></article>
       <article><b>{currentDuties.length || "—"}</b><span>Today&apos;s duty records</span><small>{currentDuties.length ? "Open Daily Duties for completion state" : "No duty records due today"}</small></article>
       <article className={activeIncident ? "danger" : "muted"}><b>{activeIncident ? "ACTIVE" : "NONE"}</b><span>Incident status</span><small>{activeIncident ? "Saved department incident" : "CAD feed not inferred"}</small></article>
     </div>
-    <div className="ops-columns">
+    <div className="ops-columns ops-command-grid">
       <section className="ops-card ops-wide"><header><div><span>APPARATUS STATUS</span><h2>Department fleet</h2></div><a href={`?module=fleet${supportQuery}`}>Open Apparatus</a></header>
-        {units.length ? <div className="ops-table-wrap"><table><thead><tr><th>Unit</th><th>Type</th><th>Detail</th><th>Status</th></tr></thead><tbody>{units.slice(0, 12).map((unit) => <tr key={unit.id}><td><b>{unit.unit}</b></td><td>{unit.type}</td><td>{unit.detail || "Details not entered"}</td><td><span className={inService(unit.status) ? "ops-status ready" : "ops-status danger"}>{unit.status}</span></td></tr>)}</tbody></table></div> : <Empty text="No apparatus records are connected to this department."/>}
+        {units.length ? <div className="ops-table-wrap"><table><thead><tr><th>Unit</th><th>Type</th><th>Detail</th><th>Status</th></tr></thead><tbody>{units.slice(0, 12).map((unit) => <tr key={unit.id}><td><b>{unit.unit}</b></td><td>{unit.type}</td><td>{unit.detail || "Details not entered"}</td><td><span className={inService(unit.status) ? "ops-status ready" : "ops-status danger"}>{unit.status}</span></td></tr>)}</tbody></table>{units.length > 12 ? <p className="ops-table-more">Showing 12 of {units.length} units. Open Apparatus for the complete fleet.</p> : null}</div> : <Empty text="No apparatus records are connected to this department."/>}
+      </section>
+      <section className="ops-card"><header><div><span>ON-DUTY ROSTER</span><h2>Today&apos;s riding assignments</h2></div><a href={`?module=scheduling${supportQuery}`}>Open Schedule</a></header>
+        {todayAssignments.length ? <div className="ops-list ops-roster-list">{todayAssignments.slice(0, 10).map((assignment) => { const employee = employeeById.get(assignment.employee_id); return <article key={assignment.id}><b>{assignment.role || "Position not entered"}<em>{assignment.employee_name || employee?.name || "Employee not entered"}</em></b><span>{[assignment.rank || employee?.rank, assignment.shift_name, assignment.start_time && assignment.end_time ? `${assignment.start_time}–${assignment.end_time}` : ""].filter(Boolean).join(" · ")}</span></article>; })}{todayAssignments.length > 10 ? <p className="ops-list-more">+ {todayAssignments.length - 10} more assignments in Scheduling</p> : null}</div> : <Empty text="No approved schedule assignments are available for today."/>}
+      </section>
+      <section className="ops-card"><header><div><span>OPERATIONAL PRIORITIES</span><h2>Items needing attention</h2></div></header>
+        {activeIncident || staffingGap || attentionUnits.length || openDuties.length ? <div className="ops-priority-list">{activeIncident ? <a className="danger" href={`?module=active-incident${supportQuery}`}><b>Active incident</b><span>{activeIncident.title}</span></a> : null}{staffingGap ? <a className="warning" href={`?module=scheduling${supportQuery}`}><b>Below minimum staffing</b><span>{staffingGap} position{staffingGap === 1 ? "" : "s"} below the configured minimum</span></a> : null}{attentionUnits.length ? <a className="warning" href={`?module=fleet${supportQuery}`}><b>Fleet status review</b><span>{attentionUnits.length} unit{attentionUnits.length === 1 ? "" : "s"} not marked in service</span></a> : null}{openDuties.length ? <a href={`?module=duties${supportQuery}`}><b>Open daily duties</b><span>{openDuties.length} current record{openDuties.length === 1 ? "" : "s"} without completion</span></a> : null}</div> : <Empty text="No saved department record currently creates a Command Center priority."/>}
       </section>
       <section className="ops-card"><header><div><span>DAILY DUTIES</span><h2>Current duty list</h2></div><a href={`?module=duties${supportQuery}`}>Open Duties</a></header>
         {currentDuties.length ? <div className="ops-list">{currentDuties.slice(0, 8).map((duty) => <article key={duty.id}><b>{duty.duty}</b><span>{duty.detail || duty.category || duty.shift_key || "Department duty"}</span></article>)}</div> : <Empty text="No current duty records are connected. No completion is assumed."/>}
+      </section>
+      <section className="ops-card"><header><div><span>INCIDENT HISTORY</span><h2>Recent department records</h2></div><a href={`?module=live-ops${supportQuery}`}>Open Live Operations</a></header>
+        {recentIncidents.length ? <div className="ops-list">{recentIncidents.map((incident) => <article key={incident.id}><b>{incident.title}<em className={`ops-status ${incident.operational_status === "active" ? "danger" : "muted"}`}>{incident.operational_status || "Status not entered"}</em></b><span>{incident.location || incident.summary || "Location and summary not entered"}</span></article>)}</div> : <Empty text="No saved incident history is available in this department workspace."/>}
       </section>
     </div>
     <section className="ops-module-links" aria-label="Integrated department modules">
       <a href={`?module=preplans${supportQuery}`}><span>Pre-Plans</span><b>{summary ? summary.preplans + summary.preplan_imports : sourceData?.preplans?.length ?? 0}</b><small>Department properties</small></a>
       <a href={`?module=fleet${supportQuery}`}><span>Apparatus & Logistics</span><b>{units.length}</b><small>Department units</small></a>
+      <a href={`?module=scheduling${supportQuery}`}><span>Scheduling</span><b>{todayAssignments.length}</b><small>Assignments today</small></a>
+      <a href={`?module=daily-log${supportQuery}`}><span>Daily Log</span><b>OPEN</b><small>Staffing, calls, and notes</small></a>
       <a href={`?module=inspections${supportQuery}`}><span>Inspections</span><b>OWNER</b><small>Development workbench</small></a>
       <a href={`?module=hydrants${supportQuery}`}><span>Hydrants</span><b>{summary?.hydrants ?? sourceData?.hydrants?.length ?? 0}</b><small>Department water supply</small></a>
     </section>
@@ -122,6 +147,12 @@ export function ActiveIncidentWorkspace({ departmentName, supportQuery, source, 
 
   return <section className="ops-foundation" data-workspace="active-incident">
     <SourceLine source={source} departmentName={departmentName} connectionError={connectionError}/>
+    <nav className="ops-command-strip" aria-label="Incident actions">
+      <a href={`?module=respond${supportQuery}`}><span>RESPOND</span><b>Location intelligence</b></a>
+      <a href={`?module=preplans${supportQuery}${linkedPreplan ? `#stickney-preplan-${linkedPreplan.id}` : ""}`}><span>PREPLAN</span><b>{linkedPreplan ? linkedPreplan.business_name : "Find property record"}</b></a>
+      <a href={`?module=hydrants${supportQuery}`}><span>WATER SUPPLY</span><b>Open department hydrants</b></a>
+      <a href={`?module=daily-log${supportQuery}`}><span>DAILY LOG</span><b>Record calls and notes</b></a>
+    </nav>
     <header className="ops-active-head"><div><span>ACTIVE · MANUAL DEPARTMENT RECORD</span><h2>{incident.title}</h2><p>{incident.location || "Location not entered"}</p></div><div><b>{Number.isNaN(updated.getTime()) ? "Update time unavailable" : updated.toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}</b><span>Last saved update</span></div></header>
     <div className="ops-kpis incident">
       <article className="danger"><b>{dispatched.length || "—"}</b><span>Units entered</span><small>{dispatched.length ? dispatched.join(" · ") : "No units entered on incident record"}</small></article>
