@@ -1,1 +1,126 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clippin Critters Demo</title></head><body><main><h1>Clippin Critters</h1><h2>Online Grooming Booking Concept</h2><p>Private sales demo: online booking, deposits, reminders, waitlist, pet profiles, and owner dashboard.</p><p>This is a concept preview and not the current official Clippin Critters website.</p></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clippin' Critters — Demo</title>
+<style>
+:root{--g:#2f5e4d;--gd:#203f35;--cream:#fbf6ec;--peach:#f2d4c2;--ink:#1f2a25;--muted:#68736d;--line:#dedbd1}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:var(--ink);background:#fff}a{text-decoration:none;color:inherit}.wrap{max-width:1120px;margin:auto;padding:0 20px}.demo{background:#fff0bd;padding:9px 18px;text-align:center;font-size:12px;font-weight:800}.nav{height:74px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{font:700 23px Georgia,serif;display:flex;align-items:center;gap:10px}.paw{width:40px;height:40px;border-radius:14px;background:var(--g);color:#fff;display:grid;place-items:center}.navlinks{display:flex;gap:22px;font-size:14px;font-weight:700}.btn{display:inline-block;background:var(--g);color:#fff;padding:13px 18px;border-radius:999px;font-weight:800}.hero{background:linear-gradient(135deg,var(--gd),#44775f);color:#fff;padding:64px 0}.heroGrid{display:grid;grid-template-columns:1.15fr .85fr;gap:42px;align-items:center}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.12em}.hero h1{font:700 clamp(46px,7vw,76px)/1.02 Georgia,serif;margin:12px 0}.hero p{font-size:19px;line-height:1.6;color:#e4eee9;max-width:680px}.heroCard{background:#fff;color:var(--ink);border-radius:26px;padding:24px;box-shadow:0 24px 60px #132b2266}.dog{height:220px;border-radius:18px;background:linear-gradient(135deg,var(--peach),#f7eee8);display:grid;place-items:center;font-size:86px}.heroCard h3{font:700 29px Georgia,serif;margin:18px 0 6px}.trust{display:grid;grid-template-columns:repeat(4,1fr);margin-top:-22px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}.trust div{padding:18px;border-right:1px solid var(--line)}.trust div:last-child{border:0}.trust b{display:block}.trust span{font-size:12px;color:var(--muted)}.section{padding:64px 0}.tint{background:var(--cream)}.section h2{font:700 clamp(38px,5vw,56px)/1.05 Georgia,serif;margin:0 0 14px}.lead{color:var(--muted);line-height:1.6;max-width:650px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:26px}.card{border:1px solid var(--line);border-radius:20px;padding:22px;background:#fff}.card .icon{font-size:29px}.card h3{font:700 24px Georgia,serif;margin:14px 0 7px}.card p{color:var(--muted);line-height:1.5}.booking{display:grid;grid-template-columns:.85fr 1.15fr;border:1px solid var(--line);border-radius:24px;overflow:hidden;background:#fff;margin-top:24px}.policy{background:var(--gd);color:#fff;padding:30px}.policy p{color:#d9e7df;line-height:1.6}.formmock{padding:30px}.field{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin:10px 0;color:#768078;background:#fff}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}.deposit{display:flex;justify-content:space-between;align-items:center;background:#edf5f0;border-radius:14px;padding:15px;margin:14px 0}.owner{background:#f4f5f2}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.metric,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px}.metric span{font-size:10px;font-weight:900;color:var(--muted);letter-spacing:.08em}.metric strong{display:block;font:700 35px Georgia,serif;margin-top:8px}.panel h3{font:700 25px Georgia,serif;margin-top:0}.row{display:grid;grid-template-columns:1.2fr .9fr .9fr .8fr;gap:10px;padding:12px 0;border-bottom:1px solid #e4e2da;font-size:13px}.status{display:inline-block;background:#e7f3eb;color:var(--g);padding:5px 8px;border-radius:999px;font-weight:800}.foot{background:#17241f;color:#dce6e1;padding:36px 0}.footgrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:25px}.small{font-size:12px;color:#aebbb5}
+@media(max-width:800px){.navlinks{display:none}.heroGrid,.booking,.footgrid{grid-template-columns:1fr}.trust,.cards,.metrics{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr 1fr}.hero{padding:45px 0}.heroCard{margin-top:10px}}
+@media(max-width:520px){.trust,.cards,.metrics,.twocol{grid-template-columns:1fr}.row{grid-template-columns:1fr}.section{padding:48px 0}.nav{height:68px}.btn{padding:11px 14px}.hero h1{font-size:48px}}
+</style>
+</head>
+<body>
+<div class="demo">PRIVATE CONCEPT DEMO · Not the current official Clippin' Critters website</div>
+
+<div class="wrap">
+  <div class="nav">
+    <div class="brand"><span class="paw">🐾</span><span>Clippin' Critters</span></div>
+    <div class="navlinks"><a href="#services">Services</a><a href="#booking">Book</a><a href="#owner">Owner view</a></div>
+    <a class="btn" href="#booking">Book your pet</a>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap heroGrid">
+    <div>
+      <div class="eyebrow">FAMILY OWNED · SERVING BERWYN FOR 30+ YEARS</div>
+      <h1>Your pet's groomer, made easier to book.</h1>
+      <p>A modern booking experience with pet profiles, deposits, appointment reminders and a waitlist for last-minute openings.</p>
+      <a class="btn" style="background:#fff;color:var(--g)" href="#booking">See online booking</a>
+    </div>
+    <div class="heroCard">
+      <div class="dog">🐶✂️</div>
+      <h3>Less phone tag. More time grooming.</h3>
+      <p class="lead">Customers handle routine booking while the owner stays in control of appointments and policies.</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap trust">
+  <div><b>30+ years in Berwyn</b><span>Established local business</span></div>
+  <div><b>Certified Master Groomer</b><span>Experienced pet care</span></div>
+  <div><b>All-natural products</b><span>Pet wellness first</span></div>
+  <div><b>Online booking ready</b><span>Deposit + waitlist concept</span></div>
+</div>
+
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--g)">GROOMING WITH CARE</div>
+    <h2>A better visit from booking to pickup.</h2>
+    <p class="lead">The customer tells the salon about their pet first, helping the groomer confirm the right service and appointment length.</p>
+    <div class="cards">
+      <div class="card"><div class="icon">✂️</div><h3>Full Groom</h3><p>Bath, coat care, haircut and finishing touches tailored to the pet.</p></div>
+      <div class="card"><div class="icon">🫧</div><h3>Bath & Brush</h3><p>A simple online request for routine coat care and cleanup.</p></div>
+      <div class="card"><div class="icon">🐾</div><h3>Nail Care</h3><p>Quick nail-trim requests with confirmation from the salon.</p></div>
+      <div class="card"><div class="icon">💛</div><h3>Not Sure?</h3><p>Customers can send pet details and let the groomer recommend the right service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section tint" id="booking">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--g)">ONLINE BOOKING CONCEPT</div>
+    <h2>Reserve a grooming visit.</h2>
+    <p class="lead">This preview shows the customer flow. The production version would connect to the salon's real payment account and schedule.</p>
+    <div class="booking">
+      <div class="policy">
+        <h3 style="font:700 30px Georgia,serif;margin-top:0">Simple booking policy</h3>
+        <p><b>$25 demo deposit</b> reserves the appointment. Cancel or reschedule at least 24 hours ahead to transfer the deposit. Late cancellations and no-shows may forfeit it.</p>
+        <p>Every amount and rule can be changed by the owner.</p>
+      </div>
+      <div class="formmock">
+        <div class="twocol">
+          <div class="field">Customer name</div>
+          <div class="field">Mobile phone</div>
+          <div class="field">Pet name</div>
+          <div class="field">Breed / size</div>
+        </div>
+        <div class="field">Choose service: Full Groom ▾</div>
+        <div class="twocol"><div class="field">Preferred date</div><div class="field">Available time ▾</div></div>
+        <div class="field">Temperament, coat condition, allergies or special requests</div>
+        <div class="deposit"><span>Booking deposit</span><strong>$25.00</strong></div>
+        <div class="btn" style="text-align:center;width:100%">Reserve appointment</div>
+        <p class="small">Demo only — no payment is collected on this preview.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section owner" id="owner">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--g)">OWNER BACK END CONCEPT</div>
+    <h2>One place to run the schedule.</h2>
+    <p class="lead">The owner can view appointments, deposits, waitlist customers, pet profiles and booking rules.</p>
+    <div class="metrics">
+      <div class="metric"><span>APPOINTMENTS TODAY</span><strong>4</strong></div>
+      <div class="metric"><span>UPCOMING</span><strong>12</strong></div>
+      <div class="metric"><span>DEPOSITS HELD</span><strong>$275</strong></div>
+      <div class="metric"><span>WAITLIST</span><strong>5</strong></div>
+    </div>
+    <div class="panel">
+      <h3>Today's appointments</h3>
+      <div class="row"><b>8:00 AM · Milo</b><span>Full Groom</span><span class="status">Confirmed</span><span>$25 held</span></div>
+      <div class="row"><b>10:00 AM · Luna</b><span>Full Groom</span><span class="status">Confirmed</span><span>$25 held</span></div>
+      <div class="row"><b>12:00 PM · Rocky</b><span>Bath & Brush</span><span class="status">Confirmed</span><span>$25 held</span></div>
+      <div class="row"><b>2:00 PM · Bella</b><span>Full Groom</span><span class="status">Confirmed</span><span>$25 held</span></div>
+    </div>
+    <div class="cards">
+      <div class="card"><h3>Waitlist filling</h3><p>When a slot opens, customers waiting for that day can be offered the appointment.</p></div>
+      <div class="card"><h3>Pet profiles</h3><p>Keep breed, grooming notes, preferences, history and future rebooking information together.</p></div>
+      <div class="card"><h3>Deposit rules</h3><p>Change deposit amount, cancellation cutoff and late-cancellation handling from settings.</p></div>
+      <div class="card"><h3>Rebook reminders</h3><p>Prompt customers to schedule again at the right interval after their grooming visit.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap footgrid">
+    <div><div class="brand"><span class="paw" style="background:#fff;color:var(--g)">🐾</span><span>Clippin' Critters</span></div><p>Concept redesign for a simpler customer and owner experience.</p></div>
+    <div><b>Location</b><p>6407 W 34th St<br>Berwyn, IL 60402</p></div>
+    <div><b>Demo note</b><p class="small">Private proposal preview only. Not the current official business site.</p></div>
+  </div>
+</footer>
+</body>
+</html>
